@@ -1,16 +1,16 @@
 """
 Streaming Purification Quantum Error Correction - Numerical Simulator
 
-This module implements the complete mathematical framework for analyzing
-streaming purification as a quantum error correction protocol.
-
-Author: [Your Name]
-Date: [Current Date]
+This module implements systematic parameter studies for streaming purification QEC.
+Data is automatically saved to data directory.
 """
 
 import numpy as np
+import os
+import json
+from datetime import datetime
 from typing import Dict, List, Tuple, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import warnings
 
 @dataclass
@@ -35,28 +35,51 @@ class ThresholdResult:
     resource_costs: np.ndarray
     dimension: int
 
+@dataclass
+class StudyParameters:
+    """Configuration for systematic parameter studies."""
+    # Dimension studies
+    dimensions: List[int]
+    
+    # Noise level studies  
+    noise_fine: np.ndarray      # Fine resolution for detailed analysis
+    noise_coarse: np.ndarray    # Coarse resolution for quick surveys
+    
+    # Recursion depth studies
+    max_levels: int
+    convergence_levels: List[int]
+    
+    # Specific test points
+    test_deltas: List[float]    # Specific noise levels of interest
+    
+    # Resource analysis
+    resource_levels: int
+
 class PurificationSimulator:
     """
-    Comprehensive simulator for streaming purification quantum error correction.
-    
-    This class implements the complete theoretical framework including:
-    - Purity transformation for qudits
-    - Recursive binary tree purification
-    - Amplitude amplification cost analysis
-    - Error metrics using Grafe formalism
-    - Threshold and scaling studies
+    Comprehensive simulator for streaming purification quantum error correction
+    with organized data saving and systematic parameter studies.
     """
     
-    def __init__(self, dimension: int = 2, verbose: bool = False):
+    def __init__(self, dimension: int = 2, data_dir: str = "./data/", verbose: bool = False):
         """
-        Initialize the purification simulator.
+        Initialize the purification simulator with data management.
         
         Args:
             dimension: Dimension of the quantum system (d=2 for qubits)
+            data_dir: Directory to save all simulation data
             verbose: Enable detailed logging of simulation progress
         """
         self.dimension = dimension
+        self.data_dir = data_dir
         self.verbose = verbose
+        
+        # Create data directory structure
+        os.makedirs(data_dir, exist_ok=True)
+        os.makedirs(f"{data_dir}/threshold_studies", exist_ok=True)
+        os.makedirs(f"{data_dir}/convergence_studies", exist_ok=True)
+        os.makedirs(f"{data_dir}/dimension_scaling", exist_ok=True)
+        os.makedirs(f"{data_dir}/parameter_sweeps", exist_ok=True)
         
         # Validate dimension
         if dimension < 2:
@@ -64,13 +87,11 @@ class PurificationSimulator:
             
         if self.verbose:
             print(f"Initialized PurificationSimulator for d={dimension} systems")
+            print(f"Data will be saved to: {data_dir}")
     
     def purity_transformation(self, lambda_in: float) -> Tuple[float, float, int]:
         """
         Compute the effect of a single swap test on purity parameter.
-        
-        This implements the core purity transformation:
-        λ_out = λ_in * (2-(1-λ_in) + 2(1-λ_in)/d) / (1 + λ_in² + (1-λ_in²)/d)
         
         Args:
             lambda_in: Input purity parameter (0 ≤ λ ≤ 1)
@@ -105,9 +126,6 @@ class PurificationSimulator:
     def recursive_purification(self, initial_delta: float, num_levels: int) -> PurificationResult:
         """
         Simulate complete recursive purification through binary tree.
-        
-        Starting with 2^num_levels noisy copies, this performs recursive
-        swap tests to produce a single purified copy.
         
         Args:
             initial_delta: Initial depolarization parameter (0 ≤ δ ≤ 1)
@@ -178,214 +196,304 @@ class PurificationSimulator:
         )
     
     def _logical_error(self, purity: float) -> float:
-        """
-        Calculate logical error using generalized Grafe metric.
-        
-        For qudits: ε_L = (1-λ)(d-1)/d
-        For qubits: ε_L = (1-λ)/2
-        
-        Args:
-            purity: Current purity parameter λ
-            
-        Returns:
-            Logical error value
-        """
+        """Calculate logical error using generalized Grafe metric."""
         return (1 - purity) * (self.dimension - 1) / self.dimension
     
-    def threshold_analysis(self, noise_range: np.ndarray, num_levels: int = 5) -> ThresholdResult:
+    def save_result(self, result: any, filename: str, metadata: Dict = None) -> str:
         """
-        Analyze purification performance across range of noise levels.
-        
-        This sweeps through different initial noise levels and computes
-        the final purification performance and resource costs.
+        Save simulation result with metadata.
         
         Args:
-            noise_range: Array of initial depolarization parameters to test
-            num_levels: Number of purification levels to apply
+            result: Result object to save
+            filename: Base filename (without extension)
+            metadata: Additional metadata to save
             
         Returns:
-            ThresholdResult containing performance vs noise data
+            Full path to saved file
         """
-        final_purities = np.zeros_like(noise_range)
-        error_reductions = np.zeros_like(noise_range)
-        resource_costs = np.zeros_like(noise_range)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        full_filename = f"{filename}_{timestamp}"
+        filepath = os.path.join(self.data_dir, f"{full_filename}.npz")
         
-        if self.verbose:
-            print(f"Threshold analysis for d={self.dimension}")
-            print(f"Noise range: {noise_range[0]:.3f} to {noise_range[-1]:.3f}")
+        # Prepare data for saving
+        if isinstance(result, PurificationResult):
+            save_data = asdict(result)
+            save_data['purity_evolution'] = result.purity_evolution
+            save_data['error_evolution'] = result.error_evolution
+            save_data['success_probabilities'] = result.success_probabilities
+            save_data['amplification_iterations'] = result.amplification_iterations
+        elif isinstance(result, ThresholdResult):
+            save_data = asdict(result)
+            save_data['noise_levels'] = result.noise_levels
+            save_data['final_purities'] = result.final_purities
+            save_data['error_reductions'] = result.error_reductions
+            save_data['resource_costs'] = result.resource_costs
+        else:
+            save_data = result
         
-        for i, delta in enumerate(noise_range):
-            try:
-                result = self.recursive_purification(delta, num_levels)
-                
-                final_purities[i] = result.final_purity
-                resource_costs[i] = result.total_cost
-                
-                # Calculate error reduction ratio
-                initial_error = self._logical_error(result.initial_purity)
-                final_error = self._logical_error(result.final_purity)
-                
-                if initial_error > 0:
-                    error_reductions[i] = final_error / initial_error
-                else:
-                    error_reductions[i] = 0
-                    
-            except Exception as e:
-                if self.verbose:
-                    print(f"Warning: Failed at δ={delta:.3f}: {e}")
-                final_purities[i] = np.nan
-                error_reductions[i] = np.nan
-                resource_costs[i] = np.nan
+        # Add metadata
+        if metadata is None:
+            metadata = {}
         
-        return ThresholdResult(
-            noise_levels=noise_range,
-            final_purities=final_purities,
-            error_reductions=error_reductions,
-            resource_costs=resource_costs,
-            dimension=self.dimension
-        )
-    
-    def dimension_scaling_study(self, dimensions: List[int], 
-                               delta: float = 0.3, num_levels: int = 5) -> Dict[int, PurificationResult]:
-        """
-        Study how purification performance scales with system dimension.
-        
-        Args:
-            dimensions: List of dimensions to test
-            delta: Fixed depolarization parameter
-            num_levels: Number of purification levels
-            
-        Returns:
-            Dictionary mapping dimension to PurificationResult
-        """
-        results = {}
-        
-        if self.verbose:
-            print(f"Dimension scaling study at δ={delta}")
-            print(f"Testing dimensions: {dimensions}")
-        
-        for d in dimensions:
-            # Temporarily create simulator for this dimension
-            temp_sim = PurificationSimulator(dimension=d, verbose=False)
-            results[d] = temp_sim.recursive_purification(delta, num_levels)
-            
-            if self.verbose:
-                result = results[d]
-                print(f"d={d}: λ_final={result.final_purity:.4f}, cost={result.total_cost}")
-        
-        return results
-    
-    def convergence_analysis(self, initial_delta: float, max_levels: int = 10) -> Dict[str, np.ndarray]:
-        """
-        Analyze convergence properties of recursive purification.
-        
-        Args:
-            initial_delta: Initial depolarization parameter
-            max_levels: Maximum number of levels to test
-            
-        Returns:
-            Dictionary with convergence data
-        """
-        levels_range = np.arange(1, max_levels + 1)
-        final_purities = np.zeros(len(levels_range))
-        total_costs = np.zeros(len(levels_range))
-        
-        for i, levels in enumerate(levels_range):
-            result = self.recursive_purification(initial_delta, levels)
-            final_purities[i] = result.final_purity
-            total_costs[i] = result.total_cost
-        
-        return {
-            'levels': levels_range,
-            'final_purities': final_purities,
-            'total_costs': total_costs,
+        metadata.update({
+            'timestamp': timestamp,
             'dimension': self.dimension,
-            'initial_delta': initial_delta
-        }
+            'simulator_version': '1.0',
+            'save_date': datetime.now().isoformat()
+        })
+        
+        # Save data and metadata
+        np.savez_compressed(filepath, **save_data, metadata=metadata)
+        
+        # Save metadata as separate JSON for easy reading
+        with open(filepath.replace('.npz', '_metadata.json'), 'w') as f:
+            json.dump(metadata, f, indent=2)
+        
+        if self.verbose:
+            print(f"Results saved to: {filepath}")
+        
+        return filepath
 
-# Utility functions for batch simulations
-def compare_dimensions(dimensions: List[int], delta_range: np.ndarray, 
-                      num_levels: int = 5) -> Dict[int, ThresholdResult]:
+def get_study_parameters() -> StudyParameters:
     """
-    Compare threshold performance across multiple dimensions.
+    Define comprehensive parameter sets for systematic studies.
+    
+    Returns:
+        StudyParameters object with all test configurations
+    """
+    return StudyParameters(
+        # Dimension studies: Focus on computationally feasible range
+        dimensions=[2, 3, 4, 5, 8, 10, 16],
+        
+        # Noise level studies
+        noise_fine=np.linspace(0.01, 0.99, 99),        # High resolution for detailed threshold
+        noise_coarse=np.linspace(0.05, 0.95, 19),      # Quick survey
+        
+        # Recursion depth studies  
+        max_levels=12,
+        convergence_levels=[1, 2, 3, 4, 5, 6, 8, 10],
+        
+        # Specific test points of interest
+        test_deltas=[
+            0.01,   # Very low noise
+            0.1,    # Low noise  
+            0.25,   # Moderate noise
+            0.5,    # High noise
+            0.75,   # Very high noise
+            0.9,    # Extreme noise
+            0.99    # Near-maximal noise
+        ],
+        
+        # Resource analysis depth
+        resource_levels=8
+    )
+
+def run_systematic_studies(data_dir: str = "./data/") -> Dict[str, str]:
+    """
+    Execute comprehensive systematic parameter studies.
     
     Args:
-        dimensions: List of dimensions to compare
-        delta_range: Range of noise levels to test
-        num_levels: Number of purification levels
+        data_dir: Directory to save all results
         
     Returns:
-        Dictionary mapping dimension to ThresholdResult
+        Dictionary mapping study name to saved file path
     """
-    results = {}
+    params = get_study_parameters()
+    saved_files = {}
     
-    for d in dimensions:
-        sim = PurificationSimulator(dimension=d, verbose=True)
-        results[d] = sim.threshold_analysis(delta_range, num_levels)
+    print("="*60)
+    print("SYSTEMATIC PARAMETER STUDIES FOR STREAMING PURIFICATION QEC")
+    print("="*60)
     
-    return results
-
-def generate_benchmark_data(output_file: Optional[str] = "data/benchmark.npz") -> Dict:
-    """
-    Generate comprehensive benchmark data for the paper.
+    # Study 1: Detailed Qubit Analysis
+    print("\n1. Detailed Qubit Analysis (d=2)")
+    print("-" * 40)
     
-    Args:
-        output_file: Optional filename to save results
-        
-    Returns:
-        Dictionary containing all benchmark results
-    """
-    print("Generating comprehensive benchmark data...")
+    qubit_sim = PurificationSimulator(dimension=2, data_dir=data_dir, verbose=True)
     
-    # Standard parameters
-    dimensions = [2, 3, 4, 5, 8, 10]
-    delta_range = np.linspace(0.1, 0.9, 25)
-    num_levels = 6
-    
-    # Main simulations
-    benchmark = {
-        'dimensions': dimensions,
-        'delta_range': delta_range,
-        'num_levels': num_levels,
-        'threshold_comparison': compare_dimensions(dimensions, delta_range, num_levels),
-        'qubit_detailed': None,
-        'convergence_studies': {}
-    }
-    
-    # Detailed qubit analysis
-    qubit_sim = PurificationSimulator(dimension=2, verbose=True)
-    benchmark['qubit_detailed'] = qubit_sim.threshold_analysis(
-        np.linspace(0.05, 0.95, 50), num_levels=8
+    # High-resolution threshold analysis
+    threshold_result = ThresholdResult(
+        noise_levels=params.noise_fine,
+        final_purities=np.zeros_like(params.noise_fine),
+        error_reductions=np.zeros_like(params.noise_fine),
+        resource_costs=np.zeros_like(params.noise_fine),
+        dimension=2
     )
     
-    # Convergence studies for different dimensions
-    for d in [2, 4, 8]:
-        sim = PurificationSimulator(dimension=d)
-        benchmark['convergence_studies'][d] = sim.convergence_analysis(0.3, max_levels=10)
+    for i, delta in enumerate(params.noise_fine):
+        try:
+            result = qubit_sim.recursive_purification(delta, params.resource_levels)
+            threshold_result.final_purities[i] = result.final_purity
+            threshold_result.resource_costs[i] = result.total_cost
+            
+            initial_error = qubit_sim._logical_error(result.initial_purity)
+            final_error = qubit_sim._logical_error(result.final_purity)
+            threshold_result.error_reductions[i] = final_error / initial_error if initial_error > 0 else 0
+            
+        except Exception as e:
+            print(f"Warning: Failed at δ={delta:.3f}: {e}")
+            threshold_result.final_purities[i] = np.nan
+            threshold_result.error_reductions[i] = np.nan
+            threshold_result.resource_costs[i] = np.nan
     
-    # Save results if filename provided
-    if output_file:
-        np.savez(output_file, **benchmark)
-        print(f"Benchmark data saved to {output_file}")
+    saved_files['qubit_detailed'] = qubit_sim.save_result(
+        threshold_result, 
+        "threshold_studies/qubit_detailed_threshold",
+        {"study_type": "detailed_qubit_threshold", "resolution": "high"}
+    )
     
-    return benchmark
+    # Study 2: Dimension Scaling Analysis
+    print("\n2. Dimension Scaling Analysis")
+    print("-" * 40)
+    
+    dimension_results = {}
+    
+    for d in params.dimensions:
+        print(f"  Testing dimension d={d}")
+        sim = PurificationSimulator(dimension=d, data_dir=data_dir, verbose=False)
+        
+        # Threshold analysis for this dimension
+        threshold_result = ThresholdResult(
+            noise_levels=params.noise_coarse,
+            final_purities=np.zeros_like(params.noise_coarse),
+            error_reductions=np.zeros_like(params.noise_coarse),
+            resource_costs=np.zeros_like(params.noise_coarse),
+            dimension=d
+        )
+        
+        for i, delta in enumerate(params.noise_coarse):
+            try:
+                result = sim.recursive_purification(delta, 6)  # Moderate depth for survey
+                threshold_result.final_purities[i] = result.final_purity
+                threshold_result.resource_costs[i] = result.total_cost
+                
+                initial_error = sim._logical_error(result.initial_purity)
+                final_error = sim._logical_error(result.final_purity)
+                threshold_result.error_reductions[i] = final_error / initial_error if initial_error > 0 else 0
+                
+            except Exception as e:
+                threshold_result.final_purities[i] = np.nan
+                threshold_result.error_reductions[i] = np.nan
+                threshold_result.resource_costs[i] = np.nan
+        
+        dimension_results[d] = threshold_result
+        
+        # Save individual dimension result
+        saved_files[f'dimension_{d}'] = sim.save_result(
+            threshold_result,
+            f"dimension_scaling/threshold_d{d}",
+            {"study_type": "dimension_scaling", "dimension": d}
+        )
+    
+    # Study 3: Convergence Analysis  
+    print("\n3. Convergence Analysis")
+    print("-" * 40)
+    
+    convergence_results = {}
+    
+    for d in [2, 4, 8]:  # Selected dimensions for detailed convergence study
+        print(f"  Convergence study for d={d}")
+        sim = PurificationSimulator(dimension=d, data_dir=data_dir, verbose=False)
+        
+        convergence_data = {
+            'dimension': d,
+            'test_deltas': params.test_deltas,
+            'levels': params.convergence_levels,
+            'results': {}
+        }
+        
+        for delta in params.test_deltas:
+            level_results = {
+                'final_purities': [],
+                'total_costs': [],
+                'error_reductions': []
+            }
+            
+            for levels in params.convergence_levels:
+                try:
+                    result = sim.recursive_purification(delta, levels)
+                    level_results['final_purities'].append(result.final_purity)
+                    level_results['total_costs'].append(result.total_cost)
+                    
+                    initial_error = sim._logical_error(result.initial_purity)
+                    final_error = sim._logical_error(result.final_purity)
+                    level_results['error_reductions'].append(
+                        final_error / initial_error if initial_error > 0 else 0
+                    )
+                    
+                except Exception as e:
+                    level_results['final_purities'].append(np.nan)
+                    level_results['total_costs'].append(np.nan)
+                    level_results['error_reductions'].append(np.nan)
+            
+            convergence_data['results'][delta] = level_results
+        
+        convergence_results[d] = convergence_data
+        
+        # Save convergence result
+        saved_files[f'convergence_d{d}'] = sim.save_result(
+            convergence_data,
+            f"convergence_studies/convergence_d{d}",
+            {"study_type": "convergence_analysis", "dimension": d}
+        )
+    
+    # Study 4: Resource Scaling Deep Dive
+    print("\n4. Resource Scaling Analysis")
+    print("-" * 40)
+    
+    resource_study = {
+        'dimensions': params.dimensions,
+        'test_delta': 0.3,  # Fixed moderate noise level
+        'max_levels': params.max_levels,
+        'results': {}
+    }
+    
+    for d in params.dimensions:
+        print(f"  Resource scaling for d={d}")
+        sim = PurificationSimulator(dimension=d, data_dir=data_dir, verbose=False)
+        
+        level_data = {
+            'levels': list(range(1, params.max_levels + 1)),
+            'final_purities': [],
+            'total_costs': [],
+            'cost_per_level': []
+        }
+        
+        for levels in range(1, params.max_levels + 1):
+            try:
+                result = sim.recursive_purification(0.3, levels)
+                level_data['final_purities'].append(result.final_purity)
+                level_data['total_costs'].append(result.total_cost)
+                level_data['cost_per_level'].append(result.total_cost / levels)
+                
+            except Exception as e:
+                level_data['final_purities'].append(np.nan)
+                level_data['total_costs'].append(np.nan)
+                level_data['cost_per_level'].append(np.nan)
+        
+        resource_study['results'][d] = level_data
+    
+    saved_files['resource_scaling'] = PurificationSimulator(
+        dimension=2, data_dir=data_dir
+    ).save_result(
+        resource_study,
+        "parameter_sweeps/resource_scaling",
+        {"study_type": "resource_scaling", "fixed_delta": 0.3}
+    )
+    
+    # Summary
+    print("\n" + "="*60)
+    print("SYSTEMATIC STUDIES COMPLETED")
+    print("="*60)
+    print(f"Total studies conducted: {len(saved_files)}")
+    print(f"Data saved to: {data_dir}")
+    print("\nSaved files:")
+    for study, filepath in saved_files.items():
+        print(f"  {study}: {os.path.basename(filepath)}")
+    
+    return saved_files
 
 if __name__ == "__main__":
-    # Example usage and testing
-    print("Testing Purification Simulator...")
+    # Run all systematic studies
+    run_systematic_studies()
     
-    # Test single transformation
-    sim = PurificationSimulator(dimension=2, verbose=True)
-    purity_out, prob, iters = sim.purity_transformation(0.7)
-    print(f"Single transformation: 0.7 → {purity_out:.4f} (P={prob:.4f}, iters={iters})")
-    
-    # Test recursive purification
-    result = sim.recursive_purification(0.3, 5)
-    print(f"Recursive result: {result.initial_purity:.4f} → {result.final_purity:.4f}")
-    
-    # Test threshold analysis
-    noise_range = np.linspace(0.1, 0.8, 10)
-    threshold_result = sim.threshold_analysis(noise_range, 3)
-    print(f"Threshold analysis completed for {len(noise_range)} points")
-    
-    print("All tests passed!")
