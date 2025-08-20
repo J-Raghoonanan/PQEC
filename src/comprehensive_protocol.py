@@ -382,7 +382,7 @@ class DataManager:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         noise_type = result.protocol_params.noise_type.value
         filename = f"purification_{noise_type}_d{result.protocol_params.dimension}_" \
-                  f"levels{result.protocol_params.purification_levels}_{timestamp}.npz"
+                  f"levels{result.protocol_params.purification_levels}.npz"
         
         # Choose appropriate directory
         if study_type == "noise_study":
@@ -436,7 +436,7 @@ class DataManager:
     def save_study_summary(self, study_results: Dict[str, Any], study_name: str) -> str:
         """Save summary of a complete study."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{study_name}_summary_{timestamp}.json"
+        filename = f"{study_name}_summary.json"
         filepath = os.path.join(self.base_dir, "streaming_purification", filename)
         
         # Convert numpy arrays to lists for JSON serialization
