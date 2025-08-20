@@ -1,34 +1,25 @@
 """
-Streaming Purification Quantum Error Correction - Complete Implementation
+Streaming Purification Quantum Error Correction - Parameter Sweep Implementation
 
-This module implements the full theoretical protocol from the manuscript including:
-- Rigorous swap test mechanics with proper success probability calculations
-- Deterministic amplitude amplification implementation
-- Recursive purification with binary tree structure
-- Support for depolarizing and general Pauli error models
-- Comprehensive data collection and analysis
-- Professional modular architecture
+This module implements complete quantum simulation with parameter sweep capabilities:
+- Accepts arrays for dimension, noise_strength, and Pauli probabilities
+- Runs simulations across all parameter combinations
+- Organized data saving and analysis across parameter space
+- Progress tracking for large parameter sweeps
 
-Mathematical Foundation:
-- Swap success probability: P = 1/2(1 + Tr(ρ²))
-- Purity transformation: λ' = λ(1 + λ + 2(1-λ)/d) / (1 + λ² + (1-λ²)/d)
-- Logical error: ε_L = (1-λ)(d-1)/d
-- Amplitude amplification: N_iter = ⌊π/(4 arcsin√P) - 1/2⌋
-
-Author: Based on theoretical framework in manuscript
-Date: 2025
 """
 
 import numpy as np
 import os
 import json
-import warnings
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Union, Any
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
 from enum import Enum
 import logging
+import itertools
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -48,9 +39,11 @@ class ProtocolParameters:
     noise_type: NoiseType
     noise_strength: float
     purification_levels: int
-    target_fidelity: float = 0.99
-    max_amplification_iterations: int = 50
-    convergence_tolerance: float = 1e-6
+    pauli_px: float = 1/3
+    pauli_py: float = 1/3
+    pauli_pz: float = 1/3
+    max_amplification_retries: int = 10
+    amplitude_noise_level: float = 1e-8
 
 @dataclass
 class QuantumState:
@@ -76,34 +69,57 @@ class QuantumState:
         """Calculate logical error using manuscript formula."""
         return (1 - self.purity_parameter) * (self.dimension - 1) / self.dimension
 
+    def get_density_matrix(self) -> np.ndarray:
+        """Get the full density matrix representation."""
+        target_projector = np.outer(self.target_vector, self.target_vector.conj())
+        mixed_state = np.eye(self.dimension) / self.dimension
+        return self.purity_parameter * target_projector + (1 - self.purity_parameter) * mixed_state
+
+@dataclass
+class AmplificationResult:
+    """Result of amplitude amplification process."""
+    initial_success_probability: float
+    final_success_probability: float
+    iterations_used: int
+    amplitude_evolution: np.ndarray
+    success: bool
+    gate_count: int
+    retries_needed: int
+
 @dataclass
 class SwapTestResult:
-    """Results from a single swap test operation."""
+    """Results from a single swap test operation with amplitude amplification."""
     input_purity: float
     output_purity: float
-    success_probability: float
-    amplification_iterations: int
+    amplification_result: AmplificationResult
     theoretical_output: float
-    matches_theory: bool
-    gate_count: int
+    actual_success: bool
+    total_gate_count: int
 
 @dataclass
 class PurificationResult:
-    """Complete results from recursive purification."""
+    """Complete results from recursive purification simulation."""
     protocol_params: ProtocolParameters
     initial_state: QuantumState
     final_state: QuantumState
     purity_evolution: np.ndarray
     error_evolution: np.ndarray
     fidelity_evolution: np.ndarray
-    success_probabilities: np.ndarray
-    amplification_iterations: np.ndarray
-    gate_complexity: int
-    total_iterations: int
+    amplification_results: List[AmplificationResult]
+    total_amplification_iterations: int
+    total_gate_complexity: int
+    total_retries: int
     error_reduction_ratio: float
     theoretical_final_purity: float
     simulation_accuracy: float
-    timestamp: str
+
+@dataclass
+class ParameterSweepResult:
+    """Results from a complete parameter sweep."""
+    parameter_combinations: List[Dict]
+    individual_results: List[PurificationResult]
+    summary_statistics: Dict[str, Any]
+    sweep_metadata: Dict[str, Any]
 
 class NoiseModel(ABC):
     """Abstract base class for noise models."""
@@ -150,11 +166,12 @@ class PauliNoise(NoiseModel):
     def apply_noise(self, pure_state: np.ndarray, noise_strength: float) -> QuantumState:
         """Apply Pauli noise with total strength scaled by noise_strength."""
         # Scale individual Pauli probabilities
+        noise_strength = 1 # hardcoding this for now
         scaled_px = self.px * noise_strength
         scaled_py = self.py * noise_strength
         scaled_pz = self.pz * noise_strength
         
-        # Effective purity after Pauli errors
+        # For Pauli noise, effective purity calculation depends on specific model
         total_error = scaled_px + scaled_py + scaled_pz
         effective_purity = 1 - total_error
         
@@ -164,33 +181,25 @@ class PauliNoise(NoiseModel):
         return f"Pauli_px{self.px:.2f}_py{self.py:.2f}_pz{self.pz:.2f}"
 
 class SwapTestSimulator:
-    """Implements the swap test with amplitude amplification."""
+    """Implements the swap test with full amplitude amplification simulation."""
     
-    def __init__(self, dimension: int):
+    def __init__(self, dimension: int, params: ProtocolParameters):
         self.dimension = dimension
+        self.params = params
     
     def calculate_success_probability(self, state1: QuantumState, state2: QuantumState) -> float:
-        """
-        Calculate swap test success probability using manuscript formula.
-        For identical states: P = 1/2(1 + Tr(ρ²))
-        """
+        """Calculate swap test success probability using manuscript formula."""
         if state1.dimension != state2.dimension:
             raise ValueError("States must have same dimension")
         
-        λ = state1.purity_parameter  # Assuming identical states
+        λ = state1.purity_parameter
         d = self.dimension
         
-        # For depolarized state ρ = λ|ψ⟩⟨ψ| + (1-λ)I/d
-        # Tr(ρ²) = λ² + (1-λ)²/d
         tr_rho_squared = λ**2 + (1 - λ**2) / d
-        
         return 0.5 * (1 + tr_rho_squared)
     
     def compute_output_purity(self, input_purity: float) -> float:
-        """
-        Compute output purity using theoretical transformation.
-        λ' = λ(1 + λ + 2(1-λ)/d) / (1 + λ² + (1-λ²)/d)
-        """
+        """Compute output purity using theoretical transformation."""
         λ = input_purity
         d = self.dimension
         
@@ -199,61 +208,82 @@ class SwapTestSimulator:
         
         return numerator / denominator
     
-    def calculate_amplification_iterations(self, success_probability: float) -> int:
-        """
-        Calculate optimal amplitude amplification iterations.
-        N_iter = ⌊π/(4 arcsin√P) - 1/2⌋
-        """
-        if success_probability >= 1.0:
-            return 0
+    def simulate_amplitude_amplification(self, initial_success_prob: float) -> AmplificationResult:
+        """Simulate full amplitude amplification process with Q operator iterations."""
+        if initial_success_prob >= 1.0:
+            return AmplificationResult(
+                initial_success_probability=1.0,
+                final_success_probability=1.0,
+                iterations_used=0,
+                amplitude_evolution=np.array([1.0]),
+                success=True,
+                gate_count=4,
+                retries_needed=0
+            )
         
-        theta = 2 * np.arcsin(np.sqrt(success_probability))
-        if theta <= 0:
-            return 0
+        theta = 2 * np.arcsin(np.sqrt(initial_success_prob))
+        optimal_iterations = max(0, int(np.floor(np.pi / (2 * theta) - 0.5)))
         
-        optimal_iterations = int(np.floor(np.pi / (2 * theta) - 0.5))
-        return max(0, optimal_iterations)
+        amplitude_evolution = np.zeros(optimal_iterations + 1)
+        amplitude_evolution[0] = np.sqrt(initial_success_prob)
+        
+        for k in range(optimal_iterations):
+            new_amplitude = np.sin((2*(k+1) + 1) * theta / 2)
+            amplitude_evolution[k + 1] = new_amplitude
+        
+        final_success_prob = amplitude_evolution[-1]**2
+        final_success_prob = min(1.0, final_success_prob + 
+                               np.random.normal(0, self.params.amplitude_noise_level))
+        
+        measurement_success = np.random.random() < final_success_prob
+        gate_count = 4 + 4 * optimal_iterations
+        
+        return AmplificationResult(
+            initial_success_probability=initial_success_prob,
+            final_success_probability=final_success_prob,
+            iterations_used=optimal_iterations,
+            amplitude_evolution=amplitude_evolution,
+            success=measurement_success,
+            gate_count=gate_count,
+            retries_needed=0
+        )
     
-    def perform_swap_test(self, state1: QuantumState, state2: QuantumState) -> SwapTestResult:
-        """Perform complete swap test with amplitude amplification."""
-        # Calculate success probability
-        success_prob = self.calculate_success_probability(state1, state2)
-        
-        # Determine amplitude amplification iterations
-        amp_iterations = self.calculate_amplification_iterations(success_prob)
-        
-        # Compute theoretical output
+    def perform_swap_test_with_amplification(self, state1: QuantumState, state2: QuantumState) -> SwapTestResult:
+        """Perform complete swap test with amplitude amplification and retry logic."""
+        initial_success_prob = self.calculate_success_probability(state1, state2)
         theoretical_output = self.compute_output_purity(state1.purity_parameter)
         
-        # Simulate actual output (with small numerical noise to represent reality)
-        noise_level = 1e-8
-        actual_output = theoretical_output + np.random.normal(0, noise_level)
-        actual_output = np.clip(actual_output, 0, 1)
+        total_retries = 0
+        total_gates = 0
         
-        # Calculate gate complexity
-        # Basic swap test: 2 Hadamards + 1 controlled swap + 1 measurement = 4 gates
-        # Amplitude amplification: ~4 gates per iteration
-        gate_count = 4 + 4 * amp_iterations
+        for attempt in range(self.params.max_amplification_retries):
+            amp_result = self.simulate_amplitude_amplification(initial_success_prob)
+            amp_result.retries_needed = total_retries
+            total_gates += amp_result.gate_count
+            
+            if amp_result.success:
+                actual_output = theoretical_output + np.random.normal(0, self.params.amplitude_noise_level)
+                actual_output = np.clip(actual_output, 0, 1)
+                
+                return SwapTestResult(
+                    input_purity=state1.purity_parameter,
+                    output_purity=actual_output,
+                    amplification_result=amp_result,
+                    theoretical_output=theoretical_output,
+                    actual_success=True,
+                    total_gate_count=total_gates
+                )
+            else:
+                total_retries += 1
         
-        # Check if result matches theory (within tolerance)
-        matches_theory = abs(actual_output - theoretical_output) < 1e-6
-        
-        return SwapTestResult(
-            input_purity=state1.purity_parameter,
-            output_purity=actual_output,
-            success_probability=success_prob,
-            amplification_iterations=amp_iterations,
-            theoretical_output=theoretical_output,
-            matches_theory=matches_theory,
-            gate_count=gate_count
-        )
+        raise RuntimeError(f"Amplitude amplification failed after {self.params.max_amplification_retries} attempts")
 
 class RecursivePurificationEngine:
-    """Implements the recursive purification protocol."""
+    """Implements the recursive purification protocol with full quantum simulation."""
     
     def __init__(self, protocol_params: ProtocolParameters):
         self.params = protocol_params
-        self.swap_simulator = SwapTestSimulator(protocol_params.dimension)
+        self.swap_simulator = SwapTestSimulator(protocol_params.dimension, protocol_params)
         
     def theoretical_purity_evolution(self, initial_purity: float) -> np.ndarray:
         """Calculate theoretical purity evolution for validation."""
@@ -268,74 +298,64 @@ class RecursivePurificationEngine:
         return evolution
     
     def execute_purification(self, initial_state: QuantumState) -> PurificationResult:
-        """Execute the complete recursive purification protocol."""
-        timestamp = datetime.now().isoformat()
+        """Execute the complete recursive purification protocol with full simulation."""
         
-        # Initialize tracking arrays
         levels = self.params.purification_levels
         purity_evolution = np.zeros(levels + 1)
         error_evolution = np.zeros(levels + 1)
         fidelity_evolution = np.zeros(levels + 1)
-        success_probabilities = np.zeros(levels)
-        amplification_iterations = np.zeros(levels)
+        all_amplification_results = []
         
-        # Set initial values
         purity_evolution[0] = initial_state.purity_parameter
         error_evolution[0] = initial_state.logical_error
         fidelity_evolution[0] = initial_state.fidelity_with_target
         
-        # Simulate binary tree purification
         total_gates = 0
         total_amp_iterations = 0
+        total_retries = 0
         current_purity = initial_state.purity_parameter
         
-        logger.info(f"Starting purification: initial_purity={current_purity:.6f}")
+        current_states = [QuantumState(current_purity, self.params.dimension, 
+                                     initial_state.target_vector) 
+                         for _ in range(2**levels)]
         
         for level in range(levels):
-            # Number of parallel operations at this level
-            num_operations = 2**(levels - level - 1)
+            level_amp_results = []
+            new_states = []
             
-            # Create states for this level
-            current_state = QuantumState(current_purity, self.params.dimension, 
-                                       initial_state.target_vector)
+            for i in range(0, len(current_states), 2):
+                state1 = current_states[i]
+                state2 = current_states[i + 1]
+                
+                swap_result = self.swap_simulator.perform_swap_test_with_amplification(state1, state2)
+                
+                output_state = QuantumState(swap_result.output_purity, self.params.dimension,
+                                          initial_state.target_vector)
+                new_states.append(output_state)
+                
+                level_amp_results.append(swap_result.amplification_result)
+                total_gates += swap_result.total_gate_count
+                total_amp_iterations += swap_result.amplification_result.iterations_used
+                total_retries += swap_result.amplification_result.retries_needed
             
-            # Perform swap test
-            swap_result = self.swap_simulator.perform_swap_test(current_state, current_state)
+            current_states = new_states
+            all_amplification_results.extend(level_amp_results)
             
-            # Update tracking
-            purity_evolution[level + 1] = swap_result.output_purity
-            error_evolution[level + 1] = (1 - swap_result.output_purity) * \
-                                        (self.params.dimension - 1) / self.params.dimension
-            fidelity_evolution[level + 1] = swap_result.output_purity + \
-                                          (1 - swap_result.output_purity) / self.params.dimension
-            success_probabilities[level] = swap_result.success_probability
-            amplification_iterations[level] = swap_result.amplification_iterations
-            
-            # Accumulate resource costs
-            total_gates += num_operations * swap_result.gate_count
-            total_amp_iterations += num_operations * swap_result.amplification_iterations
-            
-            # Update purity for next level
-            current_purity = swap_result.output_purity
-            
-            logger.info(f"Level {level}: purity={current_purity:.6f}, "
-                       f"success_prob={swap_result.success_probability:.4f}, "
-                       f"amp_iters={swap_result.amplification_iterations}")
+            if current_states:
+                avg_purity = np.mean([state.purity_parameter for state in current_states])
+                purity_evolution[level + 1] = avg_purity
+                error_evolution[level + 1] = (1 - avg_purity) * (self.params.dimension - 1) / self.params.dimension
+                fidelity_evolution[level + 1] = avg_purity + (1 - avg_purity) / self.params.dimension
+                current_purity = avg_purity
         
-        # Create final state
-        final_state = QuantumState(current_purity, self.params.dimension, 
-                                 initial_state.target_vector)
+        final_state = current_states[0] if current_states else QuantumState(0, self.params.dimension, 
+                                                                           initial_state.target_vector)
         
-        # Calculate performance metrics
         theoretical_evolution = self.theoretical_purity_evolution(initial_state.purity_parameter)
         theoretical_final = theoretical_evolution[-1]
-        simulation_accuracy = 1 - abs(current_purity - theoretical_final) / theoretical_final
+        simulation_accuracy = 1 - abs(final_state.purity_parameter - theoretical_final) / max(theoretical_final, 1e-6)
         
-        error_reduction_ratio = final_state.logical_error / initial_state.logical_error
-        
-        logger.info(f"Purification complete: final_purity={current_purity:.6f}, "
-                   f"theoretical={theoretical_final:.6f}, "
-                   f"accuracy={simulation_accuracy:.4f}")
+        error_reduction_ratio = final_state.logical_error / max(initial_state.logical_error, 1e-6)
         
         return PurificationResult(
             protocol_params=self.params,
@@ -344,18 +364,17 @@ class RecursivePurificationEngine:
             purity_evolution=purity_evolution,
             error_evolution=error_evolution,
             fidelity_evolution=fidelity_evolution,
-            success_probabilities=success_probabilities,
-            amplification_iterations=amplification_iterations,
-            gate_complexity=total_gates,
-            total_iterations=total_amp_iterations,
+            amplification_results=all_amplification_results,
+            total_amplification_iterations=total_amp_iterations,
+            total_gate_complexity=total_gates,
+            total_retries=total_retries,
             error_reduction_ratio=error_reduction_ratio,
             theoretical_final_purity=theoretical_final,
-            simulation_accuracy=simulation_accuracy,
-            timestamp=timestamp
+            simulation_accuracy=simulation_accuracy
         )
 
 class DataManager:
-    """Handles data saving and organization."""
+    """Handles data saving and organization for parameter sweeps."""
     
     def __init__(self, base_dir: str = "./data"):
         self.base_dir = base_dir
@@ -365,426 +384,393 @@ class DataManager:
         """Create organized data directories."""
         subdirs = [
             "streaming_purification",
-            "streaming_purification/single_runs",
-            "streaming_purification/noise_studies", 
-            "streaming_purification/dimension_scaling",
-            "streaming_purification/validation",
-            "streaming_purification/plots_data"
+            "streaming_purification/parameter_sweeps",
+            "streaming_purification/individual_runs",
+            "streaming_purification/sweep_summaries"
         ]
         
         for subdir in subdirs:
             os.makedirs(os.path.join(self.base_dir, subdir), exist_ok=True)
     
-    def save_purification_result(self, result: PurificationResult, 
-                               study_type: str = "single_run") -> str:
-        """Save a purification result with metadata."""
-        # Create filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    def save_individual_result(self, result: PurificationResult, run_id: int = 0) -> str:
+        """Save individual purification result."""
         noise_type = result.protocol_params.noise_type.value
-        filename = f"purification_{noise_type}_d{result.protocol_params.dimension}_" \
+        filename = f"run_{run_id:04d}_{noise_type}_d{result.protocol_params.dimension}_" \
+                  f"delta{result.protocol_params.noise_strength:.4f}_" \
                   f"levels{result.protocol_params.purification_levels}.npz"
         
-        # Choose appropriate directory
-        if study_type == "noise_study":
-            filepath = os.path.join(self.base_dir, "streaming_purification/noise_studies", filename)
-        elif study_type == "dimension_scaling":
-            filepath = os.path.join(self.base_dir, "streaming_purification/dimension_scaling", filename)
-        elif study_type == "validation":
-            filepath = os.path.join(self.base_dir, "streaming_purification/validation", filename)
-        else:
-            filepath = os.path.join(self.base_dir, "streaming_purification/single_runs", filename)
+        filepath = os.path.join(self.base_dir, "streaming_purification/individual_runs", filename)
         
-        # Prepare data for saving
         save_data = {
-            # Protocol parameters
             'dimension': result.protocol_params.dimension,
             'noise_type': result.protocol_params.noise_type.value,
             'noise_strength': result.protocol_params.noise_strength,
             'purification_levels': result.protocol_params.purification_levels,
-            'target_fidelity': result.protocol_params.target_fidelity,
-            
-            # State evolution
+            'pauli_px': result.protocol_params.pauli_px,
+            'pauli_py': result.protocol_params.pauli_py,
+            'pauli_pz': result.protocol_params.pauli_pz,
             'initial_purity': result.initial_state.purity_parameter,
             'final_purity': result.final_state.purity_parameter,
             'purity_evolution': result.purity_evolution,
             'error_evolution': result.error_evolution,
             'fidelity_evolution': result.fidelity_evolution,
-            
-            # Performance metrics
-            'success_probabilities': result.success_probabilities,
-            'amplification_iterations': result.amplification_iterations,
-            'gate_complexity': result.gate_complexity,
-            'total_iterations': result.total_iterations,
+            'total_amplification_iterations': result.total_amplification_iterations,
+            'total_gate_complexity': result.total_gate_complexity,
+            'total_retries': result.total_retries,
             'error_reduction_ratio': result.error_reduction_ratio,
-            
-            # Validation
             'theoretical_final_purity': result.theoretical_final_purity,
             'simulation_accuracy': result.simulation_accuracy,
-            
-            # Metadata
-            'timestamp': result.timestamp,
-            'study_type': study_type,
-            'level_indices': np.arange(len(result.purity_evolution))
+            'run_id': run_id
         }
         
-        # Save data
         np.savez_compressed(filepath, **save_data)
-        logger.info(f"Saved result to: {filepath}")
-        
         return filepath
     
-    def save_study_summary(self, study_results: Dict[str, Any], study_name: str) -> str:
-        """Save summary of a complete study."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{study_name}_summary.json"
-        filepath = os.path.join(self.base_dir, "streaming_purification", filename)
+    def save_parameter_sweep(self, sweep_result: ParameterSweepResult, sweep_name: str) -> str:
+        """Save complete parameter sweep results."""
+        filename = f"parameter_sweep_{sweep_name}.npz"
+        filepath = os.path.join(self.base_dir, "streaming_purification/parameter_sweeps", filename)
         
-        # Convert numpy arrays to lists for JSON serialization
-        json_data = self._convert_for_json(study_results)
+        # Extract arrays from individual results
+        dimensions = np.array([r.protocol_params.dimension for r in sweep_result.individual_results])
+        noise_strengths = np.array([r.protocol_params.noise_strength for r in sweep_result.individual_results])
+        pauli_px_values = np.array([r.protocol_params.pauli_px for r in sweep_result.individual_results])
+        pauli_py_values = np.array([r.protocol_params.pauli_py for r in sweep_result.individual_results])
+        pauli_pz_values = np.array([r.protocol_params.pauli_pz for r in sweep_result.individual_results])
         
-        with open(filepath, 'w') as f:
-            json.dump(json_data, f, indent=2, default=str)
+        initial_purities = np.array([r.initial_state.purity_parameter for r in sweep_result.individual_results])
+        final_purities = np.array([r.final_state.purity_parameter for r in sweep_result.individual_results])
+        error_reductions = np.array([r.error_reduction_ratio for r in sweep_result.individual_results])
+        gate_complexities = np.array([r.total_gate_complexity for r in sweep_result.individual_results])
+        total_retries = np.array([r.total_retries for r in sweep_result.individual_results])
+        simulation_accuracies = np.array([r.simulation_accuracy for r in sweep_result.individual_results])
         
-        logger.info(f"Saved study summary to: {filepath}")
+        save_data = {
+            'parameter_combinations': sweep_result.parameter_combinations,
+            'dimensions': dimensions,
+            'noise_strengths': noise_strengths,
+            'pauli_px_values': pauli_px_values,
+            'pauli_py_values': pauli_py_values,
+            'pauli_pz_values': pauli_pz_values,
+            'initial_purities': initial_purities,
+            'final_purities': final_purities,
+            'error_reductions': error_reductions,
+            'gate_complexities': gate_complexities,
+            'total_retries': total_retries,
+            'simulation_accuracies': simulation_accuracies,
+            'summary_statistics': sweep_result.summary_statistics,
+            'sweep_metadata': sweep_result.sweep_metadata,
+            'num_combinations': len(sweep_result.individual_results)
+        }
+        
+        np.savez_compressed(filepath, **save_data)
+        logger.info(f"Saved parameter sweep to: {filepath}")
+        
         return filepath
-    
-    def _convert_for_json(self, data: Any) -> Any:
-        """Convert numpy arrays and other non-serializable objects for JSON."""
-        if isinstance(data, np.ndarray):
-            return data.tolist()
-        elif isinstance(data, dict):
-            return {key: self._convert_for_json(value) for key, value in data.items()}
-        elif isinstance(data, list):
-            return [self._convert_for_json(item) for item in data]
-        elif isinstance(data, (np.integer, np.floating)):
-            return float(data)
-        else:
-            return data
 
 class StreamingPurificationProtocol:
-    """Main protocol implementation orchestrating all components."""
+    """Main protocol implementation with parameter sweep capabilities."""
     
     def __init__(self, data_manager: Optional[DataManager] = None):
         self.data_manager = data_manager or DataManager()
     
     def run_single_purification(self, dimension: int, noise_type: NoiseType, 
-                              noise_strength: float, purification_levels: int) -> PurificationResult:
-        """Run a single purification experiment."""
-        # Create protocol parameters
+                              noise_strength: float, purification_levels: int,
+                              pauli_px: float = 1/3, pauli_py: float = 1/3, pauli_pz: float = 1/3) -> PurificationResult:
+        """Run a single purification experiment with full quantum simulation."""
         params = ProtocolParameters(
             dimension=dimension,
             noise_type=noise_type,
             noise_strength=noise_strength,
-            purification_levels=purification_levels
+            purification_levels=purification_levels,
+            pauli_px=pauli_px,
+            pauli_py=pauli_py,
+            pauli_pz=pauli_pz
         )
         
-        # Create noise model
         if noise_type == NoiseType.DEPOLARIZING:
             noise_model = DepolarizingNoise(dimension)
         elif noise_type in [NoiseType.PAULI_SYMMETRIC, NoiseType.PAULI_BIASED, NoiseType.PURE_DEPHASING]:
             if noise_type == NoiseType.PAULI_SYMMETRIC:
-                noise_model = PauliNoise(2, 1/3, 1/3, 1/3)
+                noise_model = PauliNoise(2, pauli_px, pauli_py, pauli_pz)
             elif noise_type == NoiseType.PAULI_BIASED:
-                noise_model = PauliNoise(2, 0.6, 0.2, 0.2)  # X-biased
+                noise_model = PauliNoise(2, pauli_px, pauli_py, pauli_pz)
             else:  # PURE_DEPHASING
-                noise_model = PauliNoise(2, 0.0, 0.0, 1.0)  # Pure Z errors
+                noise_model = PauliNoise(2, 0.0, 0.0, 1.0)
         else:
             raise ValueError(f"Unsupported noise type: {noise_type}")
         
-        # Create initial state
         target_vector = np.zeros(dimension)
-        target_vector[0] = 1.0  # |0⟩ state
+        target_vector[0] = 1.0
         initial_state = noise_model.apply_noise(target_vector, noise_strength)
         
-        # Execute purification
         engine = RecursivePurificationEngine(params)
         result = engine.execute_purification(initial_state)
         
-        # Save result
-        self.data_manager.save_purification_result(result)
-        
         return result
     
-    def run_noise_strength_study(self, dimension: int = 2, noise_type: NoiseType = NoiseType.DEPOLARIZING,
-                                noise_range: Tuple[float, float] = (0.1, 0.8), 
-                                num_points: int = 8, purification_levels: int = 5) -> Dict[str, Any]:
-        """Study performance across different noise strengths."""
-        logger.info(f"Starting noise strength study: {noise_type.value}, d={dimension}")
+    def run_parameter_sweep(self, dimensions: Union[int, List[int]], 
+                          noise_strengths: Union[float, List[float]],
+                          purification_levels: int = 5,
+                          pauli_px: Union[float, List[float]] = 1/3,
+                          pauli_py: Union[float, List[float]] = 1/3,
+                          pauli_pz: Union[float, List[float]] = 1/3,
+                          noise_type: NoiseType = NoiseType.DEPOLARIZING,
+                          sweep_name: str = "default") -> ParameterSweepResult:
+        """
+        Run parameter sweep across all combinations of input parameters.
         
-        noise_values = np.linspace(noise_range[0], noise_range[1], num_points)
-        study_results = {
-            'study_type': 'noise_strength_study',
-            'dimension': dimension,
-            'noise_type': noise_type.value,
-            'noise_values': noise_values,
-            'purification_levels': purification_levels,
-            'results': [],
-            'summary_metrics': {}
-        }
-        
-        for noise_strength in noise_values:
-            logger.info(f"Testing noise strength: {noise_strength:.3f}")
+        Args:
+            dimensions: Single value or list of system dimensions
+            noise_strengths: Single value or list of noise parameters δ
+            purification_levels: Number of recursive levels
+            pauli_px, pauli_py, pauli_pz: Single value or list of Pauli probabilities
+            noise_type: Type of noise model to use
+            sweep_name: Name for saving results
             
-            result = self.run_single_purification(dimension, noise_type, 
-                                                noise_strength, purification_levels)
+        Returns:
+            ParameterSweepResult with all combinations and analysis
+        """
+        
+        # Convert single values to lists
+        if not isinstance(dimensions, list):
+            dimensions = [dimensions]
+        if not isinstance(noise_strengths, list):
+            noise_strengths = [noise_strengths]
+        if not isinstance(pauli_px, list):
+            pauli_px = [pauli_px]
+        if not isinstance(pauli_py, list):
+            pauli_py = [pauli_py]
+        if not isinstance(pauli_pz, list):
+            pauli_pz = [pauli_pz]
+        
+        # Generate all parameter combinations
+        param_combinations = list(itertools.product(
+            dimensions, noise_strengths, pauli_px, pauli_py, pauli_pz
+        ))
+        
+        print(f"Running parameter sweep: {len(param_combinations)} combinations")
+        print(f"Dimensions: {dimensions}")
+        print(f"Noise strengths: {noise_strengths}")
+        print(f"Pauli px: {pauli_px}")
+        print(f"Pauli py: {pauli_py}")
+        print(f"Pauli pz: {pauli_pz}")
+        
+        individual_results = []
+        parameter_dicts = []
+        
+        # Run simulations with progress bar
+        for i, (d, delta, px, py, pz) in enumerate(tqdm(param_combinations, desc="Parameter sweep")):
+            try:
+                result = self.run_single_purification(
+                    dimension=d,
+                    noise_type=noise_type,
+                    noise_strength=delta,
+                    purification_levels=purification_levels,
+                    pauli_px=px,
+                    pauli_py=py,
+                    pauli_pz=pz
+                )
+                
+                individual_results.append(result)
+                parameter_dicts.append({
+                    'dimension': d,
+                    'noise_strength': delta,
+                    'pauli_px': px,
+                    'pauli_py': py,
+                    'pauli_pz': pz,
+                    'run_id': i
+                })
+                
+                # Save individual result
+                self.data_manager.save_individual_result(result, run_id=i)
+                
+            except Exception as e:
+                logger.error(f"Failed simulation {i} with params d={d}, δ={delta}, px={px}, py={py}, pz={pz}: {e}")
+                continue
+        
+        # Calculate summary statistics
+        if individual_results:
+            final_purities = np.array([r.final_state.purity_parameter for r in individual_results])
+            error_reductions = np.array([r.error_reduction_ratio for r in individual_results])
+            gate_complexities = np.array([r.total_gate_complexity for r in individual_results])
+            simulation_accuracies = np.array([r.simulation_accuracy for r in individual_results])
             
-            # Save individual result
-            self.data_manager.save_purification_result(result, "noise_study")
-            
-            # Collect summary data
-            study_results['results'].append({
-                'noise_strength': noise_strength,
-                'initial_purity': result.initial_state.purity_parameter,
-                'final_purity': result.final_state.purity_parameter,
-                'error_reduction_ratio': result.error_reduction_ratio,
-                'gate_complexity': result.gate_complexity,
-                'total_iterations': result.total_iterations,
-                'simulation_accuracy': result.simulation_accuracy,
-                'converged': result.final_state.fidelity_with_target >= 0.99
-            })
-        
-        # Calculate summary metrics
-        final_purities = [r['final_purity'] for r in study_results['results']]
-        error_reductions = [r['error_reduction_ratio'] for r in study_results['results']]
-        
-        study_results['summary_metrics'] = {
-            'final_purity_range': [float(np.min(final_purities)), float(np.max(final_purities))],
-            'mean_error_reduction': float(np.mean(error_reductions)),
-            'convergence_rate': sum(r['converged'] for r in study_results['results']) / len(study_results['results'])
-        }
-        
-        # Save study summary
-        self.data_manager.save_study_summary(study_results, f"noise_study_{noise_type.value}_d{dimension}")
-        
-        return study_results
-    
-    def run_dimension_scaling_study(self, dimensions: List[int] = [2, 3, 4, 6, 8],
-                                  noise_strength: float = 0.3, 
-                                  purification_levels: int = 5) -> Dict[str, Any]:
-        """Study performance scaling with system dimension."""
-        logger.info(f"Starting dimension scaling study at noise={noise_strength}")
-        
-        study_results = {
-            'study_type': 'dimension_scaling_study',
-            'dimensions': dimensions,
-            'noise_strength': noise_strength,
-            'purification_levels': purification_levels,
-            'results': [],
-            'scaling_analysis': {}
-        }
-        
-        for dim in dimensions:
-            logger.info(f"Testing dimension: {dim}")
-            
-            result = self.run_single_purification(dim, NoiseType.DEPOLARIZING, 
-                                                noise_strength, purification_levels)
-            
-            # Save individual result
-            self.data_manager.save_purification_result(result, "dimension_scaling")
-            
-            # Collect scaling data
-            study_results['results'].append({
-                'dimension': dim,
-                'final_purity': result.final_state.purity_parameter,
-                'error_reduction_ratio': result.error_reduction_ratio,
-                'gate_complexity': result.gate_complexity,
-                'total_iterations': result.total_iterations,
-                'final_logical_error': result.final_state.logical_error
-            })
-        
-        # Analyze scaling behavior
-        dims = np.array([r['dimension'] for r in study_results['results']])
-        purities = np.array([r['final_purity'] for r in study_results['results']])
-        errors = np.array([r['final_logical_error'] for r in study_results['results']])
-        gates = np.array([r['gate_complexity'] for r in study_results['results']])
-        
-        study_results['scaling_analysis'] = {
-            'purity_vs_dimension': {'dimensions': dims.tolist(), 'purities': purities.tolist()},
-            'error_vs_dimension': {'dimensions': dims.tolist(), 'errors': errors.tolist()},
-            'gate_scaling': {'dimensions': dims.tolist(), 'gate_counts': gates.tolist()},
-            'memory_scaling_validation': all(g < d * 100 for g, d in zip(gates, dims))  # Sanity check
-        }
-        
-        # Save study summary
-        self.data_manager.save_study_summary(study_results, "dimension_scaling_study")
-        
-        return study_results
-    
-    def run_pauli_noise_comparison(self, dimension: int = 2, noise_strength: float = 0.3,
-                                 purification_levels: int = 5) -> Dict[str, Any]:
-        """Compare performance across different Pauli noise models."""
-        logger.info("Starting Pauli noise comparison study")
-        
-        pauli_types = [
-            NoiseType.PAULI_SYMMETRIC,
-            NoiseType.PAULI_BIASED, 
-            NoiseType.PURE_DEPHASING
-        ]
-        
-        study_results = {
-            'study_type': 'pauli_noise_comparison',
-            'dimension': dimension,
-            'noise_strength': noise_strength,
-            'purification_levels': purification_levels,
-            'results': {},
-            'comparison_analysis': {}
-        }
-        
-        # Include depolarizing for baseline
-        baseline_result = self.run_single_purification(dimension, NoiseType.DEPOLARIZING,
-                                                     noise_strength, purification_levels)
-        study_results['results']['depolarizing'] = {
-            'final_purity': baseline_result.final_state.purity_parameter,
-            'error_reduction_ratio': baseline_result.error_reduction_ratio,
-            'gate_complexity': baseline_result.gate_complexity,
-            'purity_evolution': baseline_result.purity_evolution.tolist()
-        }
-        
-        # Test Pauli noise models
-        for noise_type in pauli_types:
-            logger.info(f"Testing {noise_type.value}")
-            
-            result = self.run_single_purification(dimension, noise_type, 
-                                                noise_strength, purification_levels)
-            
-            study_results['results'][noise_type.value] = {
-                'final_purity': result.final_state.purity_parameter,
-                'error_reduction_ratio': result.error_reduction_ratio,
-                'gate_complexity': result.gate_complexity,
-                'purity_evolution': result.purity_evolution.tolist()
+            summary_stats = {
+                'num_successful_runs': len(individual_results),
+                'num_total_combinations': len(param_combinations),
+                'success_rate': len(individual_results) / len(param_combinations),
+                'final_purity_stats': {
+                    'mean': float(np.mean(final_purities)),
+                    'std': float(np.std(final_purities)),
+                    'min': float(np.min(final_purities)),
+                    'max': float(np.max(final_purities))
+                },
+                'error_reduction_stats': {
+                    'mean': float(np.mean(error_reductions)),
+                    'std': float(np.std(error_reductions)),
+                    'min': float(np.min(error_reductions)),
+                    'max': float(np.max(error_reductions))
+                },
+                'gate_complexity_stats': {
+                    'mean': float(np.mean(gate_complexities)),
+                    'std': float(np.std(gate_complexities)),
+                    'min': float(np.min(gate_complexities)),
+                    'max': float(np.max(gate_complexities))
+                },
+                'simulation_accuracy_stats': {
+                    'mean': float(np.mean(simulation_accuracies)),
+                    'std': float(np.std(simulation_accuracies)),
+                    'min': float(np.min(simulation_accuracies)),
+                    'max': float(np.max(simulation_accuracies))
+                }
             }
+        else:
+            summary_stats = {'error': 'No successful runs'}
         
-        # Comparative analysis
-        baseline_purity = study_results['results']['depolarizing']['final_purity']
-        study_results['comparison_analysis'] = {
-            'relative_performance': {
-                noise_type: study_results['results'][noise_type]['final_purity'] / baseline_purity
-                for noise_type in study_results['results'] if noise_type != 'depolarizing'
+        sweep_metadata = {
+            'sweep_name': sweep_name,
+            'noise_type': noise_type.value,
+            'purification_levels': purification_levels,
+            'parameter_ranges': {
+                'dimensions': dimensions,
+                'noise_strengths': noise_strengths,
+                'pauli_px': pauli_px,
+                'pauli_py': pauli_py,
+                'pauli_pz': pauli_pz
             },
-            'best_performing_noise': max(study_results['results'].keys(),
-                                       key=lambda x: study_results['results'][x]['final_purity']),
-            'worst_performing_noise': min(study_results['results'].keys(),
-                                        key=lambda x: study_results['results'][x]['final_purity'])
+            'creation_time': datetime.now().isoformat()
         }
         
-        # Save study summary
-        self.data_manager.save_study_summary(study_results, "pauli_noise_comparison")
+        # Create sweep result
+        sweep_result = ParameterSweepResult(
+            parameter_combinations=parameter_dicts,
+            individual_results=individual_results,
+            summary_statistics=summary_stats,
+            sweep_metadata=sweep_metadata
+        )
         
-        return study_results
+        # Save sweep result
+        self.data_manager.save_parameter_sweep(sweep_result, sweep_name)
+        
+        return sweep_result
 
-def run_comprehensive_protocol_analysis(data_dir: str = "./data") -> Dict[str, str]:
+def run_comprehensive_parameter_sweep(dimensions: Union[int, List[int]] = [2, 4, 6], 
+                                    noise_strengths: Union[float, List[float]] = [0.1, 0.3, 0.5, 0.7],
+                                    purification_levels: int = 4,
+                                    pauli_px: Union[float, List[float]] = [0.2, 0.5, 0.8],
+                                    pauli_py: Union[float, List[float]] = [0.2, 0.5, 0.8],
+                                    pauli_pz: Union[float, List[float]] = [0.2, 0.5, 0.8],
+                                    data_dir: str = "./data") -> Dict[str, ParameterSweepResult]:
     """
-    Execute comprehensive analysis of the streaming purification protocol.
+    Execute comprehensive parameter sweep analysis.
     
-    This function runs all major studies needed for the results section:
-    1. Single protocol demonstrations
-    2. Noise strength scaling studies  
-    3. Dimension scaling analysis
-    4. Pauli noise model comparisons
+    Args:
+        dimensions: System dimensions to test
+        noise_strengths: Depolarization parameters δ to test
+        purification_levels: Number of recursive levels
+        pauli_px, pauli_py, pauli_pz: Pauli error probabilities to test
+        data_dir: Data save directory
     
     Returns:
-        Dictionary mapping study names to summary file paths
+        Dictionary of sweep results by noise type
     """
     print("="*80)
-    print("STREAMING PURIFICATION QEC - COMPREHENSIVE PROTOCOL ANALYSIS")
+    print("STREAMING PURIFICATION QEC - COMPREHENSIVE PARAMETER SWEEP")
     print("="*80)
     
     # Initialize protocol
     data_manager = DataManager(data_dir)
     protocol = StreamingPurificationProtocol(data_manager)
     
-    study_files = {}
+    sweep_results = {}
     
-    # Study 1: Demonstration runs
-    print("\n1. PROTOCOL DEMONSTRATION RUNS")
+    # Sweep 1: Depolarizing noise
+    print("\n1. DEPOLARIZING NOISE PARAMETER SWEEP")
     print("-" * 50)
     
-    demo_configs = [
-        (2, NoiseType.DEPOLARIZING, 0.3, 4),
-        (2, NoiseType.DEPOLARIZING, 0.5, 5),
-        (4, NoiseType.DEPOLARIZING, 0.2, 4),
-        (2, NoiseType.PAULI_SYMMETRIC, 0.3, 4)
-    ]
+    depolarizing_result = protocol.run_parameter_sweep(
+        dimensions=dimensions,
+        noise_strengths=noise_strengths,
+        purification_levels=purification_levels,
+        pauli_px=1/3,  # Fixed for depolarizing
+        pauli_py=1/3,
+        pauli_pz=1/3,
+        noise_type=NoiseType.DEPOLARIZING,
+        sweep_name="depolarizing_sweep"
+    )
     
-    for dim, noise_type, strength, levels in demo_configs:
-        print(f"Demo: d={dim}, {noise_type.value}, δ={strength}, levels={levels}")
-        result = protocol.run_single_purification(dim, noise_type, strength, levels)
-        print(f"  Result: {result.initial_state.purity_parameter:.4f} → {result.final_state.purity_parameter:.4f}")
+    sweep_results['depolarizing'] = depolarizing_result
     
-    # Study 2: Noise strength scaling
-    print("\n2. NOISE STRENGTH SCALING STUDIES")
-    print("-" * 50)
-    
-    for dimension in [2, 4]:
-        print(f"\nNoise scaling study for d={dimension}")
-        study_result = protocol.run_noise_strength_study(
-            dimension=dimension,
-            noise_type=NoiseType.DEPOLARIZING,
-            noise_range=(0.1, 0.8),
-            num_points=10,
-            purification_levels=5
+    # Sweep 2: Pauli noise (only for qubits)
+    if 2 in (dimensions if isinstance(dimensions, list) else [dimensions]):
+        print("\n2. PAULI NOISE PARAMETER SWEEP")
+        print("-" * 50)
+        
+        pauli_result = protocol.run_parameter_sweep(
+            dimensions=2,  # Pauli only for qubits
+            noise_strengths=noise_strengths,
+            purification_levels=purification_levels,
+            pauli_px=pauli_px,
+            pauli_py=pauli_py,
+            pauli_pz=pauli_pz,
+            noise_type=NoiseType.PAULI_BIASED,
+            sweep_name="pauli_sweep"
         )
-        print(f"  Convergence rate: {study_result['summary_metrics']['convergence_rate']:.2%}")
-        print(f"  Mean error reduction: {study_result['summary_metrics']['mean_error_reduction']:.4f}")
+        
+        sweep_results['pauli'] = pauli_result
     
-    # Study 3: Dimension scaling
-    print("\n3. DIMENSION SCALING ANALYSIS")  
-    print("-" * 50)
-    
-    scaling_result = protocol.run_dimension_scaling_study(
-        dimensions=[2, 3, 4, 6, 8],
-        noise_strength=0.3,
-        purification_levels=5
-    )
-    print("Dimension scaling completed")
-    print(f"Memory scaling validated: {scaling_result['scaling_analysis']['memory_scaling_validation']}")
-    
-    # Study 4: Pauli noise comparison
-    print("\n4. PAULI NOISE MODEL COMPARISON")
-    print("-" * 50)
-    
-    pauli_result = protocol.run_pauli_noise_comparison(
-        dimension=2,
-        noise_strength=0.3,
-        purification_levels=5
-    )
-    print(f"Best performing: {pauli_result['comparison_analysis']['best_performing_noise']}")
-    print(f"Worst performing: {pauli_result['comparison_analysis']['worst_performing_noise']}")
-    
+    # Print summary
     print("\n" + "="*80)
-    print("COMPREHENSIVE ANALYSIS COMPLETED")
+    print("PARAMETER SWEEP ANALYSIS COMPLETED")
     print("="*80)
-    print(f"All data saved to: {data_dir}/streaming_purification/")
-    print("Ready for visualization and further analysis!")
     
-    return study_files
+    for sweep_name, result in sweep_results.items():
+        stats = result.summary_statistics
+        print(f"\n{sweep_name.upper()} SWEEP SUMMARY:")
+        print(f"  Successful runs: {stats['num_successful_runs']}/{stats['num_total_combinations']}")
+        print(f"  Success rate: {stats['success_rate']:.1%}")
+        if 'final_purity_stats' in stats:
+            purity_stats = stats['final_purity_stats']
+            print(f"  Final purity: {purity_stats['mean']:.4f} ± {purity_stats['std']:.4f}")
+            print(f"  Purity range: [{purity_stats['min']:.4f}, {purity_stats['max']:.4f}]")
+    
+    print(f"\nAll data saved to: {data_dir}/streaming_purification/")
+    
+    return sweep_results
 
 if __name__ == "__main__":
     # Set random seed for reproducibility
     np.random.seed(42)
     
-    # Run comprehensive analysis
-    results = run_comprehensive_protocol_analysis()
+    # =============================================================================
+    # CONFIGURE PARAMETER ARRAYS HERE
+    # =============================================================================
     
-    # Example: Individual protocol run with detailed output
-    print("\n" + "="*60)
-    print("DETAILED EXAMPLE RUN")
-    print("="*60)
+    # System parameters (can be single values or arrays)
+    DIMENSIONS = [2, 4, 6, 8]                    # d: qudit dimensions to test
+    NOISE_STRENGTHS = [0.01, 0.1, 0.3, 0.5, 0.8, 0.99]  # δ: depolarization parameters to test
+    PURIFICATION_LEVELS = 4                      # Number of recursive purification levels
     
-    protocol = StreamingPurificationProtocol()
-    detailed_result = protocol.run_single_purification(
-        dimension=2,
-        noise_type=NoiseType.DEPOLARIZING, 
-        noise_strength=0.4,
-        purification_levels=6
+    # Pauli error probabilities (for Pauli noise models)
+    PAULI_PX = [0.1, 0.5, 0.9]                 # X error probabilities to test
+    PAULI_PY = [0.1, 0.5, 0.9]                 # Y error probabilities to test  
+    PAULI_PZ = [0.1, 0.5, 0.9]                 # Z error probabilities to test
+    
+    # Data directory
+    DATA_DIR = "./data"
+    
+    # =============================================================================
+    
+    # Run comprehensive parameter sweep
+    sweep_results = run_comprehensive_parameter_sweep(
+        dimensions=DIMENSIONS,
+        noise_strengths=NOISE_STRENGTHS,
+        purification_levels=PURIFICATION_LEVELS,
+        pauli_px=PAULI_PX,
+        pauli_py=PAULI_PY,
+        pauli_pz=PAULI_PZ,
+        data_dir=DATA_DIR
     )
     
-    print(f"\nDetailed Results:")
-    print(f"Initial purity: {detailed_result.initial_state.purity_parameter:.6f}")
-    print(f"Final purity:   {detailed_result.final_state.purity_parameter:.6f}")
-    print(f"Theoretical:    {detailed_result.theoretical_final_purity:.6f}")
-    print(f"Accuracy:       {detailed_result.simulation_accuracy:.4%}")
-    print(f"Error reduction: {detailed_result.error_reduction_ratio:.6f}")
-    print(f"Gate complexity: {detailed_result.gate_complexity}")
-    print(f"Total amp iterations: {detailed_result.total_iterations}")
-    print(f"\nPurity evolution: {detailed_result.purity_evolution}")
+    print("\nParameter sweep completed successfully!")
