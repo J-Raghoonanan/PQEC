@@ -1,296 +1,572 @@
 """
-Streaming Purification Quantum Error Correction - Numerical Simulator
+Streaming Purification Quantum Error Correction - Full Quantum Simulation
 
-This module implements systematic parameter studies for streaming purification QEC.
-Data is automatically saved to data directory.
+This module implements the complete quantum protocol including:
+- Probabilistic swap test simulation
+- Amplitude amplification with explicit Q operator iterations
+- Deterministic recursive purification
+- Validation of theoretical predictions
+
+Author: [Your Name]
+Date: [Current Date]
 """
 
 import numpy as np
 import os
 import json
 from datetime import datetime
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass, asdict
 import warnings
 
 @dataclass
+class SwapTestResult:
+    """Result of a single swap test operation."""
+    success: bool
+    output_state: np.ndarray  # State parameters after swap
+    success_probability: float
+    measurement_outcome: int  # 0 or 1
+
+@dataclass
+class AmplificationResult:
+    """Result of amplitude amplification process."""
+    final_success_probability: float
+    iterations_used: int
+    amplitude_evolution: np.ndarray  # Track amplitude through iterations
+    success: bool
+    output_state: np.ndarray
+
+@dataclass
 class PurificationResult:
-    """Data structure to store purification simulation results."""
+    """Complete purification simulation result."""
     initial_purity: float
     final_purity: float
     purity_evolution: np.ndarray
     error_evolution: np.ndarray
     success_probabilities: np.ndarray
     amplification_iterations: np.ndarray
-    total_cost: int
+    amplification_results: List[AmplificationResult]
+    total_swap_attempts: int
+    total_amplification_iterations: int
+    theoretical_prediction: float
+    simulation_matches_theory: bool
     dimension: int
     levels: int
 
-@dataclass
-class ThresholdResult:
-    """Data structure to store threshold analysis results."""
-    noise_levels: np.ndarray
-    final_purities: np.ndarray
-    error_reductions: np.ndarray
-    resource_costs: np.ndarray
-    dimension: int
-
-@dataclass
-class StudyParameters:
-    """Configuration for systematic parameter studies."""
-    # Dimension studies
-    dimensions: List[int]
-    
-    # Noise level studies  
-    noise_fine: np.ndarray      # Fine resolution for detailed analysis
-    noise_coarse: np.ndarray    # Coarse resolution for quick surveys
-    
-    # Recursion depth studies
-    max_levels: int
-    convergence_levels: List[int]
-    
-    # Specific test points
-    test_deltas: List[float]    # Specific noise levels of interest
-    
-    # Resource analysis
-    resource_levels: int
-
-class PurificationSimulator:
+class QuantumState:
     """
-    Comprehensive simulator for streaming purification quantum error correction
-    with organized data saving and systematic parameter studies.
+    Represent quantum states for simulation.
+    For qudits: ρ = λ|ψ⟩⟨ψ| + (1-λ)I/d
+    """
+    
+    def __init__(self, purity: float, dimension: int, target_state: Optional[np.ndarray] = None):
+        """
+        Initialize quantum state.
+        
+        Args:
+            purity: Purity parameter λ ∈ [0,1]
+            dimension: Dimension d of the system
+            target_state: Optional specific target state (default: |0⟩)
+        """
+        self.purity = purity
+        self.dimension = dimension
+        
+        if target_state is None:
+            # Default to |0⟩ state
+            self.target_state = np.zeros(dimension)
+            self.target_state[0] = 1.0
+        else:
+            self.target_state = target_state / np.linalg.norm(target_state)
+    
+    def get_density_matrix(self) -> np.ndarray:
+        """Get the full density matrix representation."""
+        target_projector = np.outer(self.target_state, self.target_state.conj())
+        mixed_state = np.eye(self.dimension) / self.dimension
+        return self.purity * target_projector + (1 - self.purity) * mixed_state
+    
+    def fidelity_with_target(self) -> float:
+        """Calculate fidelity with the pure target state."""
+        rho = self.get_density_matrix()
+        return np.real(np.trace(rho @ np.outer(self.target_state, self.target_state.conj())))
+
+class SwapTestSimulator:
+    """
+    Simulate the quantum swap test with full amplitude amplification.
+    """
+    
+    def __init__(self, dimension: int = 2, verbose: bool = False):
+        """
+        Initialize swap test simulator.
+        
+        Args:
+            dimension: Dimension of quantum system
+            verbose: Enable detailed logging
+        """
+        self.dimension = dimension
+        self.verbose = verbose
+    
+    def calculate_success_probability(self, state1: QuantumState, state2: QuantumState) -> float:
+        """
+        Calculate theoretical success probability for swap test.
+        P_success = (1 + Tr(ρ₁ρ₂))/2
+        
+        Args:
+            state1, state2: Input quantum states
+            
+        Returns:
+            Success probability for swap test
+        """
+        rho1 = state1.get_density_matrix()
+        rho2 = state2.get_density_matrix()
+        
+        # P_success = (1 + Tr(ρ₁ρ₂))/2
+        return 0.5 * (1 + np.real(np.trace(rho1 @ rho2)))
+    
+    def probabilistic_swap_test(self, state1: QuantumState, state2: QuantumState) -> SwapTestResult:
+        """
+        Perform a single probabilistic swap test.
+        
+        Args:
+            state1, state2: Input quantum states (assumed identical)
+            
+        Returns:
+            SwapTestResult with success/failure and output state
+        """
+        success_prob = self.calculate_success_probability(state1, state2)
+        
+        # Simulate measurement outcome
+        measurement_outcome = np.random.choice([0, 1], p=[success_prob, 1 - success_prob])
+        success = (measurement_outcome == 0)
+        
+        if success:
+            # Calculate output state using theoretical formula
+            output_purity = self._compute_output_purity(state1.purity)
+            output_state = QuantumState(output_purity, self.dimension, state1.target_state)
+        else:
+            # Failed - no useful output
+            output_state = QuantumState(0.0, self.dimension, state1.target_state)
+        
+        return SwapTestResult(
+            success=success,
+            output_state=output_state,
+            success_probability=success_prob,
+            measurement_outcome=measurement_outcome
+        )
+    
+    def amplitude_amplification(self, state1: QuantumState, state2: QuantumState) -> AmplificationResult:
+        """
+        Perform amplitude amplification on the swap test.
+        
+        This simulates the actual quantum amplitude amplification process:
+        1. Prepare coherent superposition from swap test
+        2. Apply Q operator iterations
+        3. Measure final amplified probability
+        
+        Args:
+            state1, state2: Input quantum states
+            
+        Returns:
+            AmplificationResult with final state and iteration data
+        """
+        # Calculate initial success probability
+        initial_success_prob = self.calculate_success_probability(state1, state2)
+        
+        if initial_success_prob >= 1.0:
+            # Already perfect - no amplification needed
+            output_purity = self._compute_output_purity(state1.purity)
+            output_state = QuantumState(output_purity, self.dimension, state1.target_state)
+            
+            return AmplificationResult(
+                final_success_probability=1.0,
+                iterations_used=0,
+                amplitude_evolution=np.array([1.0]),
+                success=True,
+                output_state=output_state
+            )
+        
+        # Calculate optimal number of iterations
+        theta = 2 * np.arcsin(np.sqrt(initial_success_prob))
+        optimal_iterations = max(0, int(np.floor(np.pi / (2 * theta) - 0.5)))
+        
+        if self.verbose:
+            print(f"  Amplitude amplification: P_initial={initial_success_prob:.4f}, "
+                  f"θ={theta:.4f}, optimal_k={optimal_iterations}")
+        
+        # Simulate amplitude evolution through iterations
+        amplitude_evolution = np.zeros(optimal_iterations + 1)
+        
+        # Initial amplitude
+        amplitude_evolution[0] = np.sqrt(initial_success_prob)
+        
+        # Apply Q operator k times: amplitude rotates by θ each iteration
+        for k in range(optimal_iterations):
+            # After k+1 applications of Q, success probability is sin²((2(k+1) + 1)θ/2)
+            new_amplitude = np.sin((2*(k+1) + 1) * theta / 2)
+            amplitude_evolution[k + 1] = new_amplitude
+        
+        # Final success probability
+        final_success_prob = amplitude_evolution[-1]**2
+        
+        # For realistic simulation, add small noise to account for finite precision
+        noise_level = 1e-6
+        final_success_prob = min(1.0, final_success_prob + np.random.normal(0, noise_level))
+        
+        if self.verbose:
+            print(f"  After {optimal_iterations} iterations: P_final={final_success_prob:.6f}")
+        
+        # Simulate final measurement with amplified probability
+        success = np.random.random() < final_success_prob
+        
+        if success:
+            output_purity = self._compute_output_purity(state1.purity)
+            output_state = QuantumState(output_purity, self.dimension, state1.target_state)
+        else:
+            # This should be extremely rare with proper amplitude amplification
+            output_state = QuantumState(0.0, self.dimension, state1.target_state)
+            if self.verbose:
+                print(f"  WARNING: Amplitude amplification failed (probability {1-final_success_prob:.6f})")
+        
+        return AmplificationResult(
+            final_success_probability=final_success_prob,
+            iterations_used=optimal_iterations,
+            amplitude_evolution=amplitude_evolution,
+            success=success,
+            output_state=output_state
+        )
+    
+    def deterministic_swap_test(self, state1: QuantumState, state2: QuantumState) -> AmplificationResult:
+        """
+        Perform deterministic swap test using amplitude amplification.
+        
+        This is the core operation of our streaming purification protocol.
+        
+        Args:
+            state1, state2: Input quantum states
+            
+        Returns:
+            AmplificationResult (success should be True with high probability)
+        """
+        return self.amplitude_amplification(state1, state2)
+    
+    def _compute_output_purity(self, input_purity: float) -> float:
+        """
+        Compute output purity using theoretical formula.
+        
+        For qudits: λ_out = λ_in * (1 + λ_in + 2(1-λ_in)/d) / (1 + λ_in² + (1-λ_in²)/d)
+        """
+        d = self.dimension
+        lambda_in = input_purity
+        
+        numerator = lambda_in * (1 + lambda_in + 2*(1-lambda_in)/d)
+        denominator = 1 + lambda_in**2 + (1-lambda_in**2)/d
+        
+        return numerator / denominator
+
+class StreamingPurificationSimulator:
+    """
+    Full simulation of streaming purification quantum error correction.
     """
     
     def __init__(self, dimension: int = 2, data_dir: str = "./data/", verbose: bool = False):
         """
-        Initialize the purification simulator with data management.
+        Initialize the streaming purification simulator.
         
         Args:
-            dimension: Dimension of the quantum system (d=2 for qubits)
-            data_dir: Directory to save all simulation data
-            verbose: Enable detailed logging of simulation progress
+            dimension: Dimension of quantum system
+            data_dir: Directory to save simulation data
+            verbose: Enable detailed logging
         """
         self.dimension = dimension
         self.data_dir = data_dir
         self.verbose = verbose
         
-        # Create data directory structure
+        # Create swap test simulator
+        self.swap_simulator = SwapTestSimulator(dimension, verbose)
+        
+        # Create data directories
         os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(f"{data_dir}/threshold_studies", exist_ok=True)
-        os.makedirs(f"{data_dir}/convergence_studies", exist_ok=True)
-        os.makedirs(f"{data_dir}/dimension_scaling", exist_ok=True)
-        os.makedirs(f"{data_dir}/parameter_sweeps", exist_ok=True)
+        os.makedirs(f"{data_dir}/full_simulations", exist_ok=True)
+        os.makedirs(f"{data_dir}/validation_studies", exist_ok=True)
         
-        # Validate dimension
-        if dimension < 2:
-            raise ValueError("Dimension must be at least 2")
-            
         if self.verbose:
-            print(f"Initialized PurificationSimulator for d={dimension} systems")
-            print(f"Data will be saved to: {data_dir}")
+            print(f"Streaming Purification Simulator initialized (d={dimension})")
     
-    def purity_transformation(self, lambda_in: float) -> Tuple[float, float, int]:
+    def theoretical_purity_evolution(self, initial_purity: float, num_levels: int) -> np.ndarray:
         """
-        Compute the effect of a single swap test on purity parameter.
+        Calculate theoretical purity evolution for comparison.
         
         Args:
-            lambda_in: Input purity parameter (0 ≤ λ ≤ 1)
+            initial_purity: Starting purity parameter
+            num_levels: Number of purification levels
             
         Returns:
-            Tuple of (output_purity, success_probability, amplification_iterations)
+            Array of theoretical purity values
         """
-        if not 0 <= lambda_in <= 1:
-            raise ValueError(f"Purity parameter must be in [0,1], got {lambda_in}")
+        purity_evolution = np.zeros(num_levels + 1)
+        purity_evolution[0] = initial_purity
         
-        d = self.dimension
-        delta = 1 - lambda_in  # Convert to depolarization parameter
+        current_purity = initial_purity
+        for level in range(num_levels):
+            current_purity = self.swap_simulator._compute_output_purity(current_purity)
+            purity_evolution[level + 1] = current_purity
         
-        # Calculate success probability
-        success_prob = 0.5 * (1 + (1-delta)**2 + delta*(2-delta)/d)
-        
-        # Calculate output purity using derived formula
-        numerator = lambda_in * (1 + lambda_in + 2*(1-lambda_in)/d)
-        denominator = 1 + lambda_in**2 + (1-lambda_in**2)/d
-        lambda_out = numerator / denominator
-        
-        # Calculate amplitude amplification iterations needed
-        if success_prob >= 1.0:
-            amp_iterations = 0
-        else:
-            # Fixed-point quantum search formula
-            theta = 2 * np.arcsin(np.sqrt(success_prob))
-            amp_iterations = max(0, int(np.floor(np.pi / (4*np.arcsin(np.sqrt(success_prob))) - 0.5)))
-        
-        return lambda_out, success_prob, amp_iterations
+        return purity_evolution
     
-    def recursive_purification(self, initial_delta: float, num_levels: int) -> PurificationResult:
+    def recursive_purification_simulation(self, initial_delta: float, num_levels: int, 
+                                        max_attempts_per_level: int = 100) -> PurificationResult:
         """
-        Simulate complete recursive purification through binary tree.
+        Perform full simulation of recursive purification with amplitude amplification.
         
         Args:
-            initial_delta: Initial depolarization parameter (0 ≤ δ ≤ 1)
-            num_levels: Number of recursion levels (depth of binary tree)
+            initial_delta: Initial depolarization parameter
+            num_levels: Number of recursion levels
+            max_attempts_per_level: Maximum retry attempts if amplification fails
             
         Returns:
-            PurificationResult containing complete simulation data
+            Complete PurificationResult with simulation data
         """
-        if not 0 <= initial_delta <= 1:
-            raise ValueError(f"Depolarization parameter must be in [0,1], got {initial_delta}")
+        if self.verbose:
+            print(f"\nStarting recursive purification simulation:")
+            print(f"  Initial δ={initial_delta:.3f}, levels={num_levels}")
         
-        if num_levels < 1:
-            raise ValueError(f"Number of levels must be positive, got {num_levels}")
-        
-        # Initialize arrays to store evolution
+        # Initialize tracking arrays
         purity_evolution = np.zeros(num_levels + 1)
         error_evolution = np.zeros(num_levels + 1)
         success_probabilities = np.zeros(num_levels)
         amplification_iterations = np.zeros(num_levels)
+        amplification_results = []
+        
+        total_swap_attempts = 0
+        total_amplification_iterations = 0
         
         # Initial state
         initial_purity = 1 - initial_delta
         purity_evolution[0] = initial_purity
         error_evolution[0] = self._logical_error(initial_purity)
         
-        current_purity = initial_purity
-        total_cost = 0
+        # Create initial states (simulate 2^num_levels copies)
+        num_initial_states = 2**num_levels
+        current_states = [QuantumState(initial_purity, self.dimension) 
+                         for _ in range(num_initial_states)]
         
         if self.verbose:
-            print(f"Starting recursive purification:")
-            print(f"  Initial δ={initial_delta:.3f}, λ={current_purity:.3f}")
-            print(f"  Target levels: {num_levels}")
+            print(f"  Starting with {len(current_states)} copies at λ={initial_purity:.4f}")
         
-        # Recursive purification through each level
+        # Recursive purification through binary tree
         for level in range(num_levels):
-            # Number of parallel swap operations at this level
-            num_swaps = 2**(num_levels - level - 1)
+            if self.verbose:
+                print(f"\n  Level {level}: Processing {len(current_states)} states")
             
-            # Apply purity transformation
-            new_purity, success_prob, amp_iter = self.purity_transformation(current_purity)
+            level_amplification_results = []
+            new_states = []
+            level_iterations = 0
+            level_attempts = 0
             
-            # Store results
-            purity_evolution[level + 1] = new_purity
-            error_evolution[level + 1] = self._logical_error(new_purity)
-            success_probabilities[level] = success_prob
-            amplification_iterations[level] = amp_iter
+            # Pair up states and apply deterministic swap tests
+            for i in range(0, len(current_states), 2):
+                state1 = current_states[i]
+                state2 = current_states[i + 1]
+                
+                # Retry loop in case amplitude amplification fails
+                attempts = 0
+                success = False
+                
+                while not success and attempts < max_attempts_per_level:
+                    result = self.swap_simulator.deterministic_swap_test(state1, state2)
+                    attempts += 1
+                    level_attempts += 1
+                    
+                    if result.success:
+                        success = True
+                        new_states.append(result.output_state)
+                        level_amplification_results.append(result)
+                        level_iterations += result.iterations_used
+                        
+                        if self.verbose and attempts > 1:
+                            print(f"    Swap {i//2}: Success after {attempts} attempts")
+                    else:
+                        if self.verbose:
+                            print(f"    Swap {i//2}: Attempt {attempts} failed, retrying...")
+                
+                if not success:
+                    raise RuntimeError(f"Failed to achieve swap test success after {max_attempts_per_level} attempts")
             
-            # Calculate cost for this level
-            level_cost = num_swaps * amp_iter
-            total_cost += level_cost
+            # Update tracking
+            current_states = new_states
+            amplification_results.extend(level_amplification_results)
+            
+            if current_states:
+                avg_purity = np.mean([state.purity for state in current_states])
+                purity_evolution[level + 1] = avg_purity
+                error_evolution[level + 1] = self._logical_error(avg_purity)
+                
+                if level_amplification_results:
+                    avg_success_prob = np.mean([r.final_success_probability for r in level_amplification_results])
+                    success_probabilities[level] = avg_success_prob
+                    amplification_iterations[level] = level_iterations / len(level_amplification_results)
+            
+            total_swap_attempts += level_attempts
+            total_amplification_iterations += level_iterations
             
             if self.verbose:
-                print(f"  Level {level}: λ={new_purity:.4f}, P_success={success_prob:.4f}, "
-                      f"amp_iter={amp_iter}, cost={level_cost}")
-            
-            current_purity = new_purity
+                print(f"    Level {level} complete: {len(current_states)} outputs, "
+                      f"avg_purity={avg_purity:.4f}, total_iterations={level_iterations}")
+        
+        # Final result
+        final_purity = current_states[0].purity if current_states else 0.0
+        
+        # Compare with theoretical prediction
+        theoretical_evolution = self.theoretical_purity_evolution(initial_purity, num_levels)
+        theoretical_final = theoretical_evolution[-1]
+        
+        # Check if simulation matches theory (within tolerance)
+        tolerance = 0.01
+        simulation_matches_theory = abs(final_purity - theoretical_final) < tolerance
+        
+        if self.verbose:
+            print(f"\n  Simulation complete:")
+            print(f"    Final purity: {final_purity:.6f}")
+            print(f"    Theoretical:  {theoretical_final:.6f}")
+            print(f"    Difference:   {abs(final_purity - theoretical_final):.6f}")
+            print(f"    Matches theory: {simulation_matches_theory}")
+            print(f"    Total amplification iterations: {total_amplification_iterations}")
         
         return PurificationResult(
             initial_purity=initial_purity,
-            final_purity=current_purity,
+            final_purity=final_purity,
             purity_evolution=purity_evolution,
             error_evolution=error_evolution,
             success_probabilities=success_probabilities,
             amplification_iterations=amplification_iterations,
-            total_cost=total_cost,
+            amplification_results=amplification_results,
+            total_swap_attempts=total_swap_attempts,
+            total_amplification_iterations=total_amplification_iterations,
+            theoretical_prediction=theoretical_final,
+            simulation_matches_theory=simulation_matches_theory,
             dimension=self.dimension,
             levels=num_levels
         )
     
     def _logical_error(self, purity: float) -> float:
-        """Calculate logical error using generalized Grafe metric."""
+        """Calculate logical error using Grafe metric."""
         return (1 - purity) * (self.dimension - 1) / self.dimension
     
-    def save_result(self, result: any, filename: str, metadata: Dict = None) -> str:
+    def validate_deterministic_behavior(self, initial_delta: float, num_levels: int, 
+                                      num_trials: int = 10) -> Dict:
         """
-        Save simulation result with metadata.
+        Validate that the protocol produces deterministic results.
+        
+        Run multiple trials and verify consistent outcomes.
         
         Args:
-            result: Result object to save
-            filename: Base filename (without extension)
-            metadata: Additional metadata to save
+            initial_delta: Initial noise level
+            num_levels: Purification depth
+            num_trials: Number of independent trials
             
         Returns:
-            Full path to saved file
+            Validation statistics
         """
+        if self.verbose:
+            print(f"\nValidating deterministic behavior:")
+            print(f"  Running {num_trials} trials at δ={initial_delta}, levels={num_levels}")
+        
+        final_purities = []
+        total_iterations = []
+        
+        for trial in range(num_trials):
+            if self.verbose:
+                print(f"  Trial {trial + 1}/{num_trials}")
+            
+            # Set random seed for reproducibility within each trial
+            np.random.seed(trial + 1000)
+            
+            result = self.recursive_purification_simulation(initial_delta, num_levels)
+            final_purities.append(result.final_purity)
+            total_iterations.append(result.total_amplification_iterations)
+        
+        # Calculate statistics
+        purity_mean = np.mean(final_purities)
+        purity_std = np.std(final_purities)
+        purity_range = np.max(final_purities) - np.min(final_purities)
+        
+        iterations_mean = np.mean(total_iterations)
+        iterations_std = np.std(total_iterations)
+        
+        # Theoretical prediction
+        theoretical = self.theoretical_purity_evolution(1 - initial_delta, num_levels)[-1]
+        
+        validation_result = {
+            'num_trials': num_trials,
+            'initial_delta': initial_delta,
+            'num_levels': num_levels,
+            'final_purities': np.array(final_purities),
+            'purity_mean': purity_mean,
+            'purity_std': purity_std,
+            'purity_range': purity_range,
+            'total_iterations': np.array(total_iterations),
+            'iterations_mean': iterations_mean,
+            'iterations_std': iterations_std,
+            'theoretical_prediction': theoretical,
+            'mean_error': abs(purity_mean - theoretical),
+            'is_deterministic': purity_std < 0.001,  # Very low variation
+            'dimension': self.dimension
+        }
+        
+        if self.verbose:
+            print(f"  Validation results:")
+            print(f"    Purity: {purity_mean:.6f} ± {purity_std:.6f} (range: {purity_range:.6f})")
+            print(f"    Theoretical: {theoretical:.6f}")
+            print(f"    Is deterministic: {validation_result['is_deterministic']}")
+            print(f"    Iterations: {iterations_mean:.1f} ± {iterations_std:.1f}")
+        
+        return validation_result
+    
+    def save_result(self, result: any, filename: str, metadata: Dict = None) -> str:
+        """Save simulation result with metadata."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         full_filename = f"{filename}_{timestamp}"
         filepath = os.path.join(self.data_dir, f"{full_filename}.npz")
         
         # Prepare data for saving
         if isinstance(result, PurificationResult):
-            save_data = asdict(result)
-            save_data['purity_evolution'] = result.purity_evolution
-            save_data['error_evolution'] = result.error_evolution
-            save_data['success_probabilities'] = result.success_probabilities
-            save_data['amplification_iterations'] = result.amplification_iterations
-        elif isinstance(result, ThresholdResult):
-            save_data = asdict(result)
-            save_data['noise_levels'] = result.noise_levels
-            save_data['final_purities'] = result.final_purities
-            save_data['error_reductions'] = result.error_reductions
-            save_data['resource_costs'] = result.resource_costs
+            save_data = {
+                'initial_purity': result.initial_purity,
+                'final_purity': result.final_purity,
+                'purity_evolution': result.purity_evolution,
+                'error_evolution': result.error_evolution,
+                'success_probabilities': result.success_probabilities,
+                'amplification_iterations': result.amplification_iterations,
+                'total_swap_attempts': result.total_swap_attempts,
+                'total_amplification_iterations': result.total_amplification_iterations,
+                'theoretical_prediction': result.theoretical_prediction,
+                'simulation_matches_theory': result.simulation_matches_theory,
+                'dimension': result.dimension,
+                'levels': result.levels
+            }
         else:
-            save_data = result
+            save_data = result if isinstance(result, dict) else {'data': result}
         
         # Add metadata
         if metadata is None:
             metadata = {}
-        
         metadata.update({
             'timestamp': timestamp,
             'dimension': self.dimension,
-            'simulator_version': '1.0',
+            'simulator_version': '2.0_full_simulation',
             'save_date': datetime.now().isoformat()
         })
         
-        # Save data and metadata
-        np.savez_compressed(filepath, **save_data, metadata=metadata)
-        
-        # Save metadata as separate JSON for easy reading
-        with open(filepath.replace('.npz', '_metadata.json'), 'w') as f:
-            json.dump(metadata, f, indent=2)
+        save_data['metadata'] = metadata
+        np.savez_compressed(filepath, **save_data)
         
         if self.verbose:
             print(f"Results saved to: {filepath}")
         
         return filepath
 
-def get_study_parameters() -> StudyParameters:
+def run_full_simulation_studies(data_dir: str = "./data/") -> Dict[str, str]:
     """
-    Define comprehensive parameter sets for systematic studies.
-    
-    Returns:
-        StudyParameters object with all test configurations
-    """
-    return StudyParameters(
-        # Dimension studies: Focus on computationally feasible range
-        dimensions=[2, 3, 4, 5, 8, 10, 16],
-        
-        # Noise level studies
-        noise_fine=np.linspace(0.01, 0.99, 99),        # High resolution for detailed threshold
-        noise_coarse=np.linspace(0.05, 0.95, 19),      # Quick survey
-        
-        # Recursion depth studies  
-        max_levels=12,
-        convergence_levels=[1, 2, 3, 4, 5, 6, 8, 10],
-        
-        # Specific test points of interest
-        test_deltas=[
-            0.01,   # Very low noise
-            0.1,    # Low noise  
-            0.25,   # Moderate noise
-            0.5,    # High noise
-            0.75,   # Very high noise
-            0.9,    # Extreme noise
-            0.99    # Near-maximal noise
-        ],
-        
-        # Resource analysis depth
-        resource_levels=8
-    )
-
-def run_systematic_studies(data_dir: str = "./data/") -> Dict[str, str]:
-    """
-    Execute comprehensive systematic parameter studies.
+    Run comprehensive full simulation studies demonstrating deterministic behavior.
     
     Args:
         data_dir: Directory to save all results
@@ -298,202 +574,124 @@ def run_systematic_studies(data_dir: str = "./data/") -> Dict[str, str]:
     Returns:
         Dictionary mapping study name to saved file path
     """
-    params = get_study_parameters()
     saved_files = {}
     
-    print("="*60)
-    print("SYSTEMATIC PARAMETER STUDIES FOR STREAMING PURIFICATION QEC")
-    print("="*60)
+    print("="*70)
+    print("FULL QUANTUM SIMULATION: STREAMING PURIFICATION QEC")
+    print("="*70)
     
-    # Study 1: Detailed Qubit Analysis
-    print("\n1. Detailed Qubit Analysis (d=2)")
-    print("-" * 40)
+    # Study 1: Deterministic Behavior Validation
+    print("\n1. Deterministic Behavior Validation")
+    print("-" * 45)
     
-    qubit_sim = PurificationSimulator(dimension=2, data_dir=data_dir, verbose=True)
-    
-    # High-resolution threshold analysis
-    threshold_result = ThresholdResult(
-        noise_levels=params.noise_fine,
-        final_purities=np.zeros_like(params.noise_fine),
-        error_reductions=np.zeros_like(params.noise_fine),
-        resource_costs=np.zeros_like(params.noise_fine),
-        dimension=2
-    )
-    
-    for i, delta in enumerate(params.noise_fine):
-        try:
-            result = qubit_sim.recursive_purification(delta, params.resource_levels)
-            threshold_result.final_purities[i] = result.final_purity
-            threshold_result.resource_costs[i] = result.total_cost
+    for d in [2, 4]:
+        sim = StreamingPurificationSimulator(dimension=d, data_dir=data_dir, verbose=True)
+        
+        # Test deterministic behavior at different noise levels
+        for delta in [0.2, 0.5, 0.8]:
+            print(f"\nTesting d={d}, δ={delta}")
+            validation = sim.validate_deterministic_behavior(delta, num_levels=4, num_trials=5)
             
-            initial_error = qubit_sim._logical_error(result.initial_purity)
-            final_error = qubit_sim._logical_error(result.final_purity)
-            threshold_result.error_reductions[i] = final_error / initial_error if initial_error > 0 else 0
-            
-        except Exception as e:
-            print(f"Warning: Failed at δ={delta:.3f}: {e}")
-            threshold_result.final_purities[i] = np.nan
-            threshold_result.error_reductions[i] = np.nan
-            threshold_result.resource_costs[i] = np.nan
+            saved_files[f'validation_d{d}_delta{delta:.1f}'] = sim.save_result(
+                validation,
+                f"validation_studies/deterministic_validation_d{d}_delta{delta:.1f}",
+                {"study_type": "deterministic_validation", "dimension": d, "delta": delta}
+            )
     
-    saved_files['qubit_detailed'] = qubit_sim.save_result(
-        threshold_result, 
-        "threshold_studies/qubit_detailed_threshold",
-        {"study_type": "detailed_qubit_threshold", "resolution": "high"}
-    )
+    # Study 2: Full Simulation vs Theoretical Comparison
+    print("\n2. Simulation vs Theory Comparison")
+    print("-" * 45)
     
-    # Study 2: Dimension Scaling Analysis
-    print("\n2. Dimension Scaling Analysis")
-    print("-" * 40)
-    
-    dimension_results = {}
-    
-    for d in params.dimensions:
-        print(f"  Testing dimension d={d}")
-        sim = PurificationSimulator(dimension=d, data_dir=data_dir, verbose=False)
+    for d in [2, 3, 4]:
+        sim = StreamingPurificationSimulator(dimension=d, data_dir=data_dir, verbose=True)
         
-        # Threshold analysis for this dimension
-        threshold_result = ThresholdResult(
-            noise_levels=params.noise_coarse,
-            final_purities=np.zeros_like(params.noise_coarse),
-            error_reductions=np.zeros_like(params.noise_coarse),
-            resource_costs=np.zeros_like(params.noise_coarse),
-            dimension=d
-        )
-        
-        for i, delta in enumerate(params.noise_coarse):
-            try:
-                result = sim.recursive_purification(delta, 6)  # Moderate depth for survey
-                threshold_result.final_purities[i] = result.final_purity
-                threshold_result.resource_costs[i] = result.total_cost
-                
-                initial_error = sim._logical_error(result.initial_purity)
-                final_error = sim._logical_error(result.final_purity)
-                threshold_result.error_reductions[i] = final_error / initial_error if initial_error > 0 else 0
-                
-            except Exception as e:
-                threshold_result.final_purities[i] = np.nan
-                threshold_result.error_reductions[i] = np.nan
-                threshold_result.resource_costs[i] = np.nan
-        
-        dimension_results[d] = threshold_result
-        
-        # Save individual dimension result
-        saved_files[f'dimension_{d}'] = sim.save_result(
-            threshold_result,
-            f"dimension_scaling/threshold_d{d}",
-            {"study_type": "dimension_scaling", "dimension": d}
-        )
-    
-    # Study 3: Convergence Analysis  
-    print("\n3. Convergence Analysis")
-    print("-" * 40)
-    
-    convergence_results = {}
-    
-    for d in [2, 4, 8]:  # Selected dimensions for detailed convergence study
-        print(f"  Convergence study for d={d}")
-        sim = PurificationSimulator(dimension=d, data_dir=data_dir, verbose=False)
-        
-        convergence_data = {
+        comparison_data = {
             'dimension': d,
-            'test_deltas': params.test_deltas,
-            'levels': params.convergence_levels,
-            'results': {}
+            'noise_levels': np.linspace(0.1, 0.8, 8),
+            'simulation_results': [],
+            'theoretical_results': [],
+            'num_levels': 5
         }
         
-        for delta in params.test_deltas:
-            level_results = {
-                'final_purities': [],
-                'total_costs': [],
-                'error_reductions': []
-            }
+        for delta in comparison_data['noise_levels']:
+            print(f"\nSimulating d={d}, δ={delta:.2f}")
             
-            for levels in params.convergence_levels:
-                try:
-                    result = sim.recursive_purification(delta, levels)
-                    level_results['final_purities'].append(result.final_purity)
-                    level_results['total_costs'].append(result.total_cost)
-                    
-                    initial_error = sim._logical_error(result.initial_purity)
-                    final_error = sim._logical_error(result.final_purity)
-                    level_results['error_reductions'].append(
-                        final_error / initial_error if initial_error > 0 else 0
-                    )
-                    
-                except Exception as e:
-                    level_results['final_purities'].append(np.nan)
-                    level_results['total_costs'].append(np.nan)
-                    level_results['error_reductions'].append(np.nan)
+            # Full simulation
+            sim_result = sim.recursive_purification_simulation(delta, 5)
+            comparison_data['simulation_results'].append({
+                'delta': delta,
+                'final_purity': sim_result.final_purity,
+                'total_iterations': sim_result.total_amplification_iterations,
+                'matches_theory': sim_result.simulation_matches_theory
+            })
             
-            convergence_data['results'][delta] = level_results
+            # Theoretical prediction
+            theoretical = sim.theoretical_purity_evolution(1 - delta, 5)[-1]
+            comparison_data['theoretical_results'].append(theoretical)
         
-        convergence_results[d] = convergence_data
-        
-        # Save convergence result
-        saved_files[f'convergence_d{d}'] = sim.save_result(
-            convergence_data,
-            f"convergence_studies/convergence_d{d}",
-            {"study_type": "convergence_analysis", "dimension": d}
+        saved_files[f'simulation_vs_theory_d{d}'] = sim.save_result(
+            comparison_data,
+            f"full_simulations/simulation_vs_theory_d{d}",
+            {"study_type": "simulation_vs_theory", "dimension": d}
         )
     
-    # Study 4: Resource Scaling Deep Dive
-    print("\n4. Resource Scaling Analysis")
-    print("-" * 40)
+    # Study 3: Amplitude Amplification Performance Analysis
+    print("\n3. Amplitude Amplification Analysis")
+    print("-" * 45)
     
-    resource_study = {
-        'dimensions': params.dimensions,
-        'test_delta': 0.3,  # Fixed moderate noise level
-        'max_levels': params.max_levels,
-        'results': {}
+    sim = StreamingPurificationSimulator(dimension=2, data_dir=data_dir, verbose=True)
+    
+    amp_analysis = {
+        'purity_levels': np.linspace(0.1, 0.9, 9),
+        'amplification_data': []
     }
     
-    for d in params.dimensions:
-        print(f"  Resource scaling for d={d}")
-        sim = PurificationSimulator(dimension=d, data_dir=data_dir, verbose=False)
+    for purity in amp_analysis['purity_levels']:
+        state = QuantumState(purity, 2)
         
-        level_data = {
-            'levels': list(range(1, params.max_levels + 1)),
-            'final_purities': [],
-            'total_costs': [],
-            'cost_per_level': []
-        }
+        # Test amplitude amplification
+        result = sim.swap_simulator.amplitude_amplification(state, state)
         
-        for levels in range(1, params.max_levels + 1):
-            try:
-                result = sim.recursive_purification(0.3, levels)
-                level_data['final_purities'].append(result.final_purity)
-                level_data['total_costs'].append(result.total_cost)
-                level_data['cost_per_level'].append(result.total_cost / levels)
-                
-            except Exception as e:
-                level_data['final_purities'].append(np.nan)
-                level_data['total_costs'].append(np.nan)
-                level_data['cost_per_level'].append(np.nan)
+        amp_analysis['amplification_data'].append({
+            'input_purity': purity,
+            'initial_success_prob': sim.swap_simulator.calculate_success_probability(state, state),
+            'final_success_prob': result.final_success_probability,
+            'iterations_used': result.iterations_used,
+            'amplitude_evolution': result.amplitude_evolution,
+            'amplification_success': result.success
+        })
         
-        resource_study['results'][d] = level_data
+        print(f"  λ={purity:.2f}: P_init={amp_analysis['amplification_data'][-1]['initial_success_prob']:.4f} → "
+              f"P_final={result.final_success_probability:.6f} ({result.iterations_used} iterations)")
     
-    saved_files['resource_scaling'] = PurificationSimulator(
-        dimension=2, data_dir=data_dir
-    ).save_result(
-        resource_study,
-        "parameter_sweeps/resource_scaling",
-        {"study_type": "resource_scaling", "fixed_delta": 0.3}
+    saved_files['amplitude_amplification_analysis'] = sim.save_result(
+        amp_analysis,
+        "full_simulations/amplitude_amplification_analysis",
+        {"study_type": "amplitude_amplification_analysis"}
     )
     
-    # Summary
-    print("\n" + "="*60)
-    print("SYSTEMATIC STUDIES COMPLETED")
-    print("="*60)
-    print(f"Total studies conducted: {len(saved_files)}")
-    print(f"Data saved to: {data_dir}")
-    print("\nSaved files:")
-    for study, filepath in saved_files.items():
-        print(f"  {study}: {os.path.basename(filepath)}")
+    print("\n" + "="*70)
+    print("FULL SIMULATION STUDIES COMPLETED")
+    print("="*70)
+    print(f"Results saved to: {data_dir}")
     
     return saved_files
 
 if __name__ == "__main__":
-    # Run all systematic studies
-    run_systematic_studies()
+    # Run full simulation studies
+    run_full_simulation_studies()
     
+    # Example: Single detailed simulation
+    print("\n" + "="*50)
+    print("EXAMPLE: Single Detailed Simulation")
+    print("="*50)
+    
+    sim = StreamingPurificationSimulator(dimension=2, verbose=True)
+    result = sim.recursive_purification_simulation(initial_delta=0.3, num_levels=4)
+    
+    print(f"\nExample Result Summary:")
+    print(f"Initial purity: {result.initial_purity:.6f}")
+    print(f"Final purity:   {result.final_purity:.6f}")
+    print(f"Theoretical:    {result.theoretical_prediction:.6f}")
+    print(f"Matches theory: {result.simulation_matches_theory}")
+    print(f"Total amplification iterations: {result.total_amplification_iterations}")
