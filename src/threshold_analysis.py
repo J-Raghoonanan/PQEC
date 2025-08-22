@@ -136,7 +136,7 @@ class ThresholdPlotter:
     def plot_grafe_style_figure4(self, 
                                 evolution_data: Dict[str, Any],
                                 threshold_results: ThresholdResults,
-                                save_path: str = None) -> plt.Figure:
+                                save_path: str = "figures/logical_vs_purification.pdf") -> plt.Figure:
         """
         Create a figure analogous to Grafe et al. Figure 4.
         
@@ -208,7 +208,7 @@ class ThresholdPlotter:
                                             error_rates: np.ndarray,
                                             results_dict: Dict[str, ThresholdResults],
                                             code_size: int = 16,
-                                            save_path: str = None) -> plt.Figure:
+                                            save_path: str = "figures/comparison_noise_types.pdf") -> plt.Figure:
         """
         Compare threshold behavior for different noise types.
         """
@@ -293,7 +293,7 @@ def run_complete_threshold_analysis(save_plots: bool = True) -> Dict[str, Any]:
     fig_main = plotter.plot_grafe_style_figure4(
         evolution_data,
         depolarizing_results,
-        save_path='streaming_qec_figure4.png' if save_plots else None
+        save_path='figures/logical_vs_purification.pdf' if save_plots else None
     )
     
     # 5. Generate noise comparison plot
@@ -306,7 +306,7 @@ def run_complete_threshold_analysis(save_plots: bool = True) -> Dict[str, Any]:
         error_rates,
         results_dict,
         code_size=16,
-        save_path='noise_comparison.png' if save_plots else None
+        save_path='figures/comparison_noise_types.pdf' if save_plots else None
     )
     
     plt.show()
