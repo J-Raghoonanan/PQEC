@@ -43,6 +43,7 @@ class SwapTestProcessor:
         d = state1.dimension
         
         # Tr(ρ²) = (1-δ)² + δ(2-δ)/d for depolarizing noise
+        # Recall that purity = 1 - δ
         tr_rho_squared = (purity**2 + 
                          (1 - purity) * (2 - (1 - purity)) / d)
         
