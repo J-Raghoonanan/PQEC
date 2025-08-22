@@ -153,6 +153,7 @@ class StreamingPurificationProtocol:
             # For Pauli noise, use approximate analysis
             # This is more complex and depends on specific error rates
             # For now, implement a simplified model
+            # NEED TO UPDATE THIS WITH PROPER PAULI ANALYSIS
             logical_errors = [initial_error_rate]
             purities = [1 - initial_error_rate]
             
