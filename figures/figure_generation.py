@@ -29,6 +29,9 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.patches as patches
 
 # Set publication-quality plotting parameters
+plt.style.use('seaborn-v0_8-paper')
+sns.set_palette("husl")
+
 plt.rcParams.update({
     'font.size': 12,
     'axes.titlesize': 14,
@@ -61,7 +64,7 @@ PROTOCOL_COLORS = {
 class StreamingQECFigureGenerator:
     """Generate all publication-quality figures for streaming QEC paper."""
     
-    def __init__(self, data_dir: str = "../data", figures_dir: str = "../figures"):
+    def __init__(self, data_dir: str = "data", figures_dir: str = "figures"):
         self.data_dir = data_dir
         self.figures_dir = figures_dir
         os.makedirs(figures_dir, exist_ok=True)
@@ -1081,8 +1084,8 @@ def main():
     import sys
     
     # Parse command line arguments
-    data_dir = "../data"
-    figures_dir = "../figures"
+    data_dir = "data"
+    figures_dir = "figures"
     save_format = "pdf"
     
     if '--data-dir' in sys.argv:

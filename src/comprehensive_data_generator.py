@@ -172,7 +172,7 @@ class ComprehensiveDataGenerator:
     Generates ALL data needed for complete paper analysis.
     """
     
-    def __init__(self, data_dir: str = "../data"):
+    def __init__(self, data_dir: str = "data"):
         self.data_dir = data_dir
         self.protocol = StreamingPurificationProtocol()
         
@@ -1078,7 +1078,7 @@ def main():
     
     # Parse command line arguments
     quick_run = '--quick' in sys.argv
-    data_dir = "../data"
+    data_dir = "data"
     
     if '--data-dir' in sys.argv:
         idx = sys.argv.index('--data-dir')
