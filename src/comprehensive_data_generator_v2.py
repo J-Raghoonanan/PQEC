@@ -19,7 +19,7 @@ import warnings
 from tqdm import tqdm
 
 # Import the new streaming protocol
-from streaming_protocol_ologn import TrueStreamingProtocol, StreamingResult, create_streaming_protocol, run_streaming_comparison
+from src.streaming_protocol_ologn import TrueStreamingProtocol, StreamingResult, create_streaming_protocol, run_streaming_comparison
 
 # Keep the old protocol for comparisons
 from src.streaming_protocol import StreamingPurificationProtocol
