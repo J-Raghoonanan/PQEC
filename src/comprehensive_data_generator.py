@@ -715,7 +715,7 @@ class StreamingQECDataGenerator:
             noise_types = ['depolarizing', 'symmetric_pauli', 'pure_dephasing']
             dimensions = [2, 3, 4, 5]
             N_values = [8, 16, 32, 64, 128, 256, 1024]
-            error_rates = [0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99]
+            error_rates = [0.01, 0.05, 0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99]
             N_resource = [4, 8, 16, 32, 64, 128, 256, 1024]
         
         results = {}
