@@ -20,13 +20,13 @@ plt.style.use('seaborn-v0_8-paper')
 sns.set_palette("husl")
 
 plt.rcParams.update({
-    'font.size': 14,
-    'axes.titlesize': 16,
-    'axes.labelsize': 14,
-    'xtick.labelsize': 12,
-    'ytick.labelsize': 12,
-    'legend.fontsize': 12,
-    'figure.titlesize': 18,
+    'font.size': 20,
+    'axes.titlesize': 30,
+    'axes.labelsize': 25,
+    'xtick.labelsize': 20,
+    'ytick.labelsize': 20,
+    'legend.fontsize': 20,
+    'figure.titlesize': 30,
     'font.family': 'DejaVu Sans',
     'mathtext.fontset': 'dejavusans',
     'axes.linewidth': 1.2,
@@ -157,13 +157,13 @@ class StreamingQECPlotter:
         
         ax.set_xscale('linear')
         # Formatting to match Grafe style
-        ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=16, fontweight='bold')
-        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=16, fontweight='bold')
-        ax.set_title('Streaming QEC Threshold Analysis\n(Depolarizing Noise, d=2)', 
-                    fontsize=18, fontweight='bold')
+        ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=25)
+        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
+        ax.set_title('Streaming QEC Threshold \n(Depolarizing Noise, d=2)', 
+                    fontsize=30)
         
         ax.legend(fontsize=14, loc='upper left')
-        ax.grid(True, alpha=0.3, which='both')
+        # ax.grid(True, alpha=0.3)
         
         # Set reasonable axis limits
         ax.set_xlim(0.09, 1.0)
@@ -188,79 +188,178 @@ class StreamingQECPlotter:
         print(f"Saved Grafe Figure 4 analog: {filename} with {plotted_curves} curves")
         return filepath
     
+    # def plot_error_evolution(self, save_format: str = 'pdf') -> Optional[str]:
+    #     """Plot logical error evolution through purification levels."""
+    #     if not self.evolution_data:
+    #         print("Warning: No evolution data available")
+    #         return None
+        
+    #     fig, ax = plt.subplots(figsize=(10, 8))
+        
+    #     # Auto-discover all noise types in the data
+    #     available_noise_types = sorted(list(set(d['noise_type'] for d in self.evolution_data)))
+    #     print(f"Found noise types: {available_noise_types}")
+        
+    #     plotted_any = False
+    #     linestyles = ['solid', 'dotted', 'dashed', 'dashdot', 'densely dashdotdotted']  # Cycle through linestyles
+        
+    #     for noise_idx, noise_type in enumerate(available_noise_types):
+    #         # Get all data for this noise type
+    #         noise_data = [d for d in self.evolution_data if d['noise_type'] == noise_type]
+            
+    #         # Find best code size (largest available)
+    #         available_sizes = list(set(d['N'] for d in noise_data))
+    #         target_N = max(available_sizes)
+            
+    #         # Get all error rates for this noise type and code size
+    #         target_data = [d for d in noise_data if d['N'] == target_N]
+    #         error_rates = sorted(list(set(d['physical_error_rate'] for d in target_data)))
+            
+    #         print(f"{noise_type}: {len(error_rates)} error rates for N={target_N}")
+    #         if noise_type == 'depolarizing':
+    #             legend_label = '$\delta$'
+    #         else:
+    #             legend_label = 'p'
+            
+    #         # Generate colors for this noise type
+    #         base_color = PROTOCOL_COLORS.get(noise_type, '#666666')
+            
+    #         for rate_idx, error_rate in enumerate(error_rates):
+    #             matches = [d for d in target_data if d['physical_error_rate'] == error_rate]
+                
+    #             if matches:
+    #                 data = matches[0]
+    #                 iterations = data['iterations'] 
+    #                 logical_errors = data['logical_errors']
+                    
+    #                 if len(iterations) > 0 and len(logical_errors) > 0:
+    #                     # Vary alpha for different error rates within same noise type
+    #                     alpha = 1.0 - 0.6 * (rate_idx / max(1, len(error_rates) - 1))
+    #                     linestyle = linestyles[noise_idx % len(linestyles)]
+                        
+    #                     ax.semilogy(iterations, logical_errors, 'o-', 
+    #                                color=base_color, linestyle=linestyle, alpha=max(0.4, alpha),
+    #                                linewidth=3, markersize=6,
+    #                                label=rf'{noise_type.replace("_", " ").title()}, {legend_label}={error_rate:.3f}')
+    #                     plotted_any = True
+        
+    #     if not plotted_any:
+    #         print("Warning: No valid evolution data to plot")
+    #         ax.text(0.5, 0.5, 'No Evolution Data Available', 
+    #                transform=ax.transAxes, ha='center', va='center', fontsize=16)
+
+    #     ax.set_xlabel(r'Purification Level, $n$', fontsize=25)
+    #     ax.set_ylabel(r'Logical Error Rate, $\varepsilon_L^{(n)}$', fontsize=25)
+    #     ax.set_title('Error Evolution Through Purification', fontsize=30)
+    #     ax.legend(fontsize=14, ncol=2)
+    #     ax.grid(True, alpha=0.3)
+        
+    #     plt.tight_layout()
+        
+    #     filename = f"error_evolution.{save_format}"
+    #     filepath = os.path.join(self.figures_dir, filename)
+    #     plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
+    #     plt.close()
+        
+    #     print(f"Saved error evolution plot: {filename}")
+    #     return filepath
+    
+    
     def plot_error_evolution(self, save_format: str = 'pdf') -> Optional[str]:
         """Plot logical error evolution through purification levels."""
         if not self.evolution_data:
             print("Warning: No evolution data available")
             return None
-        
-        fig, ax = plt.subplots(figsize=(10, 8))
-        
+    
+        # Create figure with 2 subplots side by side
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+    
         # Auto-discover all noise types in the data
         available_noise_types = sorted(list(set(d['noise_type'] for d in self.evolution_data)))
         print(f"Found noise types: {available_noise_types}")
-        
-        plotted_any = False
-        linestyles = ['solid', 'dotted', 'dashed', 'dashdot', 'densely dashdotdotted']  # Cycle through linestyles
-        
-        for noise_idx, noise_type in enumerate(available_noise_types):
-            # Get all data for this noise type
-            noise_data = [d for d in self.evolution_data if d['noise_type'] == noise_type]
+    
+        # Separate noise types
+        depolarizing_types = [nt for nt in available_noise_types if 'depolarizing' in nt.lower()]
+        pauli_types = [nt for nt in available_noise_types if 'depolarizing' not in nt.lower()]
+    
+        print(f"Depolarizing types: {depolarizing_types}")
+        print(f"Pauli types: {pauli_types}")
+    
+        linestyles = ['solid', 'dotted', 'dashed', 'dashdot', 'densely dashdotdotted']
+        plotted_any = [False, False]  # Track if we plotted anything for each subplot
+    
+        # Function to plot data for a given set of noise types on a specific axis
+        def plot_noise_group(ax, noise_types, subplot_idx, title_suffix):
+            for noise_idx, noise_type in enumerate(noise_types):
+                # Get all data for this noise type
+                noise_data = [d for d in self.evolution_data if d['noise_type'] == noise_type]
             
-            # Find best code size (largest available)
-            available_sizes = list(set(d['N'] for d in noise_data))
-            target_N = max(available_sizes)
+                # Find best code size (largest available)
+                available_sizes = list(set(d['N'] for d in noise_data))
+                target_N = max(available_sizes)
             
-            # Get all error rates for this noise type and code size
-            target_data = [d for d in noise_data if d['N'] == target_N]
-            error_rates = sorted(list(set(d['physical_error_rate'] for d in target_data)))
+                # Get all error rates for this noise type and code size
+                target_data = [d for d in noise_data if d['N'] == target_N]
+                error_rates = sorted(list(set(d['physical_error_rate'] for d in target_data)))
             
-            print(f"{noise_type}: {len(error_rates)} error rates for N={target_N}")
-            if noise_type == 'depolarizing':
-                legend_label = '$\delta$'
-            else:
-                legend_label = 'p'
+                print(f"{noise_type}: {len(error_rates)} error rates for N={target_N}")
             
-            # Generate colors for this noise type
-            base_color = PROTOCOL_COLORS.get(noise_type, '#666666')
+                # Set legend label based on noise type
+                if noise_type == 'depolarizing':
+                    legend_label = '$\delta$'
+                else:
+                    legend_label = 'p'
             
-            for rate_idx, error_rate in enumerate(error_rates):
-                matches = [d for d in target_data if d['physical_error_rate'] == error_rate]
+                # Generate colors for this noise type
+                base_color = PROTOCOL_COLORS.get(noise_type, '#666666')
+            
+                for rate_idx, error_rate in enumerate(error_rates):
+                    matches = [d for d in target_data if d['physical_error_rate'] == error_rate]
                 
-                if matches:
-                    data = matches[0]
-                    iterations = data['iterations'] 
-                    logical_errors = data['logical_errors']
+                    if matches:
+                        data = matches[0]
+                        iterations = data['iterations'] 
+                        logical_errors = data['logical_errors']
                     
-                    if len(iterations) > 0 and len(logical_errors) > 0:
-                        # Vary alpha for different error rates within same noise type
-                        alpha = 1.0 - 0.6 * (rate_idx / max(1, len(error_rates) - 1))
-                        linestyle = linestyles[noise_idx % len(linestyles)]
+                        if len(iterations) > 0 and len(logical_errors) > 0:
+                            # Vary alpha for different error rates within same noise type
+                            alpha = 1.0 - 0.6 * (rate_idx / max(1, len(error_rates) - 1))
+                            linestyle = linestyles[noise_idx % len(linestyles)]
                         
-                        ax.semilogy(iterations, logical_errors, 'o-', 
-                                   color=base_color, linestyle=linestyle, alpha=max(0.4, alpha),
-                                   linewidth=3, markersize=6,
-                                   label=rf'{noise_type.replace("_", " ").title()}, {legend_label}={error_rate:.3f}')
-                        plotted_any = True
+                            ax.semilogy(iterations, logical_errors, 'o-', 
+                                    color=base_color, linestyle=linestyle, alpha=max(0.4, alpha),
+                                    linewidth=3, markersize=6,
+                                    label=rf'{noise_type.replace("_", " ").title()}, {legend_label}={error_rate:.3f}')
+                            plotted_any[subplot_idx] = True
         
-        if not plotted_any:
-            print("Warning: No valid evolution data to plot")
-            ax.text(0.5, 0.5, 'No Evolution Data Available', 
-                   transform=ax.transAxes, ha='center', va='center', fontsize=16)
-
-        ax.set_xlabel(r'Purification Level, $n$', fontsize=16, fontweight='bold')
-        ax.set_ylabel(r'Logical Error Rate, $\varepsilon_L^{(n)}$', fontsize=16, fontweight='bold')
-        ax.set_title('Error Evolution Through Purification', fontsize=18, fontweight='bold')
-        ax.legend(fontsize=10, ncol=2)
-        ax.grid(True, alpha=0.3)
+            # Set labels and formatting for this subplot
+            ax.set_xlabel(r'Purification Level, $n$', fontsize=20)
+            ax.set_ylabel(r'Logical Error Rate, $\varepsilon_L^{(n)}$', fontsize=20)
+            ax.set_title(f'Error Evolution - {title_suffix}', fontsize=24)
+            # ax.grid(True, alpha=0.3)
         
+            if not plotted_any[subplot_idx]:
+                ax.text(0.5, 0.5, f'No {title_suffix} Data Available', 
+                    transform=ax.transAxes, ha='center', va='center', fontsize=16)
+            else:
+                ax.legend(fontsize=12, loc='best')
+    
+        # Plot depolarizing noise types on left subplot
+        plot_noise_group(ax1, depolarizing_types, 0, "Depolarizing Noise")
+    
+        # Plot Pauli noise types on right subplot  
+        plot_noise_group(ax2, pauli_types, 1, "Pauli Errors")
+        
+        ax1.text(0.90, 0.95, '(a)', transform=ax1.transAxes, fontsize=18, fontweight='bold')
+        ax2.text(0.90, 0.95, '(b)', transform=ax2.transAxes, fontsize=18, fontweight='bold')
+    
         plt.tight_layout()
-        
+    
         filename = f"error_evolution.{save_format}"
         filepath = os.path.join(self.figures_dir, filename)
         plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
         plt.close()
-        
+    
         print(f"Saved error evolution plot: {filename}")
         return filepath
     
@@ -316,11 +415,11 @@ class StreamingQECPlotter:
         ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7, 
                   linewidth=2, label='Target Fidelity 0.99')
         
-        ax.set_xlabel('Purification Level', fontsize=16, fontweight='bold')
-        ax.set_ylabel('State Fidelity', fontsize=16, fontweight='bold')
-        ax.set_title(f'Fidelity Evolution (Depolarizing Noise, N={target_N})', fontsize=18, fontweight='bold')
-        ax.legend(fontsize=12)
-        ax.grid(True, alpha=0.3)
+        ax.set_xlabel('Purification Level', fontsize=25)
+        ax.set_ylabel('State Fidelity', fontsize=25)
+        ax.set_title(f'Fidelity Evolution (Depolarizing Noise, N={target_N})', fontsize=30)
+        ax.legend(fontsize=14)
+        # ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 1.05)
         
         plt.tight_layout()
@@ -376,22 +475,22 @@ class StreamingQECPlotter:
             
             # Add scaling annotations
             ax.text(0.75, 0.85, 'O(N)', transform=ax.transAxes, fontsize=18, 
-                    color=PROTOCOL_COLORS['surface_code'], fontweight='bold')
+                    color=PROTOCOL_COLORS['surface_code'])
             ax.text(0.75, 0.15, 'O(log N)', transform=ax.transAxes, fontsize=18,
-                    color=PROTOCOL_COLORS['streaming_qec'], fontweight='bold')
-            
+                    color=PROTOCOL_COLORS['streaming_qec'])
+
             # Calculate and show advantage
             if len(N_values) > 1:
                 max_advantage = max(standard_memory) / max(memory_used)
                 ax.text(0.05, 0.85, f'Memory Advantage:\n{max_advantage:.1f}× reduction\nfor N={max(N_values)}', 
                         transform=ax.transAxes, fontsize=14, 
                         bbox=dict(boxstyle="round,pad=0.5", facecolor="yellow", alpha=0.8))
-        
-        ax.set_xlabel('Number of Input States (N)', fontsize=16, fontweight='bold')
-        ax.set_ylabel('Memory Requirements (levels)', fontsize=16, fontweight='bold')
-        ax.set_title('Memory Scaling: Streaming vs Standard QEC', fontsize=18, fontweight='bold')
+
+        ax.set_xlabel('Number of Input States (N)', fontsize=16)
+        ax.set_ylabel('Memory Requirements (levels)', fontsize=16)
+        ax.set_title('Memory Scaling: Streaming vs Standard QEC', fontsize=18)
         ax.legend(fontsize=14, loc='upper left')
-        ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         
@@ -451,11 +550,11 @@ class StreamingQECPlotter:
         
         ax.set_xscale('linear')
         # ax.set_yscale('linear')
-        ax.set_xlabel('Physical Error Rate', fontsize=16, fontweight='bold')
-        ax.set_ylabel('Final Logical Error Rate', fontsize=16, fontweight='bold')
-        ax.set_title(f'Noise Model Comparison (N={target_N})', fontsize=18, fontweight='bold')
-        ax.legend(fontsize=12)
-        ax.grid(True, alpha=0.3)
+        ax.set_xlabel('Physical Error Rate', fontsize=25)
+        ax.set_ylabel('Final Logical Error Rate', fontsize=25)
+        ax.set_title(f'Noise Model Comparison (N={target_N})', fontsize=30)
+        ax.legend(fontsize=14)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         
@@ -500,12 +599,12 @@ class StreamingQECPlotter:
                 ref_linear = [N * 0.5 for N in N_values]
                 ax.loglog(N_values, ref_linear, '--', color='gray', alpha=0.7, 
                          label='Linear Scaling')
-        
-        ax.set_xlabel('Code Size (N)', fontsize=16, fontweight='bold')
-        ax.set_ylabel('Total Operations', fontsize=16, fontweight='bold')
-        ax.set_title('Resource Overhead Scaling', fontsize=18, fontweight='bold')
-        ax.legend(fontsize=12)
-        ax.grid(True, alpha=0.3)
+
+        ax.set_xlabel('Code Size (N)', fontsize=16)
+        ax.set_ylabel('Total Operations', fontsize=16)
+        ax.set_title('Resource Overhead Scaling', fontsize=18)
+        ax.legend(fontsize=14)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         
@@ -558,12 +657,12 @@ class StreamingQECPlotter:
             # Add reference line for no improvement
             ax.axhline(y=1.0, color='gray', linestyle='--', alpha=0.7, 
                       linewidth=2, label='No Improvement')
-        
-        ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=16, fontweight='bold')
-        ax.set_ylabel('Error Reduction Ratio', fontsize=16, fontweight='bold')
-        ax.set_title('Error Reduction Effectiveness', fontsize=18, fontweight='bold')
-        ax.legend(fontsize=12)
-        ax.grid(True, alpha=0.3)
+
+        ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=25)
+        ax.set_ylabel('Error Reduction Ratio', fontsize=25)
+        ax.set_title('Error Reduction Effectiveness', fontsize=30)
+        ax.legend(fontsize=14)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         
