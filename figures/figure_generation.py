@@ -99,8 +99,9 @@ class StreamingQECPlotter:
         
         fig, ax = plt.subplots(figsize=(10, 8))
         
-        # Group data by noise type and code size
-        noise_types = list(set(d['noise_type'] for d in self.threshold_data))
+        # Auto-discover available noise types and focus on depolarizing
+        available_noise_types = list(set(d['noise_type'] for d in self.threshold_data))
+        print(f"Available noise types: {available_noise_types}")
         
         # Focus on depolarizing noise for main result
         depolarizing_data = [d for d in self.threshold_data if d['noise_type'] == 'depolarizing']
@@ -109,11 +110,14 @@ class StreamingQECPlotter:
             print("Warning: No depolarizing data for Figure 4 analog")
             return None
         
-        # Get unique code sizes and sort them
+        # Auto-discover all available code sizes and sort them
         code_sizes = sorted(list(set(d['N'] for d in depolarizing_data)))
+        print(f"Found code sizes: {code_sizes}")
+        
+        # Generate colors dynamically based on number of code sizes
         colors = plt.cm.viridis(np.linspace(0, 1, len(code_sizes)))
         
-        print(f"Plotting threshold curves for code sizes: {code_sizes}")
+        plotted_curves = 0
         
         # Plot threshold curves for each code size
         for i, N in enumerate(code_sizes):
@@ -126,6 +130,8 @@ class StreamingQECPlotter:
                 physical_rates = np.array(data['physical_error_rates'])
                 final_errors = np.array(data['final_logical_errors'])
                 
+                print(f"Code size N={N}: {len(physical_rates)} error rate points")
+                
                 # Filter out invalid data
                 valid_mask = np.isfinite(final_errors) & (final_errors > 0)
                 
@@ -136,15 +142,23 @@ class StreamingQECPlotter:
                     ax.loglog(valid_physical, valid_final, 'o-', 
                              color=colors[i], linewidth=3, markersize=8,
                              label=f'N = {N}', alpha=0.8)
+                    plotted_curves += 1
+        
+        if plotted_curves == 0:
+            print("Warning: No valid curves to plot")
+            ax.text(0.5, 0.5, 'No Valid Threshold Data', 
+                   transform=ax.transAxes, ha='center', va='center', fontsize=16)
+            return None
         
         # Add "no improvement" reference line
         physical_range = np.logspace(-2, 0, 100)
         ax.loglog(physical_range, physical_range, '--', 
                  color='gray', linewidth=2, alpha=0.7, label='No Correction')
         
+        ax.set_xscale('linear')
         # Formatting to match Grafe style
-        ax.set_xlabel('Physical Error Rate', fontsize=16, fontweight='bold')
-        ax.set_ylabel('Final Logical Error Rate', fontsize=16, fontweight='bold')
+        ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=16, fontweight='bold')
+        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=16, fontweight='bold')
         ax.set_title('Streaming QEC Threshold Analysis\n(Depolarizing Noise, d=2)', 
                     fontsize=18, fontweight='bold')
         
@@ -152,17 +166,17 @@ class StreamingQECPlotter:
         ax.grid(True, alpha=0.3, which='both')
         
         # Set reasonable axis limits
-        ax.set_xlim(0.01, 1.0)
-        ax.set_ylim(1e-4, 1.0)
+        ax.set_xlim(0.09, 1.0)
+        ax.set_ylim(1e-5, 1.0)
         
         # Add threshold annotation
-        ax.text(0.7, 0.8, 'Below diagonal:\nError correction', 
-                transform=ax.transAxes, fontsize=12,
-                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgreen", alpha=0.8))
+        # ax.text(0.7, 0.8, 'Below diagonal:\nError correction', 
+        #         transform=ax.transAxes, fontsize=12,
+        #         bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgreen", alpha=0.8))
         
-        ax.text(0.3, 0.2, 'Above diagonal:\nNo improvement', 
-                transform=ax.transAxes, fontsize=12,
-                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightcoral", alpha=0.8))
+        # ax.text(0.3, 0.2, 'Above diagonal:\nNo improvement', 
+        #         transform=ax.transAxes, fontsize=12,
+        #         bbox=dict(boxstyle="round,pad=0.5", facecolor="lightcoral", alpha=0.8))
         
         plt.tight_layout()
         
@@ -171,7 +185,7 @@ class StreamingQECPlotter:
         plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
         plt.close()
         
-        print(f"Saved Grafe Figure 4 analog: {filename}")
+        print(f"Saved Grafe Figure 4 analog: {filename} with {plotted_curves} curves")
         return filepath
     
     def plot_error_evolution(self, save_format: str = 'pdf') -> Optional[str]:
@@ -182,19 +196,36 @@ class StreamingQECPlotter:
         
         fig, ax = plt.subplots(figsize=(10, 8))
         
-        # Plot examples for different noise types and error rates
-        noise_types = ['depolarizing', 'symmetric_pauli']
-        error_rates_to_show = [0.1, 0.3, 0.5]
+        # Auto-discover all noise types in the data
+        available_noise_types = sorted(list(set(d['noise_type'] for d in self.evolution_data)))
+        print(f"Found noise types: {available_noise_types}")
         
         plotted_any = False
+        linestyles = ['solid', 'dotted', 'dashed', 'dashdot', 'densely dashdotdotted']  # Cycle through linestyles
         
-        for noise_type in noise_types:
-            for error_rate in error_rates_to_show:
-                # Find matching data
-                matches = [d for d in self.evolution_data 
-                          if d['noise_type'] == noise_type 
-                          and abs(d['physical_error_rate'] - error_rate) < 0.05
-                          and d['N'] >= 16]
+        for noise_idx, noise_type in enumerate(available_noise_types):
+            # Get all data for this noise type
+            noise_data = [d for d in self.evolution_data if d['noise_type'] == noise_type]
+            
+            # Find best code size (largest available)
+            available_sizes = list(set(d['N'] for d in noise_data))
+            target_N = max(available_sizes)
+            
+            # Get all error rates for this noise type and code size
+            target_data = [d for d in noise_data if d['N'] == target_N]
+            error_rates = sorted(list(set(d['physical_error_rate'] for d in target_data)))
+            
+            print(f"{noise_type}: {len(error_rates)} error rates for N={target_N}")
+            if noise_type == 'depolarizing':
+                legend_label = '$\delta$'
+            else:
+                legend_label = 'p'
+            
+            # Generate colors for this noise type
+            base_color = PROTOCOL_COLORS.get(noise_type, '#666666')
+            
+            for rate_idx, error_rate in enumerate(error_rates):
+                matches = [d for d in target_data if d['physical_error_rate'] == error_rate]
                 
                 if matches:
                     data = matches[0]
@@ -202,25 +233,25 @@ class StreamingQECPlotter:
                     logical_errors = data['logical_errors']
                     
                     if len(iterations) > 0 and len(logical_errors) > 0:
-                        color = PROTOCOL_COLORS.get(noise_type, '#666666')
-                        linestyle = '-' if error_rate == 0.3 else '--'
-                        alpha = 1.0 if error_rate == 0.3 else 0.7
+                        # Vary alpha for different error rates within same noise type
+                        alpha = 1.0 - 0.6 * (rate_idx / max(1, len(error_rates) - 1))
+                        linestyle = linestyles[noise_idx % len(linestyles)]
                         
                         ax.semilogy(iterations, logical_errors, 'o-', 
-                                   color=color, linestyle=linestyle, alpha=alpha,
-                                   linewidth=3, markersize=8,
-                                   label=f'{noise_type.replace("_", " ").title()}, p={error_rate}')
+                                   color=base_color, linestyle=linestyle, alpha=max(0.4, alpha),
+                                   linewidth=3, markersize=6,
+                                   label=rf'{noise_type.replace("_", " ").title()}, {legend_label}={error_rate:.3f}')
                         plotted_any = True
         
         if not plotted_any:
             print("Warning: No valid evolution data to plot")
             ax.text(0.5, 0.5, 'No Evolution Data Available', 
                    transform=ax.transAxes, ha='center', va='center', fontsize=16)
-        
-        ax.set_xlabel('Purification Level', fontsize=16, fontweight='bold')
-        ax.set_ylabel('Logical Error Rate', fontsize=16, fontweight='bold')
+
+        ax.set_xlabel(r'Purification Level, $n$', fontsize=16, fontweight='bold')
+        ax.set_ylabel(r'Logical Error Rate, $\varepsilon_L^{(n)}$', fontsize=16, fontweight='bold')
         ax.set_title('Error Evolution Through Purification', fontsize=18, fontweight='bold')
-        ax.legend(fontsize=12)
+        ax.legend(fontsize=10, ncol=2)
         ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
@@ -241,17 +272,30 @@ class StreamingQECPlotter:
         
         fig, ax = plt.subplots(figsize=(10, 8))
         
-        # Focus on depolarizing noise with different error rates
-        error_rates = [0.1, 0.3, 0.5, 0.7]
-        colors = ['green', 'orange', 'red', 'purple']
+        # Auto-discover all available error rates for depolarizing noise
+        depolarizing_data = [d for d in self.evolution_data if d['noise_type'] == 'depolarizing']
+        
+        if not depolarizing_data:
+            print("Warning: No depolarizing evolution data available")
+            return None
+        
+        # Find best code size to use (largest available)
+        available_sizes = list(set(d['N'] for d in depolarizing_data))
+        target_N = max(available_sizes)
+        
+        # Get all unique error rates for this code size
+        target_data = [d for d in depolarizing_data if d['N'] == target_N]
+        error_rates = sorted(list(set(d['physical_error_rate'] for d in target_data)))
+        
+        print(f"Found {len(error_rates)} error rates for N={target_N}: {error_rates}")
+        
+        # Generate colors dynamically
+        colors = plt.cm.viridis(np.linspace(0, 1, len(error_rates)))
         
         plotted_any = False
         
         for i, error_rate in enumerate(error_rates):
-            matches = [d for d in self.evolution_data 
-                      if d['noise_type'] == 'depolarizing'
-                      and abs(d['physical_error_rate'] - error_rate) < 0.05
-                      and d['N'] == 32]  # Use consistent code size
+            matches = [d for d in target_data if d['physical_error_rate'] == error_rate]
             
             if matches:
                 data = matches[0]
@@ -260,7 +304,7 @@ class StreamingQECPlotter:
                 
                 if len(iterations) > 0 and len(fidelities) > 0:
                     ax.plot(iterations, fidelities, 'o-', color=colors[i],
-                           label=f'p = {error_rate}', linewidth=3, markersize=8)
+                           label=rf'$\delta$ = {error_rate:.3f}', linewidth=3, markersize=8)
                     plotted_any = True
         
         if not plotted_any:
@@ -270,11 +314,11 @@ class StreamingQECPlotter:
         
         # Add target fidelity line
         ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7, 
-                  linewidth=2, label='Target Fidelity')
+                  linewidth=2, label='Target Fidelity 0.99')
         
         ax.set_xlabel('Purification Level', fontsize=16, fontweight='bold')
         ax.set_ylabel('State Fidelity', fontsize=16, fontweight='bold')
-        ax.set_title('Fidelity Evolution (Depolarizing Noise)', fontsize=18, fontweight='bold')
+        ax.set_title(f'Fidelity Evolution (Depolarizing Noise, N={target_N})', fontsize=18, fontweight='bold')
         ax.legend(fontsize=12)
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 1.05)
@@ -370,13 +414,17 @@ class StreamingQECPlotter:
         # Get unique noise types
         noise_types = list(set(d['noise_type'] for d in self.threshold_data))
         
+        
         plotted_any = False
         
         for noise_type in noise_types:
+            # Find best code size to use (largest available)
+            available_sizes = list(set(d['N'] for d in self.threshold_data))
+            target_N = max(available_sizes)
             # Find representative data (fixed code size)
-            matches = [d for d in self.threshold_data 
-                      if d['noise_type'] == noise_type and d['N'] == 32]
-            
+            matches = [d for d in self.threshold_data
+                      if d['noise_type'] == noise_type and d['N'] == target_N]
+
             if matches:
                 data = matches[0]
                 physical_rates = np.array(data['physical_error_rates'])
@@ -401,9 +449,11 @@ class StreamingQECPlotter:
             ax.loglog(physical_range, physical_range, '--', 
                      color='gray', linewidth=2, alpha=0.7, label='No Correction')
         
+        ax.set_xscale('linear')
+        # ax.set_yscale('linear')
         ax.set_xlabel('Physical Error Rate', fontsize=16, fontweight='bold')
         ax.set_ylabel('Final Logical Error Rate', fontsize=16, fontweight='bold')
-        ax.set_title('Noise Model Comparison (N=32)', fontsize=18, fontweight='bold')
+        ax.set_title(f'Noise Model Comparison (N={target_N})', fontsize=18, fontweight='bold')
         ax.legend(fontsize=12)
         ax.grid(True, alpha=0.3)
         
@@ -509,7 +559,7 @@ class StreamingQECPlotter:
             ax.axhline(y=1.0, color='gray', linestyle='--', alpha=0.7, 
                       linewidth=2, label='No Improvement')
         
-        ax.set_xlabel('Physical Error Rate', fontsize=16, fontweight='bold')
+        ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=16, fontweight='bold')
         ax.set_ylabel('Error Reduction Ratio', fontsize=16, fontweight='bold')
         ax.set_title('Error Reduction Effectiveness', fontsize=18, fontweight='bold')
         ax.legend(fontsize=12)
