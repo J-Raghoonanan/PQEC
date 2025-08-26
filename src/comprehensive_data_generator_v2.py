@@ -819,14 +819,14 @@ class ComprehensiveStreamingDataGenerator:
             print("QUICK RUN MODE - Reduced parameter sets")
             noise_types = ['depolarizing', 'symmetric_pauli']
             dimensions = [2, 3]
-            N_values = [8, 16, 32, 64, 128]
+            N_values = [8, 16, 32, 64, 128, 256, 512, 1024]
             error_rates = [0.1, 0.3, 0.5]
         else:
             print("FULL ANALYSIS MODE - Complete parameter space")
             noise_types = ['depolarizing', 'symmetric_pauli', 'pure_dephasing']
             dimensions = [2, 3, 4]
             N_values = [8, 16, 32, 64, 128, 256, 512, 1024]
-            error_rates = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 0.9]
+            error_rates = [0.01, 0.1, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99]
         
         results = {}
         
@@ -864,7 +864,7 @@ class ComprehensiveStreamingDataGenerator:
         threshold_data = self.generate_threshold_analysis(
             noise_types=noise_types,
             dimensions=dimensions,
-            N_values=N_values[:4] if quick_run else N_values[:6]
+            N_values=N_values[:4] if quick_run else N_values
         )
         results['threshold_data'] = threshold_data
         
@@ -924,7 +924,7 @@ def main():
     quick_run = '--quick' in sys.argv
     verbose = '--verbose' in sys.argv or '-v' in sys.argv
     
-    data_dir = "data_streaming"
+    data_dir = "data/data_streaming"
     if '--data-dir' in sys.argv:
         idx = sys.argv.index('--data-dir')
         if idx + 1 < len(sys.argv):

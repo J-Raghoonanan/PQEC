@@ -47,72 +47,6 @@
     "noise_type": "depolarizing",
     "dimension": 2,
     "N": 8,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.018161044852027297,
-    "worst_output_error": 0.018161044852027297,
-    "average_output_error": 0.018161044852027297,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 8,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.03346617716880623,
-    "worst_output_error": 0.03346617716880623,
-    "average_output_error": 0.03346617716880623,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 8,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.055522740696987594,
-    "worst_output_error": 0.055522740696987594,
-    "average_output_error": 0.055522740696987594,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 8,
     "physical_error_rate": 0.5,
     "total_states_processed": 0,
     "output_states_count": 1,
@@ -200,6 +134,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 2,
+    "N": 8,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.44103211561154715,
+    "worst_output_error": 0.44103211561154715,
+    "average_output_error": 0.44103211561154715,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 8,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.488150493528762,
+    "worst_output_error": 0.488150493528762,
+    "average_output_error": 0.488150493528762,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
     "N": 16,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -240,72 +218,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d2_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.009413284561262059,
-    "worst_output_error": 0.009413284561262059,
-    "average_output_error": 0.009413284561262059,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0178711445677599,
-    "worst_output_error": 0.0178711445677599,
-    "average_output_error": 0.0178711445677599,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.030924433981125543,
-    "worst_output_error": 0.030924433981125543,
-    "average_output_error": 0.030924433981125543,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -398,6 +310,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 2,
+    "N": 16,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4217389942295285,
+    "worst_output_error": 0.4217389942295285,
+    "average_output_error": 0.4217389942295285,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 16,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4842036153491,
+    "worst_output_error": 0.4842036153491,
+    "average_output_error": 0.4842036153491,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
     "N": 32,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -438,72 +394,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d2_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.004795665261973114,
-    "worst_output_error": 0.004795665261973114,
-    "average_output_error": 0.004795665261973114,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.00925775107555743,
-    "worst_output_error": 0.00925775107555743,
-    "average_output_error": 0.00925775107555743,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.016432838465105015,
-    "worst_output_error": 0.016432838465105015,
-    "average_output_error": 0.016432838465105015,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -596,6 +486,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 2,
+    "N": 32,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.39649723521764185,
+    "worst_output_error": 0.39649723521764185,
+    "average_output_error": 0.39649723521764185,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 32,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4789451587660398,
+    "worst_output_error": 0.4789451587660398,
+    "average_output_error": 0.4789451587660398,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
     "N": 64,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -636,72 +570,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d2_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0024208859156122364,
-    "worst_output_error": 0.0024208859156122364,
-    "average_output_error": 0.0024208859156122364,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.004714974473884026,
-    "worst_output_error": 0.004714974473884026,
-    "average_output_error": 0.004714974473884026,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.008488638491187972,
-    "worst_output_error": 0.008488638491187972,
-    "average_output_error": 0.008488638491187972,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -794,6 +662,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 2,
+    "N": 64,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.3639397657751765,
+    "worst_output_error": 0.3639397657751765,
+    "average_output_error": 0.3639397657751765,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 64,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.47194346187633507,
+    "worst_output_error": 0.47194346187633507,
+    "average_output_error": 0.47194346187633507,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
     "N": 128,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -834,72 +746,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d2_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.001216310723194669,
-    "worst_output_error": 0.001216310723194669,
-    "average_output_error": 0.001216310723194669,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0023797703810490844,
-    "worst_output_error": 0.0023797703810490844,
-    "average_output_error": 0.0023797703810490844,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.004316679421504932,
-    "worst_output_error": 0.004316679421504932,
-    "average_output_error": 0.004316679421504932,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -992,6 +838,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 2,
+    "N": 128,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.3229563550742036,
+    "worst_output_error": 0.3229563550742036,
+    "average_output_error": 0.3229563550742036,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 128,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4626305039966959,
+    "worst_output_error": 0.4626305039966959,
+    "average_output_error": 0.4626305039966959,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
     "N": 256,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -1032,72 +922,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d2_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.000609635671987907,
-    "worst_output_error": 0.000609635671987907,
-    "average_output_error": 0.000609635671987907,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0011955552201633468,
-    "worst_output_error": 0.0011955552201633468,
-    "average_output_error": 0.0011955552201633468,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0021770134747711722,
-    "worst_output_error": 0.0021770134747711722,
-    "average_output_error": 0.0021770134747711722,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -1190,6 +1014,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 2,
+    "N": 256,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.2734115287753685,
+    "worst_output_error": 0.2734115287753685,
+    "average_output_error": 0.2734115287753685,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 256,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4502666075285285,
+    "worst_output_error": 0.4502666075285285,
+    "average_output_error": 0.4502666075285285,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
     "N": 512,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -1230,72 +1098,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d2_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.00030518960486464186,
-    "worst_output_error": 0.00030518960486464186,
-    "average_output_error": 0.00030518960486464186,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0005992078157769365,
-    "worst_output_error": 0.0005992078157769365,
-    "average_output_error": 0.0005992078157769365,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.001093251272630491,
-    "worst_output_error": 0.001093251272630491,
-    "average_output_error": 0.001093251272630491,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -1388,6 +1190,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 2,
+    "N": 512,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.2172388612888035,
+    "worst_output_error": 0.2172388612888035,
+    "average_output_error": 0.2172388612888035,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 512,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4339067775831741,
+    "worst_output_error": 0.4339067775831741,
+    "average_output_error": 0.4339067775831741,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
     "N": 1024,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -1428,72 +1274,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d2_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0001526879573356399,
-    "worst_output_error": 0.0001526879573356399,
-    "average_output_error": 0.0001526879573356399,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.00029996306540319706,
-    "worst_output_error": 0.00029996306540319706,
-    "average_output_error": 0.00029996306540319706,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0005478214872705611,
-    "worst_output_error": 0.0005478214872705611,
-    "average_output_error": 0.0005478214872705611,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d2_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -1585,6 +1365,50 @@
   },
   {
     "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 1024,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.15930499054739888,
+    "worst_output_error": 0.15930499054739888,
+    "average_output_error": 0.15930499054739888,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 2,
+    "N": 1024,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.41238600404351783,
+    "worst_output_error": 0.41238600404351783,
+    "average_output_error": 0.41238600404351783,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d2_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
     "dimension": 3,
     "N": 8,
     "physical_error_rate": 0.01,
@@ -1626,72 +1450,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 8,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.02433122376564441,
-    "worst_output_error": 0.02433122376564441,
-    "average_output_error": 0.02433122376564441,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 8,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.04512840107854199,
-    "worst_output_error": 0.04512840107854199,
-    "average_output_error": 0.04512840107854199,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 8,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.07558219207973409,
-    "worst_output_error": 0.07558219207973409,
-    "average_output_error": 0.07558219207973409,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -1784,6 +1542,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 3,
+    "N": 8,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.599453360734684,
+    "worst_output_error": 0.599453360734684,
+    "average_output_error": 0.599453360734684,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 8,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6535493584129761,
+    "worst_output_error": 0.6535493584129761,
+    "average_output_error": 0.6535493584129761,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
     "N": 16,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -1824,72 +1626,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 16,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.012614950049995688,
-    "worst_output_error": 0.012614950049995688,
-    "average_output_error": 0.012614950049995688,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 16,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.024125227024569096,
-    "worst_output_error": 0.024125227024569096,
-    "average_output_error": 0.024125227024569096,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 16,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.042230177109146595,
-    "worst_output_error": 0.042230177109146595,
-    "average_output_error": 0.042230177109146595,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -1982,6 +1718,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 3,
+    "N": 16,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.5813893313015082,
+    "worst_output_error": 0.5813893313015082,
+    "average_output_error": 0.5813893313015082,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 16,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6502086932323031,
+    "worst_output_error": 0.6502086932323031,
+    "average_output_error": 0.6502086932323031,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
     "N": 32,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -2022,72 +1802,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 32,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0064275756634645615,
-    "worst_output_error": 0.0064275756634645615,
-    "average_output_error": 0.0064275756634645615,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 32,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.01250433160580148,
-    "worst_output_error": 0.01250433160580148,
-    "average_output_error": 0.01250433160580148,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 32,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0224802105930626,
-    "worst_output_error": 0.0224802105930626,
-    "average_output_error": 0.0224802105930626,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -2180,6 +1894,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 3,
+    "N": 32,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.5582300606783083,
+    "worst_output_error": 0.5582300606783083,
+    "average_output_error": 0.5582300606783083,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 32,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6459989234768486,
+    "worst_output_error": 0.6459989234768486,
+    "average_output_error": 0.6459989234768486,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
     "N": 64,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -2220,72 +1978,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 64,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.003244872383388738,
-    "worst_output_error": 0.003244872383388738,
-    "average_output_error": 0.003244872383388738,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 64,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0063701629895981755,
-    "worst_output_error": 0.0063701629895981755,
-    "average_output_error": 0.0063701629895981755,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 64,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.01162333480255473,
-    "worst_output_error": 0.01162333480255473,
-    "average_output_error": 0.01162333480255473,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -2378,6 +2070,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 3,
+    "N": 64,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.5285386724980807,
+    "worst_output_error": 0.5285386724980807,
+    "average_output_error": 0.5285386724980807,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 64,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6406842901587643,
+    "worst_output_error": 0.6406842901587643,
+    "average_output_error": 0.6406842901587643,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
     "N": 128,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -2418,72 +2154,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 128,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0016303458805392672,
-    "worst_output_error": 0.0016303458805392672,
-    "average_output_error": 0.0016303458805392672,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 128,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0032156123490087265,
-    "worst_output_error": 0.0032156123490087265,
-    "average_output_error": 0.0032156123490087265,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 128,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.005913579188154901,
-    "worst_output_error": 0.005913579188154901,
-    "average_output_error": 0.005913579188154901,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -2576,6 +2246,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 3,
+    "N": 128,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4906304085390083,
+    "worst_output_error": 0.4906304085390083,
+    "average_output_error": 0.4906304085390083,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 128,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6339603789972731,
+    "worst_output_error": 0.6339603789972731,
+    "average_output_error": 0.6339603789972731,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
     "N": 256,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -2616,72 +2330,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 256,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0008171680847712803,
-    "worst_output_error": 0.0008171680847712803,
-    "average_output_error": 0.0008171680847712803,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 256,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.001615573745112971,
-    "worst_output_error": 0.001615573745112971,
-    "average_output_error": 0.001615573745112971,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 256,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.002983094725612793,
-    "worst_output_error": 0.002983094725612793,
-    "average_output_error": 0.002983094725612793,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -2774,6 +2422,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 3,
+    "N": 256,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.44280490664176025,
+    "worst_output_error": 0.44280490664176025,
+    "average_output_error": 0.44280490664176025,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 256,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6254322911310867,
+    "worst_output_error": 0.6254322911310867,
+    "average_output_error": 0.6254322911310867,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
     "N": 512,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -2814,72 +2506,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 512,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0004090850696891006,
-    "worst_output_error": 0.0004090850696891006,
-    "average_output_error": 0.0004090850696891006,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 512,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0008097460114588154,
-    "worst_output_error": 0.0008097460114588154,
-    "average_output_error": 0.0008097460114588154,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 512,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0014982314432506378,
-    "worst_output_error": 0.0014982314432506378,
-    "average_output_error": 0.0014982314432506378,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -2972,6 +2598,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 3,
+    "N": 512,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.3839838728635698,
+    "worst_output_error": 0.3839838728635698,
+    "average_output_error": 0.3839838728635698,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 512,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6145857154570896,
+    "worst_output_error": 0.6145857154570896,
+    "average_output_error": 0.6145857154570896,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
     "N": 1024,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -3012,72 +2682,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d3_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 1024,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0002046680734576848,
-    "worst_output_error": 0.0002046680734576848,
-    "average_output_error": 0.0002046680734576848,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 1024,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.00040536497120384024,
-    "worst_output_error": 0.00040536497120384024,
-    "average_output_error": 0.00040536497120384024,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 3,
-    "N": 1024,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0007508005049238579,
-    "worst_output_error": 0.0007508005049238579,
-    "average_output_error": 0.0007508005049238579,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d3_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -3169,6 +2773,50 @@
   },
   {
     "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 1024,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.314964500472857,
+    "worst_output_error": 0.314964500472857,
+    "average_output_error": 0.314964500472857,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 3,
+    "N": 1024,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6007494630405497,
+    "worst_output_error": 0.6007494630405497,
+    "average_output_error": 0.6007494630405497,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d3_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
     "dimension": 4,
     "N": 8,
     "physical_error_rate": 0.01,
@@ -3210,72 +2858,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 8,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.02744141368794928,
-    "worst_output_error": 0.02744141368794928,
-    "average_output_error": 0.02744141368794928,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 8,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.05107758374305879,
-    "worst_output_error": 0.05107758374305879,
-    "average_output_error": 0.05107758374305879,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 8,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.08600478231810355,
-    "worst_output_error": 0.08600478231810355,
-    "average_output_error": 0.08600478231810355,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -3368,6 +2950,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 4,
+    "N": 8,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6815984203266767,
+    "worst_output_error": 0.6815984203266767,
+    "average_output_error": 0.6815984203266767,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 8,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.7368850822757064,
+    "worst_output_error": 0.7368850822757064,
+    "average_output_error": 0.7368850822757064,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
     "N": 16,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -3408,72 +3034,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 16,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.014229547409941368,
-    "worst_output_error": 0.014229547409941368,
-    "average_output_error": 0.014229547409941368,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 16,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.02732161389128182,
-    "worst_output_error": 0.02732161389128182,
-    "average_output_error": 0.02732161389128182,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 16,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.048137906742904385,
-    "worst_output_error": 0.048137906742904385,
-    "average_output_error": 0.048137906742904385,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -3566,6 +3126,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 4,
+    "N": 16,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6658427602121828,
+    "worst_output_error": 0.6658427602121828,
+    "average_output_error": 0.6658427602121828,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 16,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.7341732685241725,
+    "worst_output_error": 0.7341732685241725,
+    "average_output_error": 0.7341732685241725,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
     "N": 32,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -3606,72 +3210,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 32,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.007250716032341786,
-    "worst_output_error": 0.007250716032341786,
-    "average_output_error": 0.007250716032341786,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 32,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.014165185167032412,
-    "worst_output_error": 0.014165185167032412,
-    "average_output_error": 0.014165185167032412,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 32,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.02565028869528327,
-    "worst_output_error": 0.02565028869528327,
-    "average_output_error": 0.02565028869528327,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -3764,6 +3302,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 4,
+    "N": 32,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.646019541543922,
+    "worst_output_error": 0.646019541543922,
+    "average_output_error": 0.646019541543922,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 32,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.7308794387168958,
+    "worst_output_error": 0.7308794387168958,
+    "average_output_error": 0.7308794387168958,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
     "N": 64,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -3804,72 +3386,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 64,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.003660533354688411,
-    "worst_output_error": 0.003660533354688411,
-    "average_output_error": 0.003660533354688411,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 64,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.007217303658169111,
-    "worst_output_error": 0.007217303658169111,
-    "average_output_error": 0.007217303658169111,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 64,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.013269342775185017,
-    "worst_output_error": 0.013269342775185017,
-    "average_output_error": 0.013269342775185017,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -3962,6 +3478,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 4,
+    "N": 64,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6209454357570008,
+    "worst_output_error": 0.6209454357570008,
+    "average_output_error": 0.6209454357570008,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 64,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.7268693622294538,
+    "worst_output_error": 0.7268693622294538,
+    "average_output_error": 0.7268693622294538,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
     "N": 128,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -4002,72 +3562,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 128,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.001839216009912964,
-    "worst_output_error": 0.001839216009912964,
-    "average_output_error": 0.001839216009912964,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 128,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.003643503150949773,
-    "worst_output_error": 0.003643503150949773,
-    "average_output_error": 0.003643503150949773,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 128,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.006752830244641572,
-    "worst_output_error": 0.006752830244641572,
-    "average_output_error": 0.006752830244641572,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -4160,6 +3654,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 4,
+    "N": 128,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.5891100899860575,
+    "worst_output_error": 0.5891100899860575,
+    "average_output_error": 0.5891100899860575,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 128,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.7219738816209328,
+    "worst_output_error": 0.7219738816209328,
+    "average_output_error": 0.7219738816209328,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
     "N": 256,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -4200,72 +3738,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 256,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0009218652212135137,
-    "worst_output_error": 0.0009218652212135137,
-    "average_output_error": 0.0009218652212135137,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 256,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0018306177551279668,
-    "worst_output_error": 0.0018306177551279668,
-    "average_output_error": 0.0018306177551279668,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 256,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.003406918008742321,
-    "worst_output_error": 0.003406918008742321,
-    "average_output_error": 0.003406918008742321,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -4358,6 +3830,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 4,
+    "N": 256,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.5486850356104164,
+    "worst_output_error": 0.5486850356104164,
+    "average_output_error": 0.5486850356104164,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 256,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.7159782485391069,
+    "worst_output_error": 0.7159782485391069,
+    "average_output_error": 0.7159782485391069,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
     "N": 512,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -4398,72 +3914,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 512,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0004614994286616658,
-    "worst_output_error": 0.0004614994286616658,
-    "average_output_error": 0.0004614994286616658,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 512,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0009175450287847997,
-    "worst_output_error": 0.0009175450287847997,
-    "average_output_error": 0.0009175450287847997,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 512,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0017112102309288502,
-    "worst_output_error": 0.0017112102309288502,
-    "average_output_error": 0.0017112102309288502,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -4556,6 +4006,50 @@
   {
     "noise_type": "depolarizing",
     "dimension": 4,
+    "N": 512,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.49771349663610054,
+    "worst_output_error": 0.49771349663610054,
+    "average_output_error": 0.49771349663610054,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 512,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.7086076806233572,
+    "worst_output_error": 0.7086076806233572,
+    "average_output_error": 0.7086076806233572,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
     "N": 1024,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -4596,72 +4090,6 @@
     ],
     "convergence_achieved": true,
     "noise_model_name": "Depolarizing_d4_delta0.100"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 1024,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0002308917349045092,
-    "worst_output_error": 0.0002308917349045092,
-    "average_output_error": 0.0002308917349045092,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.200"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 1024,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.00045933403105702375,
-    "worst_output_error": 0.00045933403105702375,
-    "average_output_error": 0.00045933403105702375,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.300"
-  },
-  {
-    "noise_type": "depolarizing",
-    "dimension": 4,
-    "N": 1024,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.0008575589450880161,
-    "worst_output_error": 0.0008575589450880161,
-    "average_output_error": 0.0008575589450880161,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": true,
-    "noise_model_name": "Depolarizing_d4_delta0.400"
   },
   {
     "noise_type": "depolarizing",
@@ -4752,6 +4180,50 @@
     "noise_model_name": "Depolarizing_d4_delta0.900"
   },
   {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 1024,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4347155416510522,
+    "worst_output_error": 0.4347155416510522,
+    "average_output_error": 0.4347155416510522,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.950"
+  },
+  {
+    "noise_type": "depolarizing",
+    "dimension": 4,
+    "N": 1024,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6995077208410723,
+    "worst_output_error": 0.6995077208410723,
+    "average_output_error": 0.6995077208410723,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": true,
+    "noise_model_name": "Depolarizing_d4_delta0.990"
+  },
+  {
     "noise_type": "symmetric_pauli",
     "dimension": 2,
     "N": 8,
@@ -4763,9 +4235,9 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.008865459994826628,
-    "worst_output_error": 0.008865459994826628,
-    "average_output_error": 0.008865459994826628,
+    "best_output_error": 0.008865459994826528,
+    "worst_output_error": 0.008865459994826528,
+    "average_output_error": 0.008865459994826528,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
@@ -4785,59 +4257,15 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.15309852228638102,
-    "worst_output_error": 0.15309852228638102,
-    "average_output_error": 0.15309852228638102,
+    "best_output_error": 0.1530985222863811,
+    "worst_output_error": 0.1530985222863811,
+    "average_output_error": 0.1530985222863811,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
     ],
     "convergence_achieved": "False",
     "noise_model_name": "SymmetricPauli_p0.100"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 8,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.40839211679596743,
-    "worst_output_error": 0.40839211679596743,
-    "average_output_error": 0.40839211679596743,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 8,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5507027039679604,
-    "worst_output_error": 0.5507027039679604,
-    "average_output_error": 0.5507027039679604,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
   },
   {
     "noise_type": "symmetric_pauli",
@@ -4851,9 +4279,9 @@
     "memory_efficiency": 4.0,
     "total_swap_operations": 15,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.007946351197785667,
-    "worst_output_error": 0.007946351197785667,
-    "average_output_error": 0.007946351197785667,
+    "best_output_error": 0.007946351197785721,
+    "worst_output_error": 0.007946351197785721,
+    "average_output_error": 0.007946351197785721,
     "memory_improvement_vs_batch": 4.0,
     "output_error_levels": [
       4
@@ -4886,50 +4314,6 @@
   {
     "noise_type": "symmetric_pauli",
     "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.41096361311815544,
-    "worst_output_error": 0.41096361311815544,
-    "average_output_error": 0.41096361311815544,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5405121724980627,
-    "worst_output_error": 0.5405121724980627,
-    "average_output_error": 0.5405121724980627,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
     "N": 32,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -4939,9 +4323,9 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.007465491985860712,
-    "worst_output_error": 0.007465491985860712,
-    "average_output_error": 0.007465491985860712,
+    "best_output_error": 0.007465491985860783,
+    "worst_output_error": 0.007465491985860783,
+    "average_output_error": 0.007465491985860783,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
@@ -4961,59 +4345,15 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.13356859018190143,
-    "worst_output_error": 0.13356859018190143,
-    "average_output_error": 0.13356859018190143,
+    "best_output_error": 0.1335685901819015,
+    "worst_output_error": 0.1335685901819015,
+    "average_output_error": 0.1335685901819015,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
     ],
     "convergence_achieved": "False",
     "noise_model_name": "SymmetricPauli_p0.100"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.41343426471042677,
-    "worst_output_error": 0.41343426471042677,
-    "average_output_error": 0.41343426471042677,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5323842259210182,
-    "worst_output_error": 0.5323842259210182,
-    "average_output_error": 0.5323842259210182,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
   },
   {
     "noise_type": "symmetric_pauli",
@@ -5027,9 +4367,9 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.007214585445694282,
-    "worst_output_error": 0.007214585445694282,
-    "average_output_error": 0.007214585445694282,
+    "best_output_error": 0.0072145854456942314,
+    "worst_output_error": 0.0072145854456942314,
+    "average_output_error": 0.0072145854456942314,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
@@ -5049,59 +4389,15 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.1267582963007705,
-    "worst_output_error": 0.1267582963007705,
-    "average_output_error": 0.1267582963007705,
+    "best_output_error": 0.12675829630077046,
+    "worst_output_error": 0.12675829630077046,
+    "average_output_error": 0.12675829630077046,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
     ],
     "convergence_achieved": "False",
     "noise_model_name": "SymmetricPauli_p0.100"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.41581031637829624,
-    "worst_output_error": 0.41581031637829624,
-    "average_output_error": 0.41581031637829624,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5258943456712554,
-    "worst_output_error": 0.5258943456712554,
-    "average_output_error": 0.5258943456712554,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
   },
   {
     "noise_type": "symmetric_pauli",
@@ -5115,9 +4411,9 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.007083847849738721,
-    "worst_output_error": 0.007083847849738721,
-    "average_output_error": 0.007083847849738721,
+    "best_output_error": 0.00708384784973886,
+    "worst_output_error": 0.00708384784973886,
+    "average_output_error": 0.00708384784973886,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
@@ -5137,59 +4433,15 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.1215045532277562,
-    "worst_output_error": 0.1215045532277562,
-    "average_output_error": 0.1215045532277562,
+    "best_output_error": 0.12150455322775612,
+    "worst_output_error": 0.12150455322775612,
+    "average_output_error": 0.12150455322775612,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
     ],
     "convergence_achieved": "False",
     "noise_model_name": "SymmetricPauli_p0.100"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.41809745064932036,
-    "worst_output_error": 0.41809745064932036,
-    "average_output_error": 0.41809745064932036,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5207088114427763,
-    "worst_output_error": 0.5207088114427763,
-    "average_output_error": 0.5207088114427763,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
   },
   {
     "noise_type": "symmetric_pauli",
@@ -5203,9 +4455,9 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.007015775147675094,
-    "worst_output_error": 0.007015775147675094,
-    "average_output_error": 0.007015775147675094,
+    "best_output_error": 0.00701577514767502,
+    "worst_output_error": 0.00701577514767502,
+    "average_output_error": 0.00701577514767502,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
@@ -5225,59 +4477,15 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.11750450903662932,
-    "worst_output_error": 0.11750450903662932,
-    "average_output_error": 0.11750450903662932,
+    "best_output_error": 0.11750450903662923,
+    "worst_output_error": 0.11750450903662923,
+    "average_output_error": 0.11750450903662923,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
     ],
     "convergence_achieved": "False",
     "noise_model_name": "SymmetricPauli_p0.100"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.42030085256772814,
-    "worst_output_error": 0.42030085256772814,
-    "average_output_error": 0.42030085256772814,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5165636395234225,
-    "worst_output_error": 0.5165636395234225,
-    "average_output_error": 0.5165636395234225,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
   },
   {
     "noise_type": "symmetric_pauli",
@@ -5291,9 +4499,9 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.0069803443602985725,
-    "worst_output_error": 0.0069803443602985725,
-    "average_output_error": 0.0069803443602985725,
+    "best_output_error": 0.006980344360298879,
+    "worst_output_error": 0.006980344360298879,
+    "average_output_error": 0.006980344360298879,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
@@ -5313,59 +4521,15 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.11448996548415914,
-    "worst_output_error": 0.11448996548415914,
-    "average_output_error": 0.11448996548415914,
+    "best_output_error": 0.1144899654841592,
+    "worst_output_error": 0.1144899654841592,
+    "average_output_error": 0.1144899654841592,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
     ],
     "convergence_achieved": "False",
     "noise_model_name": "SymmetricPauli_p0.100"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.42242526555934495,
-    "worst_output_error": 0.42242526555934495,
-    "average_output_error": 0.42242526555934495,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5132491668360363,
-    "worst_output_error": 0.5132491668360363,
-    "average_output_error": 0.5132491668360363,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
   },
   {
     "noise_type": "symmetric_pauli",
@@ -5379,9 +4543,9 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.006961906824910573,
-    "worst_output_error": 0.006961906824910573,
-    "average_output_error": 0.006961906824910573,
+    "best_output_error": 0.006961906824910737,
+    "worst_output_error": 0.006961906824910737,
+    "average_output_error": 0.006961906824910737,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
@@ -5401,9 +4565,9 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.11223584223331662,
-    "worst_output_error": 0.11223584223331662,
-    "average_output_error": 0.11223584223331662,
+    "best_output_error": 0.11223584223331673,
+    "worst_output_error": 0.11223584223331673,
+    "average_output_error": 0.11223584223331673,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
@@ -5412,50 +4576,6 @@
     "noise_model_name": "SymmetricPauli_p0.100"
   },
   {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.4244750397886664,
-    "worst_output_error": 0.4244750397886664,
-    "average_output_error": 0.4244750397886664,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.200"
-  },
-  {
-    "noise_type": "symmetric_pauli",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5105984404505691,
-    "worst_output_error": 0.5105984404505691,
-    "average_output_error": 0.5105984404505691,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "SymmetricPauli_p0.300"
-  },
-  {
     "noise_type": "pure_dephasing",
     "dimension": 2,
     "N": 8,
@@ -5467,9 +4587,9 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.01735137125831555,
-    "worst_output_error": 0.01735137125831555,
-    "average_output_error": 0.01735137125831555,
+    "best_output_error": 0.010571584418069628,
+    "worst_output_error": 0.010571584418069628,
+    "average_output_error": 0.010571584418069628,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
@@ -5489,81 +4609,15 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.20781592239051816,
-    "worst_output_error": 0.20781592239051816,
-    "average_output_error": 0.20781592239051816,
+    "best_output_error": 0.1986671668672319,
+    "worst_output_error": 0.1986671668672319,
+    "average_output_error": 0.1986671668672319,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
     ],
     "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 8,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.048738883578334814,
-    "worst_output_error": 0.048738883578334814,
-    "average_output_error": 0.048738883578334814,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": "True",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 8,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.47001201221749184,
-    "worst_output_error": 0.47001201221749184,
-    "average_output_error": 0.47001201221749184,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 8,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 3,
-    "theoretical_memory_bound": 4,
-    "memory_efficiency": 3.0,
-    "total_swap_operations": 7,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.42779492284273185,
-    "worst_output_error": 0.42779492284273185,
-    "average_output_error": 0.42779492284273185,
-    "memory_improvement_vs_batch": 2.6666666666666665,
-    "output_error_levels": [
-      3
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -5577,9 +4631,9 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.5037989277140539,
-    "worst_output_error": 0.5037989277140539,
-    "average_output_error": 0.5037989277140539,
+    "best_output_error": 0.5017241824242342,
+    "worst_output_error": 0.5017241824242342,
+    "average_output_error": 0.5017241824242342,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
@@ -5599,9 +4653,9 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.4478988673012388,
-    "worst_output_error": 0.4478988673012388,
-    "average_output_error": 0.4478988673012388,
+    "best_output_error": 0.2847333751203723,
+    "worst_output_error": 0.2847333751203723,
+    "average_output_error": 0.2847333751203723,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
@@ -5621,9 +4675,9 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.20546873285867123,
-    "worst_output_error": 0.20546873285867123,
-    "average_output_error": 0.20546873285867123,
+    "best_output_error": 0.3011900036832703,
+    "worst_output_error": 0.3011900036832703,
+    "average_output_error": 0.3011900036832703,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
@@ -5643,9 +4697,9 @@
     "memory_efficiency": 3.0,
     "total_swap_operations": 7,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.1605051738353033,
-    "worst_output_error": 0.1605051738353033,
-    "average_output_error": 0.1605051738353033,
+    "best_output_error": 0.18697879201086973,
+    "worst_output_error": 0.18697879201086973,
+    "average_output_error": 0.18697879201086973,
     "memory_improvement_vs_batch": 2.6666666666666665,
     "output_error_levels": [
       3
@@ -5656,6 +4710,50 @@
   {
     "noise_type": "pure_dephasing",
     "dimension": 2,
+    "N": 8,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.08388654777270084,
+    "worst_output_error": 0.08388654777270084,
+    "average_output_error": 0.08388654777270084,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 8,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 3,
+    "theoretical_memory_bound": 4,
+    "memory_efficiency": 3.0,
+    "total_swap_operations": 7,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.01374231715421682,
+    "worst_output_error": 0.01374231715421682,
+    "average_output_error": 0.01374231715421682,
+    "memory_improvement_vs_batch": 2.6666666666666665,
+    "output_error_levels": [
+      3
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.990"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
     "N": 16,
     "physical_error_rate": 0.01,
     "total_states_processed": 0,
@@ -5665,9 +4763,9 @@
     "memory_efficiency": 4.0,
     "total_swap_operations": 15,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.016856606888494746,
-    "worst_output_error": 0.016856606888494746,
-    "average_output_error": 0.016856606888494746,
+    "best_output_error": 0.024899560358978667,
+    "worst_output_error": 0.024899560358978667,
+    "average_output_error": 0.024899560358978667,
     "memory_improvement_vs_batch": 4.0,
     "output_error_levels": [
       4
@@ -5687,81 +4785,15 @@
     "memory_efficiency": 4.0,
     "total_swap_operations": 15,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.2532387234701768,
-    "worst_output_error": 0.2532387234701768,
-    "average_output_error": 0.2532387234701768,
+    "best_output_error": 0.10962126982069223,
+    "worst_output_error": 0.10962126982069223,
+    "average_output_error": 0.10962126982069223,
     "memory_improvement_vs_batch": 4.0,
     "output_error_levels": [
       4
     ],
     "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.38797856042643764,
-    "worst_output_error": 0.38797856042643764,
-    "average_output_error": 0.38797856042643764,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.305848796536664,
-    "worst_output_error": 0.305848796536664,
-    "average_output_error": 0.305848796536664,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 16,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 4,
-    "theoretical_memory_bound": 5,
-    "memory_efficiency": 4.0,
-    "total_swap_operations": 15,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5017639500810056,
-    "worst_output_error": 0.5017639500810056,
-    "average_output_error": 0.5017639500810056,
-    "memory_improvement_vs_batch": 4.0,
-    "output_error_levels": [
-      4
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -5775,14 +4807,14 @@
     "memory_efficiency": 4.0,
     "total_swap_operations": 15,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.5188664994946206,
-    "worst_output_error": 0.5188664994946206,
-    "average_output_error": 0.5188664994946206,
+    "best_output_error": 0.36654778147778433,
+    "worst_output_error": 0.36654778147778433,
+    "average_output_error": 0.36654778147778433,
     "memory_improvement_vs_batch": 4.0,
     "output_error_levels": [
       4
     ],
-    "convergence_achieved": "False",
+    "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.500"
   },
   {
@@ -5797,9 +4829,9 @@
     "memory_efficiency": 4.0,
     "total_swap_operations": 15,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.34921826153223146,
-    "worst_output_error": 0.34921826153223146,
-    "average_output_error": 0.34921826153223146,
+    "best_output_error": 0.4039927660482887,
+    "worst_output_error": 0.4039927660482887,
+    "average_output_error": 0.4039927660482887,
     "memory_improvement_vs_batch": 4.0,
     "output_error_levels": [
       4
@@ -5819,9 +4851,9 @@
     "memory_efficiency": 4.0,
     "total_swap_operations": 15,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.5514781801128498,
-    "worst_output_error": 0.5514781801128498,
-    "average_output_error": 0.5514781801128498,
+    "best_output_error": 0.6081255574040026,
+    "worst_output_error": 0.6081255574040026,
+    "average_output_error": 0.6081255574040026,
     "memory_improvement_vs_batch": 4.0,
     "output_error_levels": [
       4
@@ -5841,15 +4873,59 @@
     "memory_efficiency": 4.0,
     "total_swap_operations": 15,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.6811818473470449,
-    "worst_output_error": 0.6811818473470449,
-    "average_output_error": 0.6811818473470449,
+    "best_output_error": 0.7366607637443378,
+    "worst_output_error": 0.7366607637443378,
+    "average_output_error": 0.7366607637443378,
     "memory_improvement_vs_batch": 4.0,
     "output_error_levels": [
       4
     ],
     "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.900"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 16,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.4437780313154008,
+    "worst_output_error": 0.4437780313154008,
+    "average_output_error": 0.4437780313154008,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 16,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 4,
+    "theoretical_memory_bound": 5,
+    "memory_efficiency": 4.0,
+    "total_swap_operations": 15,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.9347620400395331,
+    "worst_output_error": 0.9347620400395331,
+    "average_output_error": 0.9347620400395331,
+    "memory_improvement_vs_batch": 4.0,
+    "output_error_levels": [
+      4
+    ],
+    "convergence_achieved": "False",
+    "noise_model_name": "PureDephasing_pz0.990"
   },
   {
     "noise_type": "pure_dephasing",
@@ -5863,9 +4939,9 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.030421418905043185,
-    "worst_output_error": 0.030421418905043185,
-    "average_output_error": 0.030421418905043185,
+    "best_output_error": 0.028130442478749972,
+    "worst_output_error": 0.028130442478749972,
+    "average_output_error": 0.028130442478749972,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
@@ -5885,81 +4961,15 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.20525768969260058,
-    "worst_output_error": 0.20525768969260058,
-    "average_output_error": 0.20525768969260058,
+    "best_output_error": 0.23627634171572867,
+    "worst_output_error": 0.23627634171572867,
+    "average_output_error": 0.23627634171572867,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
     ],
     "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.3336029738818801,
-    "worst_output_error": 0.3336029738818801,
-    "average_output_error": 0.3336029738818801,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.49774018823499033,
-    "worst_output_error": 0.49774018823499033,
-    "average_output_error": 0.49774018823499033,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 32,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 5,
-    "theoretical_memory_bound": 6,
-    "memory_efficiency": 5.0,
-    "total_swap_operations": 31,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5442434810204024,
-    "worst_output_error": 0.5442434810204024,
-    "average_output_error": 0.5442434810204024,
-    "memory_improvement_vs_batch": 6.4,
-    "output_error_levels": [
-      5
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -5973,9 +4983,9 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.5452192410449279,
-    "worst_output_error": 0.5452192410449279,
-    "average_output_error": 0.5452192410449279,
+    "best_output_error": 0.490249789390565,
+    "worst_output_error": 0.490249789390565,
+    "average_output_error": 0.490249789390565,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
@@ -5995,9 +5005,9 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.22253558967939657,
-    "worst_output_error": 0.22253558967939657,
-    "average_output_error": 0.22253558967939657,
+    "best_output_error": 0.4297165822221253,
+    "worst_output_error": 0.4297165822221253,
+    "average_output_error": 0.4297165822221253,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
@@ -6017,9 +5027,9 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.4034054567995671,
-    "worst_output_error": 0.4034054567995671,
-    "average_output_error": 0.4034054567995671,
+    "best_output_error": 0.48030183669010545,
+    "worst_output_error": 0.48030183669010545,
+    "average_output_error": 0.48030183669010545,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
@@ -6039,15 +5049,59 @@
     "memory_efficiency": 5.0,
     "total_swap_operations": 31,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.28038684184088963,
-    "worst_output_error": 0.28038684184088963,
-    "average_output_error": 0.28038684184088963,
+    "best_output_error": 0.25744173073818966,
+    "worst_output_error": 0.25744173073818966,
+    "average_output_error": 0.25744173073818966,
     "memory_improvement_vs_batch": 6.4,
     "output_error_levels": [
       5
     ],
     "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.900"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 32,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.14189950890337286,
+    "worst_output_error": 0.14189950890337286,
+    "average_output_error": 0.14189950890337286,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 32,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 5,
+    "theoretical_memory_bound": 6,
+    "memory_efficiency": 5.0,
+    "total_swap_operations": 31,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.011418900454225556,
+    "worst_output_error": 0.011418900454225556,
+    "average_output_error": 0.011418900454225556,
+    "memory_improvement_vs_batch": 6.4,
+    "output_error_levels": [
+      5
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.990"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6061,9 +5115,9 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.013726282792422008,
-    "worst_output_error": 0.013726282792422008,
-    "average_output_error": 0.013726282792422008,
+    "best_output_error": 0.01290397080382336,
+    "worst_output_error": 0.01290397080382336,
+    "average_output_error": 0.01290397080382336,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
@@ -6083,81 +5137,15 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.2812305001920524,
-    "worst_output_error": 0.2812305001920524,
-    "average_output_error": 0.2812305001920524,
+    "best_output_error": 0.1834587770848933,
+    "worst_output_error": 0.1834587770848933,
+    "average_output_error": 0.1834587770848933,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
     ],
     "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.3903017185689031,
-    "worst_output_error": 0.3903017185689031,
-    "average_output_error": 0.3903017185689031,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.3392738740799551,
-    "worst_output_error": 0.3392738740799551,
-    "average_output_error": 0.3392738740799551,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 64,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 6,
-    "theoretical_memory_bound": 7,
-    "memory_efficiency": 6.0,
-    "total_swap_operations": 63,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.5000278710852386,
-    "worst_output_error": 0.5000278710852386,
-    "average_output_error": 0.5000278710852386,
-    "memory_improvement_vs_batch": 10.666666666666666,
-    "output_error_levels": [
-      6
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6171,14 +5159,14 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.5221375592710106,
-    "worst_output_error": 0.5221375592710106,
-    "average_output_error": 0.5221375592710106,
+    "best_output_error": 0.23592871170270738,
+    "worst_output_error": 0.23592871170270738,
+    "average_output_error": 0.23592871170270738,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
     ],
-    "convergence_achieved": "False",
+    "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.500"
   },
   {
@@ -6193,9 +5181,9 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.36603763377491183,
-    "worst_output_error": 0.36603763377491183,
-    "average_output_error": 0.36603763377491183,
+    "best_output_error": 0.3334539085129819,
+    "worst_output_error": 0.3334539085129819,
+    "average_output_error": 0.3334539085129819,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
@@ -6215,9 +5203,9 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.07517264637923818,
-    "worst_output_error": 0.07517264637923818,
-    "average_output_error": 0.07517264637923818,
+    "best_output_error": 0.41172257173240084,
+    "worst_output_error": 0.41172257173240084,
+    "average_output_error": 0.41172257173240084,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
@@ -6237,15 +5225,59 @@
     "memory_efficiency": 6.0,
     "total_swap_operations": 63,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.7322498423930247,
-    "worst_output_error": 0.7322498423930247,
-    "average_output_error": 0.7322498423930247,
+    "best_output_error": 0.8086439388229184,
+    "worst_output_error": 0.8086439388229184,
+    "average_output_error": 0.8086439388229184,
     "memory_improvement_vs_batch": 10.666666666666666,
     "output_error_levels": [
       6
     ],
     "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.900"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 64,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6420358355665304,
+    "worst_output_error": 0.6420358355665304,
+    "average_output_error": 0.6420358355665304,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 64,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 6,
+    "theoretical_memory_bound": 7,
+    "memory_efficiency": 6.0,
+    "total_swap_operations": 63,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.8760186611707278,
+    "worst_output_error": 0.8760186611707278,
+    "average_output_error": 0.8760186611707278,
+    "memory_improvement_vs_batch": 10.666666666666666,
+    "output_error_levels": [
+      6
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.990"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6259,9 +5291,9 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.012366259390918356,
-    "worst_output_error": 0.012366259390918356,
-    "average_output_error": 0.012366259390918356,
+    "best_output_error": 0.010623510051082847,
+    "worst_output_error": 0.010623510051082847,
+    "average_output_error": 0.010623510051082847,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
@@ -6281,81 +5313,15 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.27829296145651355,
-    "worst_output_error": 0.27829296145651355,
-    "average_output_error": 0.27829296145651355,
+    "best_output_error": 0.33537697731578303,
+    "worst_output_error": 0.33537697731578303,
+    "average_output_error": 0.33537697731578303,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
     ],
     "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.1880659594858004,
-    "worst_output_error": 0.1880659594858004,
-    "average_output_error": 0.1880659594858004,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.563337460499704,
-    "worst_output_error": 0.563337460499704,
-    "average_output_error": 0.563337460499704,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 128,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 7,
-    "theoretical_memory_bound": 8,
-    "memory_efficiency": 7.0,
-    "total_swap_operations": 127,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.2555420264736784,
-    "worst_output_error": 0.2555420264736784,
-    "average_output_error": 0.2555420264736784,
-    "memory_improvement_vs_batch": 18.285714285714285,
-    "output_error_levels": [
-      7
-    ],
-    "convergence_achieved": "True",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6369,14 +5335,14 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.5653400664883208,
-    "worst_output_error": 0.5653400664883208,
-    "average_output_error": 0.5653400664883208,
+    "best_output_error": 0.42930774901272195,
+    "worst_output_error": 0.42930774901272195,
+    "average_output_error": 0.42930774901272195,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
     ],
-    "convergence_achieved": "False",
+    "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.500"
   },
   {
@@ -6391,9 +5357,9 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.577491515457924,
-    "worst_output_error": 0.577491515457924,
-    "average_output_error": 0.577491515457924,
+    "best_output_error": 0.5877510593191425,
+    "worst_output_error": 0.5877510593191425,
+    "average_output_error": 0.5877510593191425,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
@@ -6413,9 +5379,9 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.5004980859757938,
-    "worst_output_error": 0.5004980859757938,
-    "average_output_error": 0.5004980859757938,
+    "best_output_error": 0.5564457637845539,
+    "worst_output_error": 0.5564457637845539,
+    "average_output_error": 0.5564457637845539,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
@@ -6435,15 +5401,59 @@
     "memory_efficiency": 7.0,
     "total_swap_operations": 127,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.3577498911889307,
-    "worst_output_error": 0.3577498911889307,
-    "average_output_error": 0.3577498911889307,
+    "best_output_error": 0.29795736151030233,
+    "worst_output_error": 0.29795736151030233,
+    "average_output_error": 0.29795736151030233,
     "memory_improvement_vs_batch": 18.285714285714285,
     "output_error_levels": [
       7
     ],
     "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.900"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 128,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.1345538176130106,
+    "worst_output_error": 0.1345538176130106,
+    "average_output_error": 0.1345538176130106,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 128,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 7,
+    "theoretical_memory_bound": 8,
+    "memory_efficiency": 7.0,
+    "total_swap_operations": 127,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.013819561525378983,
+    "worst_output_error": 0.013819561525378983,
+    "average_output_error": 0.013819561525378983,
+    "memory_improvement_vs_batch": 18.285714285714285,
+    "output_error_levels": [
+      7
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.990"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6457,9 +5467,9 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.025599643896009577,
-    "worst_output_error": 0.025599643896009577,
-    "average_output_error": 0.025599643896009577,
+    "best_output_error": 0.0405301004918636,
+    "worst_output_error": 0.0405301004918636,
+    "average_output_error": 0.0405301004918636,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
@@ -6479,81 +5489,15 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.38810163663354214,
-    "worst_output_error": 0.38810163663354214,
-    "average_output_error": 0.38810163663354214,
+    "best_output_error": 0.34541197727171047,
+    "worst_output_error": 0.34541197727171047,
+    "average_output_error": 0.34541197727171047,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
     ],
     "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.3646898208234245,
-    "worst_output_error": 0.3646898208234245,
-    "average_output_error": 0.3646898208234245,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.586941798916815,
-    "worst_output_error": 0.586941798916815,
-    "average_output_error": 0.586941798916815,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 256,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 8,
-    "theoretical_memory_bound": 9,
-    "memory_efficiency": 8.0,
-    "total_swap_operations": 255,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.3108135406696986,
-    "worst_output_error": 0.3108135406696986,
-    "average_output_error": 0.3108135406696986,
-    "memory_improvement_vs_batch": 32.0,
-    "output_error_levels": [
-      8
-    ],
-    "convergence_achieved": "True",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6567,14 +5511,14 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.37694927092537944,
-    "worst_output_error": 0.37694927092537944,
-    "average_output_error": 0.37694927092537944,
+    "best_output_error": 0.48951374057578784,
+    "worst_output_error": 0.48951374057578784,
+    "average_output_error": 0.48951374057578784,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
     ],
-    "convergence_achieved": "True",
+    "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.500"
   },
   {
@@ -6589,9 +5533,9 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.200976614736239,
-    "worst_output_error": 0.200976614736239,
-    "average_output_error": 0.200976614736239,
+    "best_output_error": 0.2730282593314243,
+    "worst_output_error": 0.2730282593314243,
+    "average_output_error": 0.2730282593314243,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
@@ -6611,9 +5555,9 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.2895604067068001,
-    "worst_output_error": 0.2895604067068001,
-    "average_output_error": 0.2895604067068001,
+    "best_output_error": 0.3930475484125125,
+    "worst_output_error": 0.3930475484125125,
+    "average_output_error": 0.3930475484125125,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
@@ -6633,15 +5577,59 @@
     "memory_efficiency": 8.0,
     "total_swap_operations": 255,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.8038679107172216,
-    "worst_output_error": 0.8038679107172216,
-    "average_output_error": 0.8038679107172216,
+    "best_output_error": 0.2917505386330628,
+    "worst_output_error": 0.2917505386330628,
+    "average_output_error": 0.2917505386330628,
     "memory_improvement_vs_batch": 32.0,
     "output_error_levels": [
       8
     ],
     "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.900"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 256,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.3709589643987228,
+    "worst_output_error": 0.3709589643987228,
+    "average_output_error": 0.3709589643987228,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 256,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 8,
+    "theoretical_memory_bound": 9,
+    "memory_efficiency": 8.0,
+    "total_swap_operations": 255,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.488284065884652,
+    "worst_output_error": 0.488284065884652,
+    "average_output_error": 0.488284065884652,
+    "memory_improvement_vs_batch": 32.0,
+    "output_error_levels": [
+      8
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.990"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6655,9 +5643,9 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.04149247544094707,
-    "worst_output_error": 0.04149247544094707,
-    "average_output_error": 0.04149247544094707,
+    "best_output_error": 0.04914800626207083,
+    "worst_output_error": 0.04914800626207083,
+    "average_output_error": 0.04914800626207083,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
@@ -6677,81 +5665,15 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.43775487490084947,
-    "worst_output_error": 0.43775487490084947,
-    "average_output_error": 0.43775487490084947,
+    "best_output_error": 0.4163975047700951,
+    "worst_output_error": 0.4163975047700951,
+    "average_output_error": 0.4163975047700951,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
     ],
     "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.2443804538199452,
-    "worst_output_error": 0.2443804538199452,
-    "average_output_error": 0.2443804538199452,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.3850272627830736,
-    "worst_output_error": 0.3850272627830736,
-    "average_output_error": 0.3850272627830736,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 512,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 9,
-    "theoretical_memory_bound": 10,
-    "memory_efficiency": 9.0,
-    "total_swap_operations": 511,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.622040735510436,
-    "worst_output_error": 0.622040735510436,
-    "average_output_error": 0.622040735510436,
-    "memory_improvement_vs_batch": 56.888888888888886,
-    "output_error_levels": [
-      9
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6765,14 +5687,14 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.2859480748524377,
-    "worst_output_error": 0.2859480748524377,
-    "average_output_error": 0.2859480748524377,
+    "best_output_error": 0.6260620196832333,
+    "worst_output_error": 0.6260620196832333,
+    "average_output_error": 0.6260620196832333,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
     ],
-    "convergence_achieved": "True",
+    "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.500"
   },
   {
@@ -6787,9 +5709,9 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.6239536640283031,
-    "worst_output_error": 0.6239536640283031,
-    "average_output_error": 0.6239536640283031,
+    "best_output_error": 0.37701738612973446,
+    "worst_output_error": 0.37701738612973446,
+    "average_output_error": 0.37701738612973446,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
@@ -6809,9 +5731,9 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.42091225520027514,
-    "worst_output_error": 0.42091225520027514,
-    "average_output_error": 0.42091225520027514,
+    "best_output_error": 0.5398192157839002,
+    "worst_output_error": 0.5398192157839002,
+    "average_output_error": 0.5398192157839002,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
@@ -6831,15 +5753,59 @@
     "memory_efficiency": 9.0,
     "total_swap_operations": 511,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.2963124321776036,
-    "worst_output_error": 0.2963124321776036,
-    "average_output_error": 0.2963124321776036,
+    "best_output_error": 0.38281113515930676,
+    "worst_output_error": 0.38281113515930676,
+    "average_output_error": 0.38281113515930676,
     "memory_improvement_vs_batch": 56.888888888888886,
     "output_error_levels": [
       9
     ],
     "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.900"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 512,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.036439016973022285,
+    "worst_output_error": 0.036439016973022285,
+    "average_output_error": 0.036439016973022285,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 512,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 9,
+    "theoretical_memory_bound": 10,
+    "memory_efficiency": 9.0,
+    "total_swap_operations": 511,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.010635047347818432,
+    "worst_output_error": 0.010635047347818432,
+    "average_output_error": 0.010635047347818432,
+    "memory_improvement_vs_batch": 56.888888888888886,
+    "output_error_levels": [
+      9
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.990"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6853,9 +5819,9 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.04669338216091114,
-    "worst_output_error": 0.04669338216091114,
-    "average_output_error": 0.04669338216091114,
+    "best_output_error": 0.05435631151767293,
+    "worst_output_error": 0.05435631151767293,
+    "average_output_error": 0.05435631151767293,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
@@ -6875,81 +5841,15 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.01998511837326533,
-    "worst_output_error": 0.01998511837326533,
-    "average_output_error": 0.01998511837326533,
+    "best_output_error": 0.4218907496598095,
+    "worst_output_error": 0.4218907496598095,
+    "average_output_error": 0.4218907496598095,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
     ],
-    "convergence_achieved": "True",
+    "convergence_achieved": "False",
     "noise_model_name": "PureDephasing_pz0.100"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.2,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.6256688781678664,
-    "worst_output_error": 0.6256688781678664,
-    "average_output_error": 0.6256688781678664,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.200"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.3,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.355102880578279,
-    "worst_output_error": 0.355102880578279,
-    "average_output_error": 0.355102880578279,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": "False",
-    "noise_model_name": "PureDephasing_pz0.300"
-  },
-  {
-    "noise_type": "pure_dephasing",
-    "dimension": 2,
-    "N": 1024,
-    "physical_error_rate": 0.4,
-    "total_states_processed": 0,
-    "output_states_count": 1,
-    "max_stack_depth_used": 10,
-    "theoretical_memory_bound": 11,
-    "memory_efficiency": 10.0,
-    "total_swap_operations": 1023,
-    "total_amplification_iterations": 0,
-    "best_output_error": 0.3428130045304952,
-    "worst_output_error": 0.3428130045304952,
-    "average_output_error": 0.3428130045304952,
-    "memory_improvement_vs_batch": 102.4,
-    "output_error_levels": [
-      10
-    ],
-    "convergence_achieved": "True",
-    "noise_model_name": "PureDephasing_pz0.400"
   },
   {
     "noise_type": "pure_dephasing",
@@ -6963,9 +5863,9 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.6063637461888973,
-    "worst_output_error": 0.6063637461888973,
-    "average_output_error": 0.6063637461888973,
+    "best_output_error": 0.5048972801206256,
+    "worst_output_error": 0.5048972801206256,
+    "average_output_error": 0.5048972801206256,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
@@ -6985,9 +5885,9 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.6068220444342471,
-    "worst_output_error": 0.6068220444342471,
-    "average_output_error": 0.6068220444342471,
+    "best_output_error": 0.24063694976898045,
+    "worst_output_error": 0.24063694976898045,
+    "average_output_error": 0.24063694976898045,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
@@ -7007,9 +5907,9 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.36191872916694695,
-    "worst_output_error": 0.36191872916694695,
-    "average_output_error": 0.36191872916694695,
+    "best_output_error": 0.2960180362755517,
+    "worst_output_error": 0.2960180362755517,
+    "average_output_error": 0.2960180362755517,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
@@ -7029,14 +5929,58 @@
     "memory_efficiency": 10.0,
     "total_swap_operations": 1023,
     "total_amplification_iterations": 0,
-    "best_output_error": 0.7984888356107379,
-    "worst_output_error": 0.7984888356107379,
-    "average_output_error": 0.7984888356107379,
+    "best_output_error": 0.691770418031997,
+    "worst_output_error": 0.691770418031997,
+    "average_output_error": 0.691770418031997,
     "memory_improvement_vs_batch": 102.4,
     "output_error_levels": [
       10
     ],
     "convergence_achieved": "True",
     "noise_model_name": "PureDephasing_pz0.900"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 1024,
+    "physical_error_rate": 0.95,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.6961030476706306,
+    "worst_output_error": 0.6961030476706306,
+    "average_output_error": 0.6961030476706306,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": "True",
+    "noise_model_name": "PureDephasing_pz0.950"
+  },
+  {
+    "noise_type": "pure_dephasing",
+    "dimension": 2,
+    "N": 1024,
+    "physical_error_rate": 0.99,
+    "total_states_processed": 0,
+    "output_states_count": 1,
+    "max_stack_depth_used": 10,
+    "theoretical_memory_bound": 11,
+    "memory_efficiency": 10.0,
+    "total_swap_operations": 1023,
+    "total_amplification_iterations": 0,
+    "best_output_error": 0.989359126466171,
+    "worst_output_error": 0.989359126466171,
+    "average_output_error": 0.989359126466171,
+    "memory_improvement_vs_batch": 102.4,
+    "output_error_levels": [
+      10
+    ],
+    "convergence_achieved": "False",
+    "noise_model_name": "PureDephasing_pz0.990"
   }
 ]
