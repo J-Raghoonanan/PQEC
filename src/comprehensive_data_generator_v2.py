@@ -314,7 +314,7 @@ class ComprehensiveStreamingDataGenerator:
         if N_values is None:
             N_values = [16, 32, 64, 128, 256]
         if error_rates is None:
-            error_rates = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7]
+            error_rates = [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9, 0.95, 0.99]
         
         evolution_data = []
         total_combinations = sum(1 for noise_type, dimension, N, error_rate 
@@ -514,7 +514,7 @@ class ComprehensiveStreamingDataGenerator:
         
         # Define error rate ranges per noise type
         error_rate_ranges = {
-            'depolarizing': np.linspace(0.1, 0.95, 12),
+            'depolarizing': np.linspace(0.1, 0.99, 12),
             'symmetric_pauli': np.linspace(0.05, 0.8, 10),
             'pure_dephasing': np.linspace(0.05, 0.9, 10),
         }
