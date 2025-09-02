@@ -290,7 +290,7 @@ class StreamingQECPlotter:
         ax.set_xscale('linear')  # keep consistent with your current fig 1a
         ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=25)
         ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
-        ax.set_title(f'Streaming Threshold \nAcross Dimensions (Depolarizing, N={N_target})', fontsize=25)
+        ax.set_title(f'Streaming Threshold \nAcross Dimensions (Depolarizing, N={N_target})', fontsize=30, pad=16)
 
         ax.legend(fontsize=14, loc='upper left', ncol=1)
         ax.set_xlim(0.09, 1.0)
@@ -299,6 +299,7 @@ class StreamingQECPlotter:
 
         filename = f"figure_dimension_sweep_N{N_target}.{save_format}"
         filepath = os.path.join(self.figures_dir, filename)
+        # plt.tight_layout()
         plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
         plt.close()
 
