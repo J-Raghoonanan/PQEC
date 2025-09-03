@@ -984,15 +984,15 @@ class StreamingQECPlotter:
                     color='gray', linewidth=2, alpha=0.7, label='No Correction')
     
         ax.set_xscale('linear')
-        ax.set_xlabel('Physical Error Rate', fontsize=20)
-        ax.set_ylabel('Final Logical Error Rate', fontsize=20)
+        ax.set_xlabel('Physical Error Rate', fontsize=25)
+        ax.set_ylabel('Final Logical Error Rate', fontsize=25)
     
         # Update title to reflect filtering
         title_suffix = ""
         # if not include_symmetric_pauli and any('symmetric' in nt.lower() for nt in all_noise_types):
         #     title_suffix = " (Excluding Symmetric Pauli)"
     
-        ax.set_title(f'Noise Model Comparison (N={target_N}){title_suffix}', fontsize=24)
+        ax.set_title(f'Noise Model Comparison (N={target_N}){title_suffix}', fontsize=30)
         ax.legend(fontsize=14, loc='best')
         ax.tick_params(axis='both', which='major', labelsize=16)
         # ax.grid(True, alpha=0.3)
@@ -1243,8 +1243,8 @@ class StreamingQECPlotter:
         # print("\n10. Dimension sweep threshold ...")
         # plots['dimension_sweep'] =self.plot_dimension_sweep_figure1a(save_format)
         
-        print("\n11. Separate error evolutions...")
-        plots['error_evolutions'] = self.plot_both_error_evolutions(save_format)
+        # print("\n11. Separate error evolutions...")
+        # plots['error_evolutions'] = self.plot_both_error_evolutions(save_format)
         
         # Summary
         successful_plots = [name for name, path in plots.items() if path is not None]
