@@ -183,6 +183,7 @@ class StreamingQECDataGenerator:
         
         if self.verbose:
             print(f"Generating evolution data: {total_runs} total runs...")
+            print(physical_error_rates)
         
         progress_bar = tqdm(total=total_runs, desc="Evolution data") if self.verbose else None
         
