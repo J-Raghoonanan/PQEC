@@ -915,71 +915,165 @@ class StreamingQECPlotter:
         print(f"Saved batch vs streaming comparison: {filename}")
         return filepath
     
-    def plot_noise_comparison(self, save_format: str = 'pdf') -> Optional[str]:
+    # def plot_noise_comparison(self, save_format: str = 'pdf') -> Optional[str]:
+    #     """Compare performance across different noise models."""
+    #     threshold_data = self.threshold_data if self.threshold_data else []
+        
+    #     if not threshold_data:
+    #         print("Warning: No threshold data for noise comparison")
+    #         return None
+        
+    #     fig, ax = plt.subplots(figsize=(10, 8))
+        
+    #     # Get unique noise types
+    #     noise_types = list(set(d['noise_type'] for d in threshold_data))
+        
+        
+    #     # Find best code size to use (largest available)
+    #     available_sizes = list(set(d['N'] for d in threshold_data))
+    #     target_N = max(available_sizes)
+        
+    #     plotted_any = False
+        
+    #     for noise_type in noise_types:
+    #         matches = [d for d in threshold_data
+    #                   if d['noise_type'] == noise_type and d['N'] == target_N]
+
+    #         if matches:
+    #             data = matches[0]
+    #             physical_rates = np.array(data['physical_error_rates'])
+                
+    #             # Use best errors if available (streaming), otherwise final errors (legacy)
+    #             if 'best_final_errors' in data:
+    #                 final_errors = np.array(data['best_final_errors'])
+    #             else:
+    #                 final_errors = np.array(data.get('final_logical_errors', []))
+                
+    #             # Filter valid data
+    #             valid_mask = np.isfinite(final_errors) & (final_errors > 0)
+                
+    #             if np.sum(valid_mask) > 0:
+    #                 valid_physical = physical_rates[valid_mask]
+    #                 valid_final = final_errors[valid_mask]
+                    
+    #                 color = PROTOCOL_COLORS.get(noise_type, '#666666')
+    #                 ax.loglog(valid_physical, valid_final, 'o-', 
+    #                          color=color, linewidth=3, markersize=8,
+    #                          label=f'{noise_type.replace("_", " ").title()}')
+    #                 plotted_any = True
+        
+    #     if plotted_any:
+    #         # Add reference line
+    #         physical_range = np.logspace(-2, 0, 100)
+    #         ax.loglog(physical_range, physical_range, '--', 
+    #                  color='gray', linewidth=2, alpha=0.7, label='No Correction')
+        
+    #     ax.set_xscale('linear')
+    #     ax.set_xlabel('Physical Error Rate', fontsize=25)
+    #     ax.set_ylabel('Final Logical Error Rate', fontsize=25)
+    #     ax.set_title(f'Noise Model Comparison (N={target_N})', fontsize=30)
+    #     ax.legend(fontsize=14)
+        
+    #     plt.tight_layout()
+        
+    #     filename = f"noise_comparison.{save_format}"
+    #     filepath = os.path.join(self.figures_dir, filename)
+    #     plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
+    #     plt.close()
+        
+    #     print(f"Saved noise comparison plot: {filename}")
+    #     return filepath
+    
+    def plot_noise_comparison(self, save_format: str = 'pdf', 
+                            include_symmetric_pauli: bool = False) -> Optional[str]:
         """Compare performance across different noise models."""
         threshold_data = self.threshold_data if self.threshold_data else []
-        
+    
         if not threshold_data:
             print("Warning: No threshold data for noise comparison")
             return None
-        
-        fig, ax = plt.subplots(figsize=(10, 8))
-        
-        # Get unique noise types
-        noise_types = list(set(d['noise_type'] for d in threshold_data))
-        
+    
+        fig, ax = plt.subplots(figsize=(12, 8))
+    
+        # Get unique noise types and optionally filter out symmetric Pauli
+        all_noise_types = list(set(d['noise_type'] for d in threshold_data))
+    
+        if include_symmetric_pauli:
+            noise_types = all_noise_types
+            print(f"Including all noise types: {noise_types}")
+        else:
+            noise_types = [nt for nt in all_noise_types if 'symmetric' not in nt.lower()]
+            excluded = [nt for nt in all_noise_types if 'symmetric' in nt.lower()]
+            print(f"Filtered noise types: {noise_types}")
+            if excluded:
+                print(f"Excluded symmetric Pauli: {excluded}")
+    
         # Find best code size to use (largest available)
         available_sizes = list(set(d['N'] for d in threshold_data))
         target_N = max(available_sizes)
-        
+    
         plotted_any = False
-        
+    
         for noise_type in noise_types:
             matches = [d for d in threshold_data
-                      if d['noise_type'] == noise_type and d['N'] == target_N]
+                    if d['noise_type'] == noise_type and d['N'] == target_N]
 
             if matches:
                 data = matches[0]
                 physical_rates = np.array(data['physical_error_rates'])
-                
+            
                 # Use best errors if available (streaming), otherwise final errors (legacy)
                 if 'best_final_errors' in data:
                     final_errors = np.array(data['best_final_errors'])
                 else:
                     final_errors = np.array(data.get('final_logical_errors', []))
-                
+            
                 # Filter valid data
                 valid_mask = np.isfinite(final_errors) & (final_errors > 0)
-                
+            
                 if np.sum(valid_mask) > 0:
                     valid_physical = physical_rates[valid_mask]
                     valid_final = final_errors[valid_mask]
-                    
+                
                     color = PROTOCOL_COLORS.get(noise_type, '#666666')
+                
+                    # Create cleaner label
+                    clean_label = noise_type.replace("_", " ").replace("pure", "Pure").title()
+                
                     ax.loglog(valid_physical, valid_final, 'o-', 
-                             color=color, linewidth=3, markersize=8,
-                             label=f'{noise_type.replace("_", " ").title()}')
+                            color=color, linewidth=3, markersize=8,
+                            label=clean_label)
                     plotted_any = True
-        
+    
         if plotted_any:
             # Add reference line
             physical_range = np.logspace(-2, 0, 100)
             ax.loglog(physical_range, physical_range, '--', 
-                     color='gray', linewidth=2, alpha=0.7, label='No Correction')
-        
+                    color='gray', linewidth=2, alpha=0.7, label='No Correction')
+    
         ax.set_xscale('linear')
-        ax.set_xlabel('Physical Error Rate', fontsize=25)
-        ax.set_ylabel('Final Logical Error Rate', fontsize=25)
-        ax.set_title(f'Noise Model Comparison (N={target_N})', fontsize=30)
-        ax.legend(fontsize=14)
-        
+        ax.set_xlabel('Physical Error Rate', fontsize=20)
+        ax.set_ylabel('Final Logical Error Rate', fontsize=20)
+    
+        # Update title to reflect filtering
+        title_suffix = ""
+        if not include_symmetric_pauli and any('symmetric' in nt.lower() for nt in all_noise_types):
+            title_suffix = " (Excluding Symmetric Pauli)"
+    
+        ax.set_title(f'Noise Model Comparison (N={target_N}){title_suffix}', fontsize=24)
+        ax.legend(fontsize=14, loc='best')
+        ax.tick_params(axis='both', which='major', labelsize=16)
+        ax.grid(True, alpha=0.3)
+    
         plt.tight_layout()
-        
-        filename = f"noise_comparison.{save_format}"
+    
+        # Update filename to reflect filtering
+        suffix = "_with_symmetric" if include_symmetric_pauli else ""
+        filename = f"noise_comparison{suffix}.{save_format}"
         filepath = os.path.join(self.figures_dir, filename)
         plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
         plt.close()
-        
+    
         print(f"Saved noise comparison plot: {filename}")
         return filepath
     
@@ -1202,8 +1296,8 @@ class StreamingQECPlotter:
         # print("\n5. Batch vs Streaming Comparison (NEW)...")
         # plots['batch_vs_streaming'] = self.plot_batch_vs_streaming_comparison(save_format)
         
-        # print("\n6. Noise Model Comparison...")
-        # plots['noise_comparison'] = self.plot_noise_comparison(save_format)
+        print("\n6. Noise Model Comparison...")
+        plots['noise_comparison'] = self.plot_noise_comparison(save_format)
         
         # print("\n7. Resource Overhead...")
         # plots['resource_overhead'] = self.plot_resource_overhead(save_format)
@@ -1217,8 +1311,8 @@ class StreamingQECPlotter:
         # print("\n10. Dimension sweep threshold ...")
         # plots['dimension_sweep'] =self.plot_dimension_sweep_figure1a(save_format)
         
-        print("\n11. Separate error evolutions...")
-        plots['error_evolutions'] = self.plot_both_error_evolutions(save_format)
+        # print("\n11. Separate error evolutions...")
+        # plots['error_evolutions'] = self.plot_both_error_evolutions(save_format)
         
         # Summary
         successful_plots = [name for name, path in plots.items() if path is not None]
