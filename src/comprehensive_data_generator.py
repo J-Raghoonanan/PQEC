@@ -195,8 +195,8 @@ class StreamingQECDataGenerator:
                 continue
                 
             max_rate = self.noise_configs.get(noise_type, {}).get('max_error_rate', 1.0)
-            if error_rate > max_rate:
-                continue
+            # if error_rate > max_rate:
+            #     continue
             
             try:
                 # Create noise model using actual implementations
