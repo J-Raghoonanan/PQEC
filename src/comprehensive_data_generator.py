@@ -216,7 +216,10 @@ class StreamingQECDataGenerator:
                 final_error = result.logical_error_evolution[-1]
                 convergence_achieved = (final_error < initial_error * 0.95)  # 5% improvement threshold
                 error_reduction_ratio = final_error / initial_error if initial_error > 0 else float('inf')
-                
+
+                if noise_type == 'depolarizing':
+                    print(error_rate)
+                    
                 # Store evolution data
                 data = EvolutionData(
                     noise_type=noise_type,
