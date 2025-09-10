@@ -21,7 +21,7 @@ from qiskit import QuantumCircuit
 from qiskit.circuit.library import CSXGate
 from qiskit.quantum_info import DensityMatrix, partial_trace, Statevector
 
-from .configs import AASpec
+from src.simulation.configs import AASpec
 
 
 # -----------------------------
