@@ -20,10 +20,17 @@ from typing import List, Optional, Sequence, Tuple
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Kraus
-from qiskit.quantum_info.operators.channel import DepolarizingChannel
+# from qiskit.quantum_info.operators.channel import DepolarizingChannel
 
 from .configs import NoiseMode, NoiseSpec, NoiseType, delta_to_kraus_p
 
+def _kraus_depolarizing(p: float) -> Kraus:
+    I = np.eye(2, dtype=complex)
+    X = np.array([[0, 1], [1, 0]], dtype=complex)
+    Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
+    Z = np.array([[1, 0], [0, -1]], dtype=complex)
+    Ks = [np.sqrt(1.0 - p) * I, np.sqrt(p / 3) * X, np.sqrt(p / 3) * Y, np.sqrt(p / 3) * Z]
+    return Kraus(Ks)
 
 # -----------------------------
 # Error pattern (for exact_k)
@@ -113,28 +120,36 @@ def _append_channel_per_qubit(qc: QuantumCircuit, chan_instr, M: int) -> None:
 
 
 def build_copy_iid_p(prep: QuantumCircuit, noise: NoiseSpec) -> QuantumCircuit:
-    """Return a circuit that prepares a *noisy* copy starting from a prepared state.
-
-    The input 'prep' prepares |psi>. We append a per-qubit channel with p derived
-    from noise.delta (unless p_override is set).
-    """
     M = prep.num_qubits
     p = noise.kraus_p()
     qc = prep.copy(name=f"noisy_{noise.noise_type.value}_iid")
 
     if noise.noise_type == NoiseType.depolarizing:
-        chan = DepolarizingChannel(p)
-        _append_channel_per_qubit(qc, chan.to_instruction(), M)
+        try:
+            # Works on some Qiskit versions
+            from qiskit.quantum_info import DepolarizingChannel  # local import
+            chan_instr = DepolarizingChannel(p).to_instruction()
+        except Exception:
+            # Robust fallback: exact same channel via Kraus ops
+            chan_instr = _kraus_depolarizing(p).to_instruction()
+        for q in range(M):
+            qc.append(chan_instr, [q])
+
     elif noise.noise_type == NoiseType.dephase_z:
-        chan = _kraus_z_dephase(p)
-        _append_channel_per_qubit(qc, chan.to_instruction(), M)
+        chan_instr = _kraus_z_dephase(p).to_instruction()
+        for q in range(M):
+            qc.append(chan_instr, [q])
+
     elif noise.noise_type == NoiseType.dephase_x:
-        chan = _kraus_x_dephase(p)
-        _append_channel_per_qubit(qc, chan.to_instruction(), M)
+        chan_instr = _kraus_x_dephase(p).to_instruction()
+        for q in range(M):
+            qc.append(chan_instr, [q])
+
     else:
         raise ValueError(f"Unsupported noise type: {noise.noise_type}")
 
     return qc
+
 
 
 def build_copy_exact_k(prep: QuantumCircuit, pattern: ErrorPattern) -> QuantumCircuit:

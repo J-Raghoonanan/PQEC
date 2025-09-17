@@ -75,7 +75,7 @@ class TheoreticalDataPlotter:
                     self.data_dir = Path(alt_path)
                     break
         
-        self.figures_dir = Path("results_v3_sim")  # Create in current directory
+        self.figures_dir = Path("figures/results_v3_sim")  # Create in current directory
         self.figures_dir.mkdir(parents=True, exist_ok=True)
         
         print(f"Looking for data in: {self.data_dir.absolute()}")
@@ -222,19 +222,19 @@ class TheoreticalDataPlotter:
                        label=f'Streaming QEC (N={N_fixed}, δ={delta_fixed})')
             
             # Add theoretical exponential decay fit
-            if len(valid_means) >= 2:
-                log_errors = np.log(valid_means)
-                coeffs = np.polyfit(valid_M, log_errors, 1)
+            # if len(valid_means) >= 2:
+            #     log_errors = np.log(valid_means)
+            #     coeffs = np.polyfit(valid_M, log_errors, 1)
                 
-                M_theory = np.linspace(min(valid_M), max(valid_M), 100)
-                theory_errors = np.exp(coeffs[1]) * np.exp(coeffs[0] * M_theory)
+                # M_theory = np.linspace(min(valid_M), max(valid_M), 100)
+                # theory_errors = np.exp(coeffs[1]) * np.exp(coeffs[0] * M_theory)
                 
-                ax.plot(M_theory, theory_errors, '--', color='gray', 
-                       alpha=0.7, linewidth=3, 
-                       label=f'Exponential fit: $\\varepsilon \\propto e^{{{coeffs[0]:.2f}M}}$')
+                # ax.plot(M_theory, theory_errors, '--', color='gray', 
+                    #    alpha=0.7, linewidth=3, 
+                    #    label=f'Exponential fit: $\\varepsilon \\propto e^{{{coeffs[0]:.2f}M}}$')
                 
                 # Print decay rate
-                print(f"Exponential decay rate: {coeffs[0]:.3f} per qubit")
+                # print(f"Exponential decay rate: {coeffs[0]:.3f} per qubit")
         
         # Add no-correction line (constant at delta_fixed)
         if valid_M:
@@ -247,7 +247,7 @@ class TheoreticalDataPlotter:
         ax.set_title(f'Final Error vs System Size\n(N={N_fixed}, δ={delta_fixed})', fontsize=30)
         ax.legend(fontsize=18)
         ax.tick_params(axis='both', which='major', labelsize=20)
-        ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         plt.savefig(self.figures_dir / f'final_error_vs_system_size_N{N_fixed}_delta{delta_fixed}.pdf', 
@@ -306,12 +306,12 @@ class TheoreticalDataPlotter:
         ax.legend(fontsize=16, loc='upper left')
         ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_xlim(0, 1)
-        ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         plt.savefig(self.figures_dir / f'threshold_curves_system_size_N{N_fixed}.pdf', 
                    dpi=300, bbox_inches='tight')
-        plt.show()
+        # plt.show()
     
     def plot_error_evolution_curves(self, M_fixed: int = 1, N_fixed: Optional[int] = None, delta_fixed: float = 0.1):
         """Plot error evolution through purification levels."""
@@ -384,12 +384,12 @@ class TheoreticalDataPlotter:
         ax.set_title('Error Evolution vs Purification Level', fontsize=30)
         ax.legend(fontsize=18)
         ax.tick_params(axis='both', which='major', labelsize=20)
-        ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         plt.savefig(self.figures_dir / f'error_evolution_M{M_fixed}_N{N_fixed}_delta{delta_fixed}.pdf', 
                    dpi=300, bbox_inches='tight')
-        plt.show()
+        # plt.show()
     
     def plot_error_scaling_with_system_size(self, N_fixed: Optional[int] = None):
         """Plot final error vs M for different δ values."""
@@ -437,12 +437,12 @@ class TheoreticalDataPlotter:
         ax.set_title(f'Error Scaling with System Size\n(N={N_fixed})', fontsize=30)
         ax.legend(fontsize=16)
         ax.tick_params(axis='both', which='major', labelsize=20)
-        ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         plt.savefig(self.figures_dir / f'error_scaling_system_size_N{N_fixed}.pdf', 
                    dpi=300, bbox_inches='tight')
-        plt.show()
+        # plt.show()
     
     def plot_error_reduction_vs_system_size(self, N_fixed: Optional[int] = None):
         """Plot error reduction ratios vs system size."""
@@ -486,12 +486,12 @@ class TheoreticalDataPlotter:
         ax.legend(fontsize=16)
         ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_xlim(0, 1)
-        ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
         plt.savefig(self.figures_dir / f'error_reduction_vs_system_size_N{N_fixed}.pdf', 
                    dpi=300, bbox_inches='tight')
-        plt.show()
+        # plt.show()
     
     def print_data_summary(self):
         """Print summary of available data."""

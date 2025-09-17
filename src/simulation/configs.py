@@ -141,14 +141,17 @@ class RunSpec:
     out_dir: Path = field(default_factory=lambda: Path("data/simulations"))
     # Optional run identifier; if empty we will synthesize a descriptive one
     run_id: Optional[str] = None
-
+        
     def validate(self) -> None:
         if self.target.M <= 0:
             raise ValueError("M must be positive")
         if not (0.0 <= self.noise.delta <= 1.0):
             raise ValueError("delta must be in [0,1]")
-        if self.noise.mode == NoiseMode.exact_k and self.noise.exact_k < 0:
-            raise ValueError("exact_k must be >= 0")
+        if self.noise.mode == NoiseMode.exact_k:
+            if self.noise.exact_k < 0:
+                raise ValueError("exact_k must be >= 0")
+            if self.noise.exact_k > self.target.M:
+                raise ValueError(f"exact_k ({self.noise.exact_k}) cannot exceed M ({self.target.M}) for single-qubit faults")
         if not (0.0 < self.aa.target_success <= 1.0):
             raise ValueError("target_success must be in (0,1]")
 

@@ -19,7 +19,7 @@ from typing import Dict, Tuple
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import CSXGate
-from qiskit.quantum_info import DensityMatrix, partial_trace, Statevector
+from qiskit.quantum_info import DensityMatrix, partial_trace, Statevector, Operator
 
 from src.simulation.configs import AASpec
 
@@ -85,41 +85,73 @@ def choose_grover_iters(P0: float, target_success: float, max_iters: int) -> int
 # Projection and extraction of purified state
 # -----------------------------
 
+# def _project_ancilla_zero(rho: DensityMatrix, M: int) -> DensityMatrix:
+#     """Project the ancilla (qubit 0) onto |0><0| and renormalize."""
+#     # Projector Π = |0><0|_anc ⊗ I_rest
+#     # Implement by slicing the density matrix in computational basis blocks.
+#     dim = 2 ** (1 + 2 * M)
+#     # Use reshape to 2 x 2 blocks: index ancilla as leading bit
+#     # However, DensityMatrix stores data as a flat matrix; we can use partial_trace math:
+#     # Construct Π ρ Π by zeroing out rows/cols where ancilla=1.
+#     data = rho.data.copy()
+#     # Basis states are ordered with ancilla as the most-significant bit given our indexing: confirm qargs ordering.
+#     # In qiskit, qubit ordering for data is big-endian by default (qubit 0 as most significant). We adhere to that here.
+#     # Create mask for basis states with ancilla=0
+#     size = data.shape[0]
+#     idx0 = []
+#     for idx in range(size):
+#         # ancilla bit is bit position (n_qubits - 1 - 0) in little-endian; but qiskit uses big-endian for Statevector dims.
+#         # For safety, compute using integer math over total qubits with ancilla as most significant:
+#         # Most significant bit being 0 means idx < size/2
+#         if idx < size // 2:
+#             idx0.append(idx)
+#     idx0 = np.array(idx0, dtype=int)
+
+#     mask = np.zeros(size, dtype=bool)
+#     mask[idx0] = True
+
+#     projected = np.zeros_like(data)
+#     projected[np.ix_(mask, mask)] = data[np.ix_(mask, mask)]
+
+#     # Renormalize by probability p0 = Tr(Π ρ)
+#     p0 = float(np.real(np.trace(projected)))
+#     if p0 <= 0.0:
+#         # Return zero state to avoid NaNs; caller should have seen P0 ~ 0
+#         return DensityMatrix(projected)
+#     projected /= p0
+#     return DensityMatrix(projected)
+
+# Construct an endian-agnostic projector 
+# Suppose anc is at position anc_idx in [0 .. 2M]
+# Move anc to the leftmost position, keep others in order:
+# order = [anc_idx] + [i for i in range(1 + 2*M) if i != anc_idx]
+# rho_reordered = rho.reorder(order)
+# then apply the same projector code on rho_reordered
 def _project_ancilla_zero(rho: DensityMatrix, M: int) -> DensityMatrix:
-    """Project the ancilla (qubit 0) onto |0><0| and renormalize."""
-    # Projector Π = |0><0|_anc ⊗ I_rest
-    # Implement by slicing the density matrix in computational basis blocks.
-    dim = 2 ** (1 + 2 * M)
-    # Use reshape to 2 x 2 blocks: index ancilla as leading bit
-    # However, DensityMatrix stores data as a flat matrix; we can use partial_trace math:
-    # Construct Π ρ Π by zeroing out rows/cols where ancilla=1.
-    data = rho.data.copy()
-    # Basis states are ordered with ancilla as the most-significant bit given our indexing: confirm qargs ordering.
-    # In qiskit, qubit ordering for data is big-endian by default (qubit 0 as most significant). We adhere to that here.
-    # Create mask for basis states with ancilla=0
-    size = data.shape[0]
-    idx0 = []
-    for idx in range(size):
-        # ancilla bit is bit position (n_qubits - 1 - 0) in little-endian; but qiskit uses big-endian for Statevector dims.
-        # For safety, compute using integer math over total qubits with ancilla as most significant:
-        # Most significant bit being 0 means idx < size/2
-        if idx < size // 2:
-            idx0.append(idx)
-    idx0 = np.array(idx0, dtype=int)
+    """
+    Project the ancilla subsystem (which is leftmost in our construction)
+    onto |0><0| and renormalize the state.
 
-    mask = np.zeros(size, dtype=bool)
-    mask[idx0] = True
+    System order is [anc] ⊗ [A (M qubits)] ⊗ [B (M qubits)].
+    """
+    # |0><0| on the ancilla
+    P0 = Operator(np.array([[1, 0], [0, 0]], dtype=complex))
+    # Identities on A and B registers
+    IA = Operator(np.eye(2**M, dtype=complex))
+    IB = Operator(np.eye(2**M, dtype=complex))
 
-    projected = np.zeros_like(data)
-    projected[np.ix_(mask, mask)] = data[np.ix_(mask, mask)]
+    # Projector on the full space: Π = |0><0|_anc ⊗ I_A ⊗ I_B
+    Pi = P0.tensor(IA).tensor(IB)
 
-    # Renormalize by probability p0 = Tr(Π ρ)
-    p0 = float(np.real(np.trace(projected)))
+    # Π ρ Π
+    proj = Pi @ rho @ Pi.adjoint()
+
+    # Renormalize by p0 = Tr(Π ρ)
+    p0 = float(np.real(np.trace(proj.data)))
     if p0 <= 0.0:
-        # Return zero state to avoid NaNs; caller should have seen P0 ~ 0
-        return DensityMatrix(projected)
-    projected /= p0
-    return DensityMatrix(projected)
+        # Return a zero matrix (or raise) if probability is numerically 0
+        return DensityMatrix(np.zeros_like(rho.data))
+    return DensityMatrix(proj.data / p0)
 
 
 def extract_purified_register(rho_after_proj: DensityMatrix, M: int) -> DensityMatrix:
@@ -134,46 +166,50 @@ def extract_purified_register(rho_after_proj: DensityMatrix, M: int) -> DensityM
 # -----------------------------
 # Public API
 # -----------------------------
-
 def purify_two_from_density(
-    rho_single: DensityMatrix,
+    rho_A: DensityMatrix,
+    rho_B: DensityMatrix,
     aa: AASpec,
 ) -> Tuple[DensityMatrix, Dict]:
-    """Apply SWAP test purification to two identical copies of 'rho_single'.
-
-    Returns (rho_out, metrics) where rho_out is the purified single-register
-    density matrix on M qubits, and metrics contains P_success and k.
-
-    Notes
-    -----
-    - This function *emulates* amplitude amplification: it computes the
-      pre-AA success probability and the Grover iteration count required to
-      reach the target success, but it does not explicitly apply Q^k. The
-      conditional output state after post-selecting ancilla=0 is identical to
-      that after amplitude amplification.
     """
-    # Build the joint state |0>_anc ⊗ rho ⊗ rho
-    M = int(np.log2(rho_single.dim))
-    rho_joint = DensityMatrix.from_label('0').tensor(rho_single).tensor(rho_single)
+    Purify two M-qubit inputs via the SWAP test and post-selection on ancilla=|0>.
 
-    # Apply the SWAP-test unitary A
+    Inputs
+    ------
+    rho_A, rho_B : DensityMatrix
+        Single-register density matrices on the same number of qubits (M).
+    aa : AASpec
+        Amplitude amplification config. We *emulate* AA by computing and logging
+        the required Grover iteration count; we do not apply Q^k explicitly.
+
+    Returns
+    -------
+    rho_out : DensityMatrix
+        The purified single-register state on register A (middle M qubits),
+        obtained by projecting ancilla to |0> and tracing out ancilla + register B.
+    metrics : dict
+        {"P_success": float, "grover_iters": int}
+    """
+    if rho_A.dim != rho_B.dim:
+        raise ValueError("rho_A and rho_B must have the same dimension")
+    M = int(np.log2(rho_A.dim))
+
+    # Joint state: |0><0|_anc ⊗ rho_A ⊗ rho_B
+    rho_joint = DensityMatrix.from_label('0').tensor(rho_A).tensor(rho_B)
+
+    # SWAP-test unitary A: H(anc) → cswap(i) for i=0..M-1 → H(anc)
     A = build_swap_test_unitary(M)
     rho_after_A = rho_joint.evolve(A)
 
-    # Compute success probability and choose k
+    # Pre-AA success probability and emulated Grover iteration count
     P0 = ancilla_success_probability(rho_after_A, M)
     k = choose_grover_iters(P0, aa.target_success, aa.max_iters)
 
-    # Optionally, one could insert explicit AA here; we skip by default (see notes)
-
-    # Project ancilla to |0> and extract the purified register A
+    # Post-select ancilla=|0>, then trace out ancilla + register B → register A
     rho_proj = _project_ancilla_zero(rho_after_A, M)
     rho_out = extract_purified_register(rho_proj, M)
 
-    metrics = {
-        "P_success": P0,
-        "grover_iters": k,
-    }
+    metrics = {"P_success": P0, "grover_iters": k}
     return rho_out, metrics
 
 

@@ -172,7 +172,7 @@ def run_streaming(spec: RunSpec) -> Tuple[pd.DataFrame, pd.DataFrame]:
                 left = slots.pop(level)
                 left_count = counts.pop(level)
                 # Purify two (identical interface accepts both copies if extended in future)
-                rho_out, meta = purify_two_from_density(left, spec.aa)  # identical copies interface
+                rho_out, meta = purify_two_from_density(left, carry_dm, spec.aa)  # identical copies interface
                 # NOTE: The above purifies two identical copies 'left' with itself.
                 # To merge two *different* copies, replace with: purify_two(left, carry_dm, spec.aa)
                 _log_step(depth=level + 1, rho_out=rho_out, meta=meta)
@@ -182,7 +182,7 @@ def run_streaming(spec: RunSpec) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
     # Final output = deepest slot
     if not counts:
-        raise RuntimeError("No data was processed; N must be >= 1")
+        raise ValueError("No data was processed; N must be >= 1")
     max_level = max(counts.keys())
     rho_final = slots[max_level]
 
