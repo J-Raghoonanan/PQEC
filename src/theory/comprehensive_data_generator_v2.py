@@ -63,6 +63,7 @@ class StreamingEvolutionData:
     output_fidelities: Optional[List[float]] = None
     fidelity_evolution_trace: Optional[List[Tuple[int, float, int]]] = None
     lineage_fidelity_trace: Optional[List[Tuple[int, float, int]]] = None
+    per_level_fidelity: Optional[List[Optional[float]]] = None
 
 
 @dataclass
@@ -405,7 +406,8 @@ class ComprehensiveStreamingDataGenerator:
                     average_output_fidelity=avg_fid,
                     output_fidelities=output_fids if output_fids else None,
                     fidelity_evolution_trace=result.fidelity_evolution_trace,
-                    lineage_fidelity_trace=result.lineage_fidelity_trace
+                    lineage_fidelity_trace=result.lineage_fidelity_trace,
+                    per_level_fidelity=getattr(result, "per_level_fidelity", None)
                 )
                 evolution_data.append(data)
                 

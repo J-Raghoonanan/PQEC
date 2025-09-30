@@ -32,6 +32,7 @@ class StreamingResult:
     error_evolution_trace: List[Tuple[int, float, int]]  # (time, error, level)
     fidelity_evolution_trace: List[Tuple[int, float, int]]  # (time, fidelity, level)
     lineage_fidelity_trace: List[Tuple[int, float, int]]    # (merge_index, fidelity, level)
+    per_level_fidelity: List[Optional[float]] = field(default_factory=list)
 
 
 class TrueStreamingProtocol:
@@ -65,6 +66,7 @@ class TrueStreamingProtocol:
         self.lineage_trace = []         # NEW
         self._merge_counter = 0         # NEW
         self._target_state = None       # NEW
+        self.per_level_fid = {}   # NEW: level -> fidelity (first-time or best)
     
     def process_state_stream(self, 
                            noise_model: NoiseModel,
@@ -106,10 +108,6 @@ class TrueStreamingProtocol:
             
             if arrival_time % stride == 0:
                 self._record_snapshot(arrival_time)     # CHANGED (calls new routine)
-            
-            # # Track error evolution
-            # if arrival_time % max(1, num_states // 20) == 0:  # Sample periodically
-            #     self._record_error_snapshot(arrival_time)
         
         # Flush remaining states from stack
         self._flush_stack()
@@ -156,6 +154,10 @@ class TrueStreamingProtocol:
                 self._merge_counter += 1
                 lineage_fid = current_state.state.get_fidelity_with_target()
                 self.lineage_trace.append((self._merge_counter, lineage_fid, current_state.level))
+                
+                L = current_state.level
+                if L not in self.per_level_fid:
+                    self.per_level_fid[L] = lineage_fid
                 
                 level += 1
         
@@ -207,9 +209,18 @@ class TrueStreamingProtocol:
         self.lineage_trace = []         # NEW
         self._merge_counter = 0         # NEW
         self._target_state = None       # NEW
+        self.per_level_fid = {}
     
     def _generate_result(self) -> StreamingResult:
         """Generate final result summary."""
+        
+        # How many merge levels did we *expect* to be possible?
+        levels = int(np.floor(np.log2(max(1, self.states_processed))))
+        per_level = [None] * (levels + 1)  # index 0 unused; fill 1..levels
+        for L, fid in self.per_level_fid.items():
+            if 1 <= L <= levels:
+                per_level[L] = float(fid)
+                
         return StreamingResult(
             total_states_processed=self.states_processed,
             output_states=self.output_states,
@@ -219,7 +230,8 @@ class TrueStreamingProtocol:
             total_amplification_iterations=self.amplification_iterations,
             error_evolution_trace=self.error_trace,
             fidelity_evolution_trace=self.fidelity_trace,
-            lineage_fidelity_trace=self.lineage_trace
+            lineage_fidelity_trace=self.lineage_trace,
+            per_level_fidelity=per_level   
         )
     
     def get_memory_usage(self) -> int:

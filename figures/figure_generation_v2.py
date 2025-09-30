@@ -816,100 +816,115 @@ class StreamingQECPlotter:
         print(f"Saved fidelity evolution plot: {filename}")
         return filepath
     
-    
     def plot_dephasing_fidelity_evolution(self, save_format: str = 'pdf') -> Optional[str]:
-        """Plot fidelity evolution through purification levels for pure dephasing."""
-        # Use streaming evolution data (this is where dephasing runs are saved)
+        """
+        Plot fidelity evolution vs purification level for pure dephasing (Pauli Z) noise.
+        Uses the new per-level fidelity recorded by the true streaming protocol.
+
+        - Reads from self.streaming_evolution_data (new data files).
+        - For each physical error rate p, plots one curve: levels 1..L vs fidelity.
+        - If per_level_fidelity is missing, falls back to lineage_fidelity_trace (max per level).
+        """
+        # Use the new streaming evolution data
         evolution_data = self.streaming_evolution_data if self.streaming_evolution_data else []
         if not evolution_data:
             print("Warning: No streaming evolution data available for dephasing fidelity plot")
             return None
 
-        # Pick dephasing entries (handle either 'pure_dephasing' or 'dephasing' labels)
-        dephasing_data = [d for d in evolution_data
-                        if d.get('noise_type') in ('pure_dephasing', 'dephasing')]
-        if not dephasing_data:
-            print("Warning: No dephasing evolution data available")
+        # Filter for pure dephasing only
+        dephasing = [d for d in evolution_data if d.get('noise_type') in ('pure_dephasing', 'dephasing')]
+        if not dephasing:
+            print("Warning: No pure dephasing evolution data available")
             return None
 
-        # Find best code size (largest available)
-        available_sizes = list(set(d.get('N') for d in dephasing_data))
-        if not available_sizes:
-            print("Warning: No N values in dephasing data")
+        # Pick a single N (largest available) to match your depolarization fig style
+        sizes = sorted({d.get('N') for d in dephasing if isinstance(d.get('N'), (int, float))})
+        if not sizes:
+            print("Warning: No code sizes found in dephasing data")
             return None
-        target_N = max(available_sizes)
+        target_N = max(sizes)
 
-        # Get all unique error rates for this code size
-        target_data = [d for d in dephasing_data if d.get('N') == target_N]
-        error_rates = sorted(list(set(d.get('physical_error_rate') for d in target_data)))
+        # Records at target_N
+        target = [d for d in dephasing if d.get('N') == target_N]
+        if not target:
+            print(f"Warning: No dephasing records for N={target_N}")
+            return None
+
+        # Unique physical error rates
+        error_rates = sorted({float(d.get('physical_error_rate')) for d in target if d.get('physical_error_rate') is not None})
         if not error_rates:
-            print(f"Warning: No error rates for dephasing at N={target_N}")
+            print(f"Warning: No physical error rates for N={target_N} (dephasing)")
             return None
 
-        print(f"Found {len(error_rates)} dephasing error rates for N={target_N}: {error_rates}")
-
-        # Prepare figure
+        # Build plot
         fig, ax = plt.subplots(figsize=(10, 8))
         colors = plt.cm.viridis(np.linspace(0, 1, len(error_rates)))
         plotted_any = False
 
-        for i, error_rate in enumerate(error_rates):
-            # Grab a representative record for this (N, error_rate)
-            matches = [d for d in target_data if d.get('physical_error_rate') == error_rate]
-            if not matches:
-                continue
-            data = matches[0]
-
-            # Streaming runs store per-snapshot fidelities in 'fidelity_evolution_trace':
-            # a list of (time, fidelity, level). We convert that to "final fidelity per level".
-            trace = data.get('fidelity_evolution_trace')
-            if not trace:
-                # If fidelity trace is missing, try per-output-state fallbacks (rare),
-                # otherwise skip this curve.
-                out_fids = data.get('output_fidelities')
-                out_lvls = data.get('output_error_levels')
-                if out_fids and out_lvls and len(out_fids) == len(out_lvls):
-                    # Collapse to best fidelity per level and plot levels in order.
-                    by_level = {}
-                    for lvl, fid in zip(out_lvls, out_fids):
-                        by_level[lvl] = max(by_level.get(lvl, 0.0), float(fid))
-                    levels = sorted(by_level.keys())
-                    fidelities = [by_level[l] for l in levels]
-                else:
-                    # Nothing we can plot for this error rate
+        def extract_per_level_fids(rec: Dict) -> List[float]:
+            """Prefer per_level_fidelity; else derive from lineage_fidelity_trace (best per level)."""
+            fids = rec.get('per_level_fidelity')
+            if isinstance(fids, list) and any(f is not None for f in fids):
+                # Drop index 0 if it's None/baseline; keep levels 1..L
+                # Also filter out trailing None
+                vals = [f for i, f in enumerate(fids) if i >= 1 and f is not None]
+                return [float(v) for v in vals]
+            # Fallback: build best-per-level from lineage_fidelity_trace
+            lineage = rec.get('lineage_fidelity_trace') or rec.get('fidelity_trace') or []
+            best_by_level = {}
+            for entry in lineage:
+                # entry can be (merge_idx, fid, level) or (time, fid, level)
+                if len(entry) != 3:
                     continue
-            else:
-                # Keep only the latest snapshot per level (max time)
-                latest_by_level = {}  # level -> (time, fidelity)
-                for t, fid, lvl in trace:
-                    if (lvl not in latest_by_level) or (t > latest_by_level[lvl][0]):
-                        latest_by_level[lvl] = (t, float(fid))
-                levels = sorted(latest_by_level.keys())
-                fidelities = [latest_by_level[l][1] for l in levels]
+                _, fid, lvl = entry
+                try:
+                    L = int(lvl)
+                    F = float(fid)
+                except (TypeError, ValueError):
+                    continue
+                if L >= 1:
+                    if (L not in best_by_level) or (F > best_by_level[L]):
+                        best_by_level[L] = F
+            if not best_by_level:
+                return []
+            # Pack levels 1..maxL
+            maxL = max(best_by_level)
+            return [best_by_level[L] for L in range(1, maxL + 1) if L in best_by_level]
 
-            if levels and fidelities:
-                ax.plot(levels, fidelities, 'o-', color=colors[i],
-                        label=rf'$p_z$ = {error_rate:.3f}', linewidth=3, markersize=8)
+        for i, p in enumerate(error_rates):
+            # Pick the record for this p (if multiple, take the one with the deepest level coverage)
+            candidates = [d for d in target if float(d.get('physical_error_rate')) == p]
+            if not candidates:
+                continue
+            # prefer the record with the longest per-level series
+            def series_len(rec):
+                fids = extract_per_level_fids(rec)
+                return len(fids)
+            rec = max(candidates, key=series_len)
+            fids = extract_per_level_fids(rec)
+
+            if fids:
+                levels = np.arange(1, len(fids) + 1)
+                ax.plot(levels, fids, 'o-', color=colors[i], linewidth=3, markersize=8,
+                        label=rf'$p={p:.2f}$')
                 plotted_any = True
 
         if not plotted_any:
-            print("Warning: No valid dephasing fidelity data to plot")
-            ax.text(0.5, 0.5, 'No Fidelity Data Available',
+            print("Warning: No valid per-level fidelity data to plot for dephasing")
+            ax.text(0.5, 0.5, 'No Dephasing Fidelity Data Available',
                     transform=ax.transAxes, ha='center', va='center', fontsize=16)
-
-        # Target line and cosmetics
-        ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
-                linewidth=2, label='Target Fidelity 0.99')
+        else:
+            # Optional target line
+            ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7, linewidth=2, label='Target Fidelity 0.99')
 
         ax.set_xlabel('Purification Level', fontsize=25)
         ax.set_ylabel('State Fidelity', fontsize=25)
-        ax.set_title(f'Fidelity Evolution (Dephasing Noise, N={target_N})', fontsize=30)
+        ax.set_title(f'Fidelity Evolution (Pure Dephasing, N={target_N})', fontsize=30)
         if plotted_any:
-            ax.legend(fontsize=14)
-        ax.set_ylim(0, 1.05)
+            ax.legend(fontsize=14, loc='best')
+        ax.set_ylim(0.0, 1.05)
 
         plt.tight_layout()
-
         filename = f"fidelity_evolution_dephasing.{save_format}"
         filepath = os.path.join(self.figures_dir, filename)
         plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
@@ -917,6 +932,207 @@ class StreamingQECPlotter:
 
         print(f"Saved dephasing fidelity evolution plot: {filename}")
         return filepath
+
+    
+    # def plot_dephasing_fidelity_evolution(self, save_format: str = 'pdf') -> Optional[str]:
+    #     """
+    #     Fidelity evolution for *dephasing* (pure Z) — figure 2a analog.
+    #     Uses streaming evolution traces and aggregates fidelity by purification level.
+    #     """
+    #     # Prefer streaming evolution JSON
+    #     evolution_data = self.streaming_evolution_data if self.streaming_evolution_data else []
+    #     if not evolution_data:
+    #         print("Warning: No streaming evolution data available for dephasing fidelity.")
+    #         return None
+
+    #     # Filter for pure dephasing
+    #     dephasing = [d for d in evolution_data if d.get('noise_type') in ('pure_dephasing', 'dephasing')]
+    #     if not dephasing:
+    #         print("Warning: No pure dephasing records found.")
+    #         return None
+
+    #     # Fix code size: use largest N
+    #     Ns = sorted({d.get('N') for d in dephasing if d.get('N') is not None})
+    #     if not Ns:
+    #         print("Warning: No N values in dephasing records.")
+    #         return None
+    #     target_N = Ns[-1]
+
+    #     # Collect all error rates we have at this N
+    #     records_at_N = [d for d in dephasing if d.get('N') == target_N]
+    #     error_rates = sorted({float(d.get('physical_error_rate')) for d in records_at_N if d.get('physical_error_rate') is not None})
+    #     if not error_rates:
+    #         print(f"Warning: No error rates for dephasing at N={target_N}.")
+    #         return None
+
+    #     fig, ax = plt.subplots(figsize=(10, 8))
+    #     colors = plt.cm.viridis(np.linspace(0, 1, len(error_rates)))
+    #     plotted = False
+
+    #     for i, pz in enumerate(error_rates):
+    #         recs = [d for d in records_at_N if float(d.get('physical_error_rate')) == pz]
+    #         if not recs:
+    #             continue
+    #         rec = recs[0]
+
+    #         # Pull traces (prefer fidelity_evolution_trace; fallback to lineage_fidelity_trace)
+    #         trace = rec.get('fidelity_evolution_trace') or rec.get('lineage_fidelity_trace') or []
+    #         # trace elements are tuples/lists: (time_or_merge_idx, fidelity, level)
+    #         if not trace:
+    #             continue
+
+    #         # Aggregate by level (robust: median)
+    #         by_level = {}
+    #         for tp in trace:
+    #             # Be tolerant of list/tuple shapes
+    #             if not isinstance(tp, (list, tuple)) or len(tp) < 3:
+    #                 continue
+    #             _, fid, lvl = tp
+    #             if fid is None or lvl is None:
+    #                 continue
+    #             try:
+    #                 lvl_i = int(lvl)
+    #                 fid_f = float(fid)
+    #             except (TypeError, ValueError):
+    #                 continue
+    #             if not (0.0 <= fid_f <= 1.0):
+    #                 continue
+    #             by_level.setdefault(lvl_i, []).append(fid_f)
+
+    #         if not by_level:
+    #             continue
+
+    #         levels_sorted = sorted(by_level.keys())
+    #         fids_med = [float(np.median(by_level[l])) for l in levels_sorted]
+
+    #         ax.plot(levels_sorted, fids_med, 'o-',
+    #                 color=colors[i], linewidth=3, markersize=8, alpha=0.9,
+    #                 label=rf'$p_z = {pz:.3f}$')
+    #         plotted = True
+
+    #     if not plotted:
+    #         print("Warning: No valid dephasing fidelity data to plot.")
+    #         ax.text(0.5, 0.5, 'No Fidelity Data Available',
+    #                 transform=ax.transAxes, ha='center', va='center', fontsize=16)
+
+    #     # Target line and cosmetics (match your depolarizing plot)
+    #     ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7, linewidth=2, label='Target Fidelity 0.99')
+    #     ax.set_xlabel('Purification Level', fontsize=25)
+    #     ax.set_ylabel('State Fidelity', fontsize=25)
+    #     ax.set_title(f'Fidelity Evolution (Dephasing Noise, N={target_N})', fontsize=30)
+    #     if plotted:
+    #         ax.legend(fontsize=14, loc='best')
+    #     ax.set_ylim(0, 1.05)
+    #     plt.tight_layout()
+
+    #     filename = f"fidelity_evolution_dephasing.{save_format}"
+    #     filepath = os.path.join(self.figures_dir, filename)
+    #     plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
+    #     plt.close()
+    #     print(f"Saved dephasing fidelity evolution plot: {filename}")
+    #     return filepath
+
+    
+    # def plot_dephasing_fidelity_evolution(self, save_format: str = 'pdf') -> Optional[str]:
+    #     """Plot fidelity evolution through purification levels for pure dephasing."""
+    #     # Use streaming evolution data (this is where dephasing runs are saved)
+    #     evolution_data = self.streaming_evolution_data if self.streaming_evolution_data else []
+    #     if not evolution_data:
+    #         print("Warning: No streaming evolution data available for dephasing fidelity plot")
+    #         return None
+
+    #     # Pick dephasing entries (handle either 'pure_dephasing' or 'dephasing' labels)
+    #     dephasing_data = [d for d in evolution_data
+    #                     if d.get('noise_type') in ('pure_dephasing', 'dephasing')]
+    #     if not dephasing_data:
+    #         print("Warning: No dephasing evolution data available")
+    #         return None
+
+    #     # Find best code size (largest available)
+    #     available_sizes = list(set(d.get('N') for d in dephasing_data))
+    #     if not available_sizes:
+    #         print("Warning: No N values in dephasing data")
+    #         return None
+    #     target_N = max(available_sizes)
+
+    #     # Get all unique error rates for this code size
+    #     target_data = [d for d in dephasing_data if d.get('N') == target_N]
+    #     error_rates = sorted(list(set(d.get('physical_error_rate') for d in target_data)))
+    #     if not error_rates:
+    #         print(f"Warning: No error rates for dephasing at N={target_N}")
+    #         return None
+
+    #     print(f"Found {len(error_rates)} dephasing error rates for N={target_N}: {error_rates}")
+
+    #     # Prepare figure
+    #     fig, ax = plt.subplots(figsize=(10, 8))
+    #     colors = plt.cm.viridis(np.linspace(0, 1, len(error_rates)))
+    #     plotted_any = False
+
+    #     for i, error_rate in enumerate(error_rates):
+    #         # Grab a representative record for this (N, error_rate)
+    #         matches = [d for d in target_data if d.get('physical_error_rate') == error_rate]
+    #         if not matches:
+    #             continue
+    #         data = matches[0]
+
+    #         # Streaming runs store per-snapshot fidelities in 'fidelity_evolution_trace':
+    #         # a list of (time, fidelity, level). We convert that to "final fidelity per level".
+    #         trace = data.get('fidelity_evolution_trace')
+    #         if not trace:
+    #             # If fidelity trace is missing, try per-output-state fallbacks (rare),
+    #             # otherwise skip this curve.
+    #             out_fids = data.get('output_fidelities')
+    #             out_lvls = data.get('output_error_levels')
+    #             if out_fids and out_lvls and len(out_fids) == len(out_lvls):
+    #                 # Collapse to best fidelity per level and plot levels in order.
+    #                 by_level = {}
+    #                 for lvl, fid in zip(out_lvls, out_fids):
+    #                     by_level[lvl] = max(by_level.get(lvl, 0.0), float(fid))
+    #                 levels = sorted(by_level.keys())
+    #                 fidelities = [by_level[l] for l in levels]
+    #             else:
+    #                 # Nothing we can plot for this error rate
+    #                 continue
+    #         else:
+    #             # Keep only the latest snapshot per level (max time)
+    #             latest_by_level = {}  # level -> (time, fidelity)
+    #             for t, fid, lvl in trace:
+    #                 if (lvl not in latest_by_level) or (t > latest_by_level[lvl][0]):
+    #                     latest_by_level[lvl] = (t, float(fid))
+    #             levels = sorted(latest_by_level.keys())
+    #             fidelities = [latest_by_level[l][1] for l in levels]
+
+    #         if levels and fidelities:
+    #             ax.plot(levels, fidelities, 'o-', color=colors[i],
+    #                     label=rf'$p_z$ = {error_rate:.3f}', linewidth=3, markersize=8)
+    #             plotted_any = True
+
+    #     if not plotted_any:
+    #         print("Warning: No valid dephasing fidelity data to plot")
+    #         ax.text(0.5, 0.5, 'No Fidelity Data Available',
+    #                 transform=ax.transAxes, ha='center', va='center', fontsize=16)
+
+    #     # Target line and cosmetics
+    #     ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
+    #             linewidth=2, label='Target Fidelity 0.99')
+
+    #     ax.set_xlabel('Purification Level', fontsize=25)
+    #     ax.set_ylabel('State Fidelity', fontsize=25)
+    #     ax.set_title(f'Fidelity Evolution (Dephasing Noise, N={target_N})', fontsize=30)
+    #     if plotted_any:
+    #         ax.legend(fontsize=14)
+    #     ax.set_ylim(0, 1.05)
+
+    #     plt.tight_layout()
+
+    #     filename = f"fidelity_evolution_dephasing.{save_format}"
+    #     filepath = os.path.join(self.figures_dir, filename)
+    #     plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
+    #     plt.close()
+
+    #     print(f"Saved dephasing fidelity evolution plot: {filename}")
+    #     return filepath
 
     
     def plot_memory_scaling(self, save_format: str = 'pdf') -> Optional[str]:

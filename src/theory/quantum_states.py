@@ -73,16 +73,16 @@ class BlochVectorState(QuantumState):
         if len(self.target_bloch_vector) != 3:
             raise ValueError("Target Bloch vector must be 3-dimensional")
         
-        # Clip to unit sphere
-        if np.linalg.norm(self.bloch_vector) > 1:
-            self.bloch_vector = self.bloch_vector / np.linalg.norm(self.bloch_vector)
-        '''
-        Need to confirm if I should do this; the whole value of the swap purification is that it renormalizes the bloch vector, 
-        so maybe I shouldn't be ensuring normalization here.
-        '''
+        
+        tnorm = np.linalg.norm(self.target_bloch_vector)
+        if not np.isfinite(tnorm) or tnorm == 0:
+            raise ValueError("target_bloch_vector must be nonzero")
+        self.target_bloch_vector = self.target_bloch_vector / tnorm
     
     def get_fidelity_with_target(self) -> float:
         """Fidelity via Bloch vector dot product."""
+        if self.target_bloch_vector is None:
+            raise RuntimeError("target_bloch_vector missing on BlochVectorState")
         return (1 + np.dot(self.bloch_vector, self.target_bloch_vector)) / 2
     
     def get_logical_error(self) -> float:
