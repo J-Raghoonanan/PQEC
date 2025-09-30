@@ -57,6 +57,11 @@ class StreamingEvolutionData:
     output_error_levels: List[int]  # Purification levels of output states
     convergence_achieved: bool
     noise_model_name: str
+    best_output_fidelity: Optional[float] = None
+    average_output_fidelity: Optional[float] = None
+    output_fidelities: Optional[List[float]] = None
+    # (optional pass-through of the sampled per-level trace; useful for Fig-2a-style plots)
+    fidelity_evolution_trace: Optional[List[Tuple[int, float, int]]] = None
 
 
 @dataclass
@@ -350,14 +355,28 @@ class ComprehensiveStreamingDataGenerator:
                     output_errors = [s.state.get_logical_error() for s in result.output_states]
                     output_levels = [s.level for s in result.output_states]
                     
+                    output_fids = []
+                    for s in result.output_states:
+                        try:
+                            output_fids.append(float(s.state.get_fidelity_with_target()))
+                        except AttributeError:
+                        # e.g., depolarizing PurityParameterState will skip here
+                            pass
+                    
                     best_error = min(output_errors)
                     worst_error = max(output_errors)
                     avg_error = np.mean(output_errors)
                     convergence = best_error < error_rate * 0.9  # 10% improvement threshold
+                    
+                    best_fid = max(output_fids) if output_fids else None
+                    avg_fid  = float(np.mean(output_fids)) if output_fids else None
                 else:
                     best_error = worst_error = avg_error = float('inf')
                     output_levels = []
                     convergence = False
+                    output_fids = []
+                    best_fid = avg_fid = None
+                    
                 
                 # Calculate memory improvement vs batch
                 memory_improvement = N / result.max_stack_depth_used if result.max_stack_depth_used > 0 else float('inf')
@@ -380,7 +399,11 @@ class ComprehensiveStreamingDataGenerator:
                     memory_improvement_vs_batch=memory_improvement,
                     output_error_levels=output_levels,
                     convergence_achieved=convergence,
-                    noise_model_name=noise_model.get_name() if hasattr(noise_model, 'get_name') else noise_type
+                    noise_model_name=noise_model.get_name() if hasattr(noise_model, 'get_name') else noise_type,
+                    best_output_fidelity=best_fid,
+                    average_output_fidelity=avg_fid,
+                    output_fidelities=output_fids if output_fids else None,
+                    fidelity_evolution_trace=result.fidelity_evolution_trace if result.fidelity_evolution_trace else None
                 )
                 evolution_data.append(data)
                 
