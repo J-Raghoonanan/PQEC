@@ -816,6 +816,109 @@ class StreamingQECPlotter:
         print(f"Saved fidelity evolution plot: {filename}")
         return filepath
     
+    
+    def plot_dephasing_fidelity_evolution(self, save_format: str = 'pdf') -> Optional[str]:
+        """Plot fidelity evolution through purification levels for pure dephasing."""
+        # Use streaming evolution data (this is where dephasing runs are saved)
+        evolution_data = self.streaming_evolution_data if self.streaming_evolution_data else []
+        if not evolution_data:
+            print("Warning: No streaming evolution data available for dephasing fidelity plot")
+            return None
+
+        # Pick dephasing entries (handle either 'pure_dephasing' or 'dephasing' labels)
+        dephasing_data = [d for d in evolution_data
+                        if d.get('noise_type') in ('pure_dephasing', 'dephasing')]
+        if not dephasing_data:
+            print("Warning: No dephasing evolution data available")
+            return None
+
+        # Find best code size (largest available)
+        available_sizes = list(set(d.get('N') for d in dephasing_data))
+        if not available_sizes:
+            print("Warning: No N values in dephasing data")
+            return None
+        target_N = max(available_sizes)
+
+        # Get all unique error rates for this code size
+        target_data = [d for d in dephasing_data if d.get('N') == target_N]
+        error_rates = sorted(list(set(d.get('physical_error_rate') for d in target_data)))
+        if not error_rates:
+            print(f"Warning: No error rates for dephasing at N={target_N}")
+            return None
+
+        print(f"Found {len(error_rates)} dephasing error rates for N={target_N}: {error_rates}")
+
+        # Prepare figure
+        fig, ax = plt.subplots(figsize=(10, 8))
+        colors = plt.cm.viridis(np.linspace(0, 1, len(error_rates)))
+        plotted_any = False
+
+        for i, error_rate in enumerate(error_rates):
+            # Grab a representative record for this (N, error_rate)
+            matches = [d for d in target_data if d.get('physical_error_rate') == error_rate]
+            if not matches:
+                continue
+            data = matches[0]
+
+            # Streaming runs store per-snapshot fidelities in 'fidelity_evolution_trace':
+            # a list of (time, fidelity, level). We convert that to "final fidelity per level".
+            trace = data.get('fidelity_evolution_trace')
+            if not trace:
+                # If fidelity trace is missing, try per-output-state fallbacks (rare),
+                # otherwise skip this curve.
+                out_fids = data.get('output_fidelities')
+                out_lvls = data.get('output_error_levels')
+                if out_fids and out_lvls and len(out_fids) == len(out_lvls):
+                    # Collapse to best fidelity per level and plot levels in order.
+                    by_level = {}
+                    for lvl, fid in zip(out_lvls, out_fids):
+                        by_level[lvl] = max(by_level.get(lvl, 0.0), float(fid))
+                    levels = sorted(by_level.keys())
+                    fidelities = [by_level[l] for l in levels]
+                else:
+                    # Nothing we can plot for this error rate
+                    continue
+            else:
+                # Keep only the latest snapshot per level (max time)
+                latest_by_level = {}  # level -> (time, fidelity)
+                for t, fid, lvl in trace:
+                    if (lvl not in latest_by_level) or (t > latest_by_level[lvl][0]):
+                        latest_by_level[lvl] = (t, float(fid))
+                levels = sorted(latest_by_level.keys())
+                fidelities = [latest_by_level[l][1] for l in levels]
+
+            if levels and fidelities:
+                ax.plot(levels, fidelities, 'o-', color=colors[i],
+                        label=rf'$p_z$ = {error_rate:.3f}', linewidth=3, markersize=8)
+                plotted_any = True
+
+        if not plotted_any:
+            print("Warning: No valid dephasing fidelity data to plot")
+            ax.text(0.5, 0.5, 'No Fidelity Data Available',
+                    transform=ax.transAxes, ha='center', va='center', fontsize=16)
+
+        # Target line and cosmetics
+        ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
+                linewidth=2, label='Target Fidelity 0.99')
+
+        ax.set_xlabel('Purification Level', fontsize=25)
+        ax.set_ylabel('State Fidelity', fontsize=25)
+        ax.set_title(f'Fidelity Evolution (Dephasing Noise, N={target_N})', fontsize=30)
+        if plotted_any:
+            ax.legend(fontsize=14)
+        ax.set_ylim(0, 1.05)
+
+        plt.tight_layout()
+
+        filename = f"fidelity_evolution_dephasing.{save_format}"
+        filepath = os.path.join(self.figures_dir, filename)
+        plt.savefig(filepath, dpi=300, bbox_inches='tight', format=save_format)
+        plt.close()
+
+        print(f"Saved dephasing fidelity evolution plot: {filename}")
+        return filepath
+
+    
     def plot_memory_scaling(self, save_format: str = 'pdf') -> Optional[str]:
         """Plot memory scaling - KEY ADVANTAGE FIGURE showing O(log N) vs O(N)."""
         if not self.memory_scaling_data:
@@ -1344,6 +1447,9 @@ class StreamingQECPlotter:
         
         # print("\n12. Grafe Figure 4 Analog for Dephasing...")
         # plots['streaming_dephasing_threshold'] = self.plot_streaming_dephasing_threshold(save_format)
+        
+        print("\n13. Fidelity for Dephasing...")
+        plots['fidelity_dephasing'] = self.plot_dephasing_fidelity_evolution(save_format)
 
         # Summary
         successful_plots = [name for name, path in plots.items() if path is not None]
