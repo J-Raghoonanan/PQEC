@@ -30,7 +30,8 @@ class StreamingResult:
     total_swap_operations: int
     total_amplification_iterations: int
     error_evolution_trace: List[Tuple[int, float, int]]  # (time, error, level)
-    fidelity_evolution_trace: List[Tuple[int, float, int]] = field(default_factory=list)
+    fidelity_evolution_trace: List[Tuple[int, float, int]]  # (time, fidelity, level)
+    lineage_fidelity_trace: List[Tuple[int, float, int]]    # (merge_index, fidelity, level)
 
 
 class TrueStreamingProtocol:
@@ -60,7 +61,10 @@ class TrueStreamingProtocol:
         self.output_states = []
         self.max_depth_used = 0
         self.error_trace = []
-        self.fidelity_trace: List[Tuple[int, float, int]] = []
+        self.fidelity_trace = []        # NEW
+        self.lineage_trace = []         # NEW
+        self._merge_counter = 0         # NEW
+        self._target_state = None       # NEW
     
     def process_state_stream(self, 
                            noise_model: NoiseModel,
@@ -82,6 +86,9 @@ class TrueStreamingProtocol:
         if target_state is None:
             dimension = getattr(noise_model, 'dimension', 2)
             target_state = generate_random_pure_state(dimension)
+            
+        self._target_state = target_state 
+        stride = max(1, num_states // 20)  # unchanged behavior
         
         # Process states one by one (simulating online arrival)
         for arrival_time in range(num_states):
@@ -95,10 +102,14 @@ class TrueStreamingProtocol:
             
             # Process through stack
             self._process_single_state(streaming_state)
+            self.states_processed += 1
             
-            # Track error evolution
-            if arrival_time % max(1, num_states // 20) == 0:  # Sample periodically
-                self._record_error_snapshot(arrival_time)
+            if arrival_time % stride == 0:
+                self._record_snapshot(arrival_time)     # CHANGED (calls new routine)
+            
+            # # Track error evolution
+            # if arrival_time % max(1, num_states // 20) == 0:  # Sample periodically
+            #     self._record_error_snapshot(arrival_time)
         
         # Flush remaining states from stack
         self._flush_stack()
@@ -141,6 +152,11 @@ class TrueStreamingProtocol:
                     processing_history=current_state.processing_history + partner_state.processing_history + [level]
                 )
                 
+                # NEW: log a lineage point (merge_index increases monotonically)
+                self._merge_counter += 1
+                lineage_fid = current_state.state.get_fidelity_with_target()
+                self.lineage_trace.append((self._merge_counter, lineage_fid, current_state.level))
+                
                 level += 1
         
         # If we've reached max stack depth, output the state
@@ -168,6 +184,16 @@ class TrueStreamingProtocol:
                     # PurityParameterState (depolarizing) may not expose fidelity in the same way
                     pass
     
+    def _record_snapshot(self, time: int):
+        """Record current per-level error and fidelity of whatever is in the stack at 'time'."""
+        for level, state in enumerate(self.stack):
+            if state is not None:
+                err = state.state.get_logical_error()
+                fid = state.state.get_fidelity_with_target()   # NEW
+                self.error_trace.append((time, err, level))
+                self.fidelity_trace.append((time, fid, level)) # NEW
+
+    
     def _reset_protocol(self):
         """Reset protocol state for new run."""
         self.stack = [None] * self.max_stack_levels
@@ -177,7 +203,10 @@ class TrueStreamingProtocol:
         self.output_states = []
         self.max_depth_used = 0
         self.error_trace = []
-        self.fidelity_trace = []
+        self.fidelity_trace = []        # NEW
+        self.lineage_trace = []         # NEW
+        self._merge_counter = 0         # NEW
+        self._target_state = None       # NEW
     
     def _generate_result(self) -> StreamingResult:
         """Generate final result summary."""
@@ -189,7 +218,8 @@ class TrueStreamingProtocol:
             total_swap_operations=self.swap_operations,
             total_amplification_iterations=self.amplification_iterations,
             error_evolution_trace=self.error_trace,
-            fidelity_evolution_trace=self.fidelity_trace
+            fidelity_evolution_trace=self.fidelity_trace,
+            lineage_fidelity_trace=self.lineage_trace
         )
     
     def get_memory_usage(self) -> int:

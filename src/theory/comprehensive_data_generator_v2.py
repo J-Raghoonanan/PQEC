@@ -57,11 +57,12 @@ class StreamingEvolutionData:
     output_error_levels: List[int]  # Purification levels of output states
     convergence_achieved: bool
     noise_model_name: str
+    
     best_output_fidelity: Optional[float] = None
     average_output_fidelity: Optional[float] = None
     output_fidelities: Optional[List[float]] = None
-    # (optional pass-through of the sampled per-level trace; useful for Fig-2a-style plots)
     fidelity_evolution_trace: Optional[List[Tuple[int, float, int]]] = None
+    lineage_fidelity_trace: Optional[List[Tuple[int, float, int]]] = None
 
 
 @dataclass
@@ -403,7 +404,8 @@ class ComprehensiveStreamingDataGenerator:
                     best_output_fidelity=best_fid,
                     average_output_fidelity=avg_fid,
                     output_fidelities=output_fids if output_fids else None,
-                    fidelity_evolution_trace=result.fidelity_evolution_trace if result.fidelity_evolution_trace else None
+                    fidelity_evolution_trace=result.fidelity_evolution_trace,
+                    lineage_fidelity_trace=result.lineage_fidelity_trace
                 )
                 evolution_data.append(data)
                 
