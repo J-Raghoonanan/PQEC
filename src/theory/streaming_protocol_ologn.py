@@ -6,7 +6,7 @@ Implements stack-based processing where states are processed online.
 import numpy as np
 from dataclasses import dataclass, field
 from typing import List, Optional, Union, Tuple, Iterator
-from src.theory.quantum_states import QuantumState, PurityParameterState, BlochVectorState, generate_random_pure_state
+from src.theory.quantum_states import QuantumState, PurityParameterState, BlochVectorState, generate_random_pure_state, pure_state_to_bloch_vector
 from src.theory.noise_models import NoiseModel, DepolarizingNoise, PauliNoise
 from src.theory.swap_operations import SwapTestProcessor, SwapResult
 
@@ -66,8 +66,30 @@ class TrueStreamingProtocol:
         self.lineage_trace = []         # NEW
         self._merge_counter = 0         # NEW
         self._target_state = None       # NEW
+        self._target_bloch = None 
         self.per_level_fid = {}   # NEW: level -> fidelity (first-time or best)
     
+    
+    def _fidelity_from_s_and_L(self, qstate) -> float:
+        """
+        Temporary fidelity estimator for qubit Pauli models:
+        F = 0.75 + 0.25*s^2 - L^2
+        with s = ||r|| and L = 0.5*||r - t|| computed against the *global* target t.
+        Falls back to qstate.get_fidelity_with_target() if we can't use Bloch vectors.
+        """
+        # Use Bloch formula only for qubits
+        if hasattr(qstate, "bloch_vector") and self._target_bloch is not None:
+            r = np.asarray(qstate.bloch_vector, dtype=float)
+            t = np.asarray(self._target_bloch, dtype=float)  # fixed reference
+            s = float(np.linalg.norm(r))                     # ||r||
+            L = float(0.5 * np.linalg.norm(r - t))           # 0.5*||r - t||
+            F = 0.75 + 0.25 * (s * s) - (L * L)
+            return float(np.clip(F, 0.0, 1.0))
+        # Fallback (e.g., depolarizing λ-state)
+        return float(qstate.get_fidelity_with_target())
+
+
+
     def process_state_stream(self, 
                            noise_model: NoiseModel,
                            num_states: int,
@@ -90,6 +112,10 @@ class TrueStreamingProtocol:
             target_state = generate_random_pure_state(dimension)
             
         self._target_state = target_state 
+        self._target_bloch = None
+        dimension = getattr(noise_model, 'dimension', 2)
+        if dimension == 2:
+            self._target_bloch = pure_state_to_bloch_vector(target_state)
         stride = max(1, num_states // 20)  # unchanged behavior
         
         # Process states one by one (simulating online arrival)
@@ -152,7 +178,13 @@ class TrueStreamingProtocol:
                 
                 # NEW: log a lineage point (merge_index increases monotonically)
                 self._merge_counter += 1
-                lineage_fid = current_state.state.get_fidelity_with_target()
+                # lineage_fid = current_state.state.get_fidelity_with_target()
+                # err = current_state.state.get_logical_error()
+                # s = float(current_state.state.get_purity_parameter())
+                # normSq = np.dot(current_state.state.bloch_vector, current_state.state.bloch_vector)
+                # normSq = s*s
+                # lineage_fid = 0.75 + 0.25*(normSq)-(err**2)
+                lineage_fid = self._fidelity_from_s_and_L(current_state.state)
                 self.lineage_trace.append((self._merge_counter, lineage_fid, current_state.level))
                 
                 L = current_state.level
@@ -171,27 +203,17 @@ class TrueStreamingProtocol:
             if self.stack[level] is not None:
                 self.output_states.append(self.stack[level])
                 self.stack[level] = None
-    
-    def _record_error_snapshot(self, time: int):
-        """Record current state of purification for analysis."""
-        for level, state in enumerate(self.stack):
-            if state is not None:
-                error = state.state.get_logical_error()
-                self.error_trace.append((time, error, level))
-                
-                try:
-                    fid = float(state.state.get_fidelity_with_target())
-                    self.fidelity_trace.append((time, fid, level))
-                except AttributeError:
-                    # PurityParameterState (depolarizing) may not expose fidelity in the same way
-                    pass
+
     
     def _record_snapshot(self, time: int):
         """Record current per-level error and fidelity of whatever is in the stack at 'time'."""
         for level, state in enumerate(self.stack):
             if state is not None:
                 err = state.state.get_logical_error()
-                fid = state.state.get_fidelity_with_target()   # NEW
+                # normSq = np.dot(state.state.bloch_vector, state.state.bloch_vector)
+                # fid = 0.75 + 0.25*(normSq)-(err**2)
+                # fid = state.state.get_fidelity_with_target()   # NEW
+                fid = self._fidelity_from_s_and_L(state.state)
                 self.error_trace.append((time, err, level))
                 self.fidelity_trace.append((time, fid, level)) # NEW
 
@@ -210,6 +232,7 @@ class TrueStreamingProtocol:
         self._merge_counter = 0         # NEW
         self._target_state = None       # NEW
         self.per_level_fid = {}
+        self._target_bloch = None
     
     def _generate_result(self) -> StreamingResult:
         """Generate final result summary."""

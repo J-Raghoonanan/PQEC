@@ -360,7 +360,11 @@ class ComprehensiveStreamingDataGenerator:
                     output_fids = []
                     for s in result.output_states:
                         try:
-                            output_fids.append(float(s.state.get_fidelity_with_target()))
+                            # output_fids.append(float(s.state.get_fidelity_with_target()))
+                            err = float(s.state.get_logical_error())
+                            normSq = float(np.dot(s.state.bloch_vector, s.state.bloch_vector))
+                            fid = 0.75 + 0.25*(normSq)-(err**2)
+                            output_fids.append(float(fid))
                         except AttributeError:
                         # e.g., depolarizing PurityParameterState will skip here
                             pass
