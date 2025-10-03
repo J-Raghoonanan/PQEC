@@ -207,13 +207,22 @@ def _project_ancilla_zero(rho: DensityMatrix, M: int) -> DensityMatrix:
 
 
 def extract_purified_register(rho_after_proj: DensityMatrix, M: int) -> DensityMatrix:
-    """Partial trace out ancilla (0) and regB (last M) to get ρ_out on regA (middle M).
+    """Partial trace out ancilla and regB to get ρ_out on regA.
     
-    Qubit ordering: [anc=0] [A:1..M] [B:M+1..2M]
+    CRITICAL: We must trace out ONLY register B, keeping ancilla + A, then
+    trace out the ancilla. The ancilla is in |0⟩⟨0| after projection, so 
+    tracing it out is trivial.
+    
+    System is: [anc=0] [A:1..M] [B:M+1..2M]
+    
+    We want to keep only register A (qubits 1..M).
     """
-    # Trace out ancilla and register B
-    traced = [0] + list(range(1 + M, 1 + 2 * M))
-    rho_A = partial_trace(rho_after_proj, qargs=traced)
+    # First trace out register B only (qubits M+1 .. 2M)
+    qubits_B = list(range(1 + M, 1 + 2 * M))
+    rho_anc_A = partial_trace(rho_after_proj, qargs=qubits_B)
+    
+    # Now trace out the ancilla (qubit 0)
+    rho_A = partial_trace(rho_anc_A, qargs=[0])
     
     # Result is a 2^M × 2^M DensityMatrix
     logger.debug(f"Extracted purified register: dimension {rho_A.dim}")
