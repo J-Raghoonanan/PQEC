@@ -1,22 +1,17 @@
 """
-Plotting Analysis for Theoretical Streaming QEC Simulation Data
-Creates key plots showing system size effects and protocol performance
-Focuses on final logical error vs system size M (number of qubits)
+Figure generation for streaming QEC simulation data.
+Loads CSV data from circuit simulations and creates publication-quality figures.
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import json
-import pickle
 import os
-from typing import Dict, List, Tuple, Optional
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
+from typing import Dict, List, Tuple, Optional
 from pathlib import Path
-import glob
-from dataclasses import dataclass
 
-# Set publication-quality plotting parameters
+# Publication-quality plotting
 plt.style.use('seaborn-v0_8-paper')
 sns.set_palette("husl")
 
@@ -36,526 +31,437 @@ plt.rcParams.update({
     'lines.markersize': 8
 })
 
-# Color schemes
-PROTOCOL_COLORS = {
+COLORS = {
     'depolarizing': '#2E86AB',
-    'symmetric_pauli': '#A23B72', 
     'dephasing': '#F18F01',
-    'pure_dephasing': '#F18F01',
-    'dephasing_z': '#F18F01',
-    'dephasing_x': '#C73E1D',
-    'streaming_qec': '#2E86AB',
-    'no_correction': '#666666'
 }
 
-@dataclass
-class ExperimentResult:
-    """Store results from a single experiment - must match the original class definition."""
-    M: int
-    N: int
-    delta: float
-    noise_type: str
-    trial_number: int
-    metrics_by_level: Dict[int, Dict[str, float]]  # level -> {'fidelity': float, 'logical_error': float}
-    final_logical_error: float
-    final_fidelity: float
 
-class TheoreticalDataPlotter:
-    """Plot analysis for theoretical streaming QEC simulation data."""
+class SimulationPlotter:
+    """Generate figures from simulation CSV data."""
     
-    def __init__(self, data_dir: str = "../data/simulations"):
-        # If running from figures/ directory, data is in ../data/simulations
-        # If data_dir doesn't exist, try alternative paths
+    def __init__(self, data_dir: str = "data/simulations", 
+                 figures_dir: str = "figures/results_v3_sim"):
         self.data_dir = Path(data_dir)
-        if not self.data_dir.exists():
-            # Try other common paths
-            alt_paths = ["data/simulations", "./data/simulations", "../data/simulations"]
-            for alt_path in alt_paths:
-                if Path(alt_path).exists():
-                    self.data_dir = Path(alt_path)
-                    break
-        
-        self.figures_dir = Path("figures/results_v3_sim")  # Create in current directory
+        self.figures_dir = Path(figures_dir)
         self.figures_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"Looking for data in: {self.data_dir.absolute()}")
-        print(f"Saving figures to: {self.figures_dir.absolute()}")
+        # Load data
+        self.depol_finals = self._load_csv('finals_circuit_depolarizing.csv')
+        self.depol_steps = self._load_csv('steps_circuit_depolarizing.csv')
+        self.dephase_finals = self._load_csv('finals_circuit_dephasing.csv')
+        self.dephase_steps = self._load_csv('steps_circuit_dephasing.csv')
         
-        # Load simulation data
-        self.raw_results = self._load_raw_results()
-        self.aggregated_data = self._load_aggregated_data()
-        self.processed_df = self._process_to_dataframe()
+        print(f"Loaded simulation data:")
+        print(f"  Depolarizing finals: {len(self.depol_finals)} runs")
+        print(f"  Depolarizing steps: {len(self.depol_steps)} merges")
+        print(f"  Dephasing finals: {len(self.dephase_finals)} runs")
+        print(f"  Dephasing steps: {len(self.dephase_steps)} merges")
     
-    def _load_raw_results(self):
-        """Load raw simulation results from pickle files."""
-        pickle_files = list(self.data_dir.glob("*raw*.pkl"))
-        
-        if not pickle_files:
-            print(f"No raw pickle files found in {self.data_dir}")
-            # Also check for any pickle files
-            all_pickles = list(self.data_dir.glob("*.pkl"))
-            if all_pickles:
-                print(f"Found pickle files: {[f.name for f in all_pickles]}")
-            return []
-        
-        # Load the most recent file
-        latest_file = max(pickle_files, key=os.path.getctime)
-        print(f"Loading raw results from: {latest_file}")
-        
-        try:
-            with open(latest_file, 'rb') as f:
-                results = pickle.load(f)
-                print(f"Successfully loaded {len(results)} experiment results")
-                return results
-        except Exception as e:
-            print(f"Error loading pickle file: {e}")
-            print("This might be due to missing class definitions or incompatible pickle format")
-            return []
-    
-    def _load_aggregated_data(self):
-        """Load aggregated simulation results from JSON files."""
-        json_files = list(self.data_dir.glob("*aggregated*.json"))
-        
-        if not json_files:
-            print("No aggregated JSON files found")
-            return {}
-        
-        # Load the most recent file
-        latest_file = max(json_files, key=os.path.getctime)
-        print(f"Loading aggregated data from: {latest_file}")
-        
-        with open(latest_file, 'r') as f:
-            return json.load(f)
-    
-    def _process_to_dataframe(self) -> pd.DataFrame:
-        """Convert raw results to DataFrame for easy plotting."""
-        if not self.raw_results:
+    def _load_csv(self, filename: str) -> pd.DataFrame:
+        """Load CSV file if it exists."""
+        filepath = self.data_dir / filename
+        if filepath.exists():
+            df = pd.read_csv(filepath)
+            
+            # For steps files, extract N from run_id if not present
+            if 'steps' in filename and 'N' not in df.columns and 'run_id' in df.columns:
+                def extract_N(run_id):
+                    # Format: M1_N512_dephase_z_iid_p_d0.50000_twirl
+                    parts = run_id.split('_')
+                    for part in parts:
+                        if part.startswith('N'):
+                            return int(part[1:])
+                    return None
+                
+                df['N'] = df['run_id'].apply(extract_N)
+            
+            return df
+        else:
+            print(f"Warning: {filename} not found")
             return pd.DataFrame()
-        
-        rows = []
-        for result in self.raw_results:
-            # Basic experiment parameters
-            row = {
-                'M': result.M,
-                'N': result.N,
-                'delta': result.delta,
-                'physical_error_rate': result.delta,  # For compatibility
-                'noise_type': result.noise_type,
-                'trial_number': result.trial_number,
-                'final_logical_error': result.final_logical_error,
-                'final_fidelity': result.final_fidelity,
-                'error_reduction_ratio': result.final_logical_error / result.delta if result.delta > 0 else 1.0
-            }
-            
-            # Add metrics by purification level
-            if result.metrics_by_level:
-                max_level = max(result.metrics_by_level.keys())
-                row['max_purification_level'] = max_level
-                
-                # Store metrics for each level
-                for level, metrics in result.metrics_by_level.items():
-                    row[f'fidelity_level_{level}'] = metrics['fidelity']
-                    row[f'logical_error_level_{level}'] = metrics['logical_error']
-            else:
-                row['max_purification_level'] = 0
-            
-            rows.append(row)
-        
-        df = pd.DataFrame(rows)
-        print(f"Processed {len(df)} experimental results")
-        print(f"M range: {df['M'].min()}-{df['M'].max()}")
-        print(f"N range: {df['N'].min()}-{df['N'].max()}")
-        print(f"Delta range: {df['delta'].min():.3f}-{df['delta'].max():.3f}")
-        
-        return df
     
-    def plot_final_error_vs_system_size(self, delta_fixed: float = 0.1, N_fixed: Optional[int] = None):
-        """Plot final logical error vs system size M - PRIMARY PLOT"""
-        
-        fig, ax = plt.subplots(figsize=(12, 9))
-        
-        if self.processed_df.empty:
-            print("No data available for plotting")
-            return
-        
-        # Use largest N if not specified
-        if N_fixed is None:
-            N_fixed = int(self.processed_df['N'].max())
-        
-        # Filter for fixed N and closest delta
-        df_filtered = self.processed_df[
-            (self.processed_df['N'] == N_fixed) &
-            (abs(self.processed_df['delta'] - delta_fixed) < 0.05)
-        ].copy()
-        
-        if df_filtered.empty:
-            print(f"No data for N={N_fixed}, delta≈{delta_fixed}")
-            return
-        
-        # Group by M and calculate mean/std
-        M_values = sorted(df_filtered['M'].unique())
-        mean_errors = []
-        std_errors = []
-        
-        for M in M_values:
-            M_data = df_filtered[df_filtered['M'] == M]
-            if not M_data.empty:
-                mean_error = M_data['final_logical_error'].mean()
-                std_error = M_data['final_logical_error'].std()
-                mean_errors.append(mean_error)
-                std_errors.append(std_error if not np.isnan(std_error) else 0)
-            else:
-                mean_errors.append(np.nan)
-                std_errors.append(0)
-        
-        # Remove NaN values
-        valid_indices = [i for i, err in enumerate(mean_errors) if not np.isnan(err)]
-        valid_M = [M_values[i] for i in valid_indices]
-        valid_means = [mean_errors[i] for i in valid_indices]
-        valid_stds = [std_errors[i] for i in valid_indices]
-        
-        if valid_M:
-            # Plot with error bars
-            ax.errorbar(valid_M, valid_means, yerr=valid_stds, 
-                       fmt='o-', linewidth=3, markersize=12, capsize=8,
-                       color=PROTOCOL_COLORS['depolarizing'], 
-                       label=f'Streaming QEC (N={N_fixed}, δ={delta_fixed})')
-            
-            # Add theoretical exponential decay fit
-            # if len(valid_means) >= 2:
-            #     log_errors = np.log(valid_means)
-            #     coeffs = np.polyfit(valid_M, log_errors, 1)
-                
-                # M_theory = np.linspace(min(valid_M), max(valid_M), 100)
-                # theory_errors = np.exp(coeffs[1]) * np.exp(coeffs[0] * M_theory)
-                
-                # ax.plot(M_theory, theory_errors, '--', color='gray', 
-                    #    alpha=0.7, linewidth=3, 
-                    #    label=f'Exponential fit: $\\varepsilon \\propto e^{{{coeffs[0]:.2f}M}}$')
-                
-                # Print decay rate
-                # print(f"Exponential decay rate: {coeffs[0]:.3f} per qubit")
-        
-        # Add no-correction line (constant at delta_fixed)
-        if valid_M:
-            ax.axhline(y=delta_fixed, color=PROTOCOL_COLORS['no_correction'], 
-                      linestyle=':', alpha=0.7, linewidth=3, label='No correction')
-        
-        ax.set_yscale('log')
-        ax.set_xlabel(r'System Size $M$ (qubits)', fontsize=25)
-        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
-        ax.set_title(f'Final Error vs System Size\n(N={N_fixed}, δ={delta_fixed})', fontsize=30)
-        ax.legend(fontsize=18)
-        ax.tick_params(axis='both', which='major', labelsize=20)
-        # ax.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        plt.savefig(self.figures_dir / f'final_error_vs_system_size_N{N_fixed}_delta{delta_fixed}.pdf', 
-                   dpi=300, bbox_inches='tight')
-        plt.show()
-        
-        return valid_M, valid_means, valid_stds
+    def plot_threshold_m1(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+        """
+        Threshold plot for M=1: Final error vs physical error rate for different N.
+        """
+        # Select data AND fix the dephasing bug
+        if noise_type == 'depolarizing':
+            df = self.depol_finals
+            color = COLORS['depolarizing']
+            # For depolarizing, use non-twirled data
+            twirling_filter = False
+        else:  # dephasing
+            df = self.dephase_finals  # FIX: was self.depol_finals
+            color = COLORS['dephasing']
+            # For dephasing, use twirled data
+            twirling_filter = True
     
-    def plot_threshold_curves_system_size(self, N_fixed: Optional[int] = None):
-        """Plot threshold curves for different system sizes."""
+        if df.empty:
+            print(f"No data for {noise_type} threshold plot")
+            return None
+    
+        # Filter M=1 AND twirling condition
+        df_m1 = df[(df['M'] == 1) & (df['twirling_enabled'] == twirling_filter)].copy()
+    
+        if df_m1.empty:
+            print(f"No M=1 data for {noise_type} with twirling={twirling_filter}")
+            return None
+    
+        fig, ax = plt.subplots(figsize=(10, 8))
+    
+        # Get unique N values
+        N_values = sorted(df_m1['N'].unique())
+        colors = plt.cm.viridis(np.linspace(0, 1, len(N_values)))
+    
+        for i, N in enumerate(N_values):
+            df_N = df_m1[df_m1['N'] == N].sort_values('delta')
         
-        fig, ax = plt.subplots(figsize=(12, 9))
-        
-        if self.processed_df.empty:
-            return
-        
-        if N_fixed is None:
-            N_fixed = int(self.processed_df['N'].max())
-        
-        # Filter for fixed N
-        df_N = self.processed_df[self.processed_df['N'] == N_fixed].copy()
-        
-        if df_N.empty:
-            print(f"No data for N={N_fixed}")
-            return
-        
-        # Plot for different M values
-        M_values = sorted(df_N['M'].unique())[:6]  # Limit for clarity
-        colors = plt.cm.viridis(np.linspace(0, 1, len(M_values)))
-        
-        for i, M in enumerate(M_values):
-            M_data = df_N[df_N['M'] == M].copy()
-            
-            # Group by delta and calculate mean
-            delta_means = []
-            delta_values = []
-            for delta in sorted(M_data['delta'].unique()):
-                delta_data = M_data[M_data['delta'] == delta]
-                mean_error = delta_data['final_logical_error'].mean()
-                delta_values.append(delta)
-                delta_means.append(mean_error)
-            
-            ax.semilogy(delta_values, delta_means, 'o-', 
-                       color=colors[i], linewidth=3, markersize=8,
-                       label=f'M = {M}')
-        
-        # Add no-correction line
-        delta_range = np.linspace(0.01, 0.99, 100)
-        ax.plot(delta_range, delta_range, '--', 
-               color=PROTOCOL_COLORS['no_correction'], alpha=0.7, linewidth=3,
-               label='No correction')
-        
+            if len(df_N) > 0:
+                ax.semilogy(df_N['delta'], df_N['eps_L_final'], 'o-',
+                        color=colors[i], linewidth=3, markersize=8,
+                        label=f'N = {N}', alpha=0.8)
+    
+        # No correction reference
+        delta_range = np.logspace(-2, 0, 100)
+        ax.semilogy(delta_range, delta_range, '--',
+                color='gray', linewidth=2, alpha=0.7, label='No Correction')
+    
         ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=25)
         ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
-        ax.set_title(f'Threshold Curves vs System Size\n(N={N_fixed})', fontsize=30)
-        ax.legend(fontsize=16, loc='upper left')
-        ax.tick_params(axis='both', which='major', labelsize=20)
-        ax.set_xlim(0, 1)
-        # ax.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        plt.savefig(self.figures_dir / f'threshold_curves_system_size_N{N_fixed}.pdf', 
-                   dpi=300, bbox_inches='tight')
-        # plt.show()
     
-    def plot_error_evolution_curves(self, M_fixed: int = 1, N_fixed: Optional[int] = None, delta_fixed: float = 0.1):
-        """Plot error evolution through purification levels."""
+        title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
+        ax.set_title(f'QEC Threshold\n({title_str} Noise, M=1)', fontsize=30)
+    
+        ax.legend(fontsize=14, loc='lower right')
+        ax.set_xlim(0.09, 1.0)
+        ax.set_ylim(1e-5, 1.0)
+    
+        plt.tight_layout()
+    
+        filename = f"threshold_{noise_type}_M1.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+    
+        print(f"Saved {filename}")
+        return str(filepath)
+    
+    
+    def plot_error_evolution_m1(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+        """
+        Error evolution for M=1: Error vs purification depth for different delta.
+        """
+        # Select data
+        if noise_type == 'depolarizing':
+            df = self.depol_steps
+            color = COLORS['depolarizing']
+        else:
+            df = self.dephase_steps
+            color = COLORS['dephasing']
         
-        fig, ax = plt.subplots(figsize=(12, 9))
+        if df.empty:
+            print(f"No steps data for {noise_type}")
+            return None
         
-        if self.processed_df.empty:
-            return
+        # Filter M=1
+        df_m1 = df[df['M'] == 1].copy()
+        if df_m1.empty:
+            print(f"No M=1 steps for {noise_type}")
+            return None
         
-        if N_fixed is None:
-            N_fixed = int(self.processed_df['N'].max())
+        # Use max N
+        max_N = df_m1['N'].max()
+        df_N = df_m1[df_m1['N'] == max_N].copy()
         
-        # Filter for specific M, N, delta
-        df_filtered = self.processed_df[
-            (self.processed_df['M'] == M_fixed) &
-            (self.processed_df['N'] == N_fixed) &
-            (abs(self.processed_df['delta'] - delta_fixed) < 0.05)
-        ]
+        fig, ax = plt.subplots(figsize=(10, 8))
         
-        if df_filtered.empty:
-            print(f"No data for M={M_fixed}, N={N_fixed}, delta≈{delta_fixed}")
-            return
+        # Get unique deltas
+        deltas = sorted(df_N['delta'].unique())
+        colors = plt.cm.viridis(np.linspace(0, 1, len(deltas)))
         
-        # Find maximum purification level
-        max_level = 0
-        for _, row in df_filtered.iterrows():
-            for col in row.index:
-                if col.startswith('logical_error_level_'):
-                    level = int(col.split('_')[-1])
-                    max_level = max(max_level, level)
-        
-        if max_level == 0:
-            print("No purification level data found")
-            return
-        
-        # Calculate mean error at each level
-        levels = list(range(max_level + 1))
-        mean_errors = []
-        std_errors = []
-        
-        for level in levels:
-            col_name = f'logical_error_level_{level}'
-            if col_name in df_filtered.columns:
-                errors = df_filtered[col_name].dropna()
-                if not errors.empty:
-                    mean_errors.append(errors.mean())
-                    std_errors.append(errors.std() if len(errors) > 1 else 0)
-                else:
-                    mean_errors.append(np.nan)
-                    std_errors.append(0)
-            else:
-                mean_errors.append(np.nan)
-                std_errors.append(0)
-        
-        # Remove NaN values
-        valid_data = [(l, m, s) for l, m, s in zip(levels, mean_errors, std_errors) 
-                      if not np.isnan(m)]
-        
-        if valid_data:
-            valid_levels, valid_means, valid_stds = zip(*valid_data)
+        for i, delta in enumerate(deltas):
+            df_delta = df_N[df_N['delta'] == delta].copy()
             
-            ax.errorbar(valid_levels, valid_means, yerr=valid_stds,
-                       fmt='o-', linewidth=3, markersize=10, capsize=6,
-                       color=PROTOCOL_COLORS['depolarizing'],
-                       label=f'M={M_fixed}, N={N_fixed}, δ={delta_fixed}')
+            # Group by depth and take best (min) error
+            evolution = df_delta.groupby('depth')['eps_L'].min().reset_index()
+            
+            if len(evolution) > 0:
+                ax.semilogy(evolution['depth'], evolution['eps_L'], 'o-',
+                           color=colors[i], linewidth=3, markersize=6,
+                           label=f'$\delta={delta:.2f}$', alpha=0.8)
         
-        ax.set_yscale('log')
         ax.set_xlabel(r'Purification Level, $n$', fontsize=25)
-        ax.set_ylabel(r'Logical Error Rate, $\varepsilon_L$', fontsize=25)
-        ax.set_title('Error Evolution vs Purification Level', fontsize=30)
-        ax.legend(fontsize=18)
-        ax.tick_params(axis='both', which='major', labelsize=20)
-        # ax.grid(True, alpha=0.3)
+        ax.set_ylabel(r'Logical Error Rate, $\varepsilon_L^{(n)}$', fontsize=25)
+        
+        title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
+        ax.set_title(f'Error Evolution\n({title_str}, M=1, N={max_N})', fontsize=30)
+        
+        ax.legend(fontsize=14, loc='best')
         
         plt.tight_layout()
-        plt.savefig(self.figures_dir / f'error_evolution_M{M_fixed}_N{N_fixed}_delta{delta_fixed}.pdf', 
-                   dpi=300, bbox_inches='tight')
-        # plt.show()
+        
+        filename = f"error_evolution_{noise_type}_M1.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved {filename}")
+        return str(filepath)
     
-    def plot_error_scaling_with_system_size(self, N_fixed: Optional[int] = None):
-        """Plot final error vs M for different δ values."""
+    def plot_fidelity_evolution_m1(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+        """
+        Fidelity evolution for M=1: Fidelity vs purification depth for different delta.
+        """
+        if noise_type == 'depolarizing':
+            df = self.depol_steps
+        else:
+            df = self.dephase_steps
         
-        fig, ax = plt.subplots(figsize=(12, 9))
+        if df.empty:
+            print(f"No steps data for {noise_type}")
+            return None
         
-        if self.processed_df.empty:
-            return
+        # Filter M=1
+        df_m1 = df[df['M'] == 1].copy()
+        if df_m1.empty:
+            return None
         
-        if N_fixed is None:
-            N_fixed = int(self.processed_df['N'].max())
+        # Use max N
+        max_N = df_m1['N'].max()
+        df_N = df_m1[df_m1['N'] == max_N].copy()
         
-        # Select representative delta values
-        available_deltas = sorted(self.processed_df['delta'].unique())
-        delta_values = []
-        for target in [0.01, 0.1, 0.3, 0.5, 0.7]:
-            closest = min(available_deltas, key=lambda x: abs(x - target))
-            if closest not in delta_values:
-                delta_values.append(closest)
+        fig, ax = plt.subplots(figsize=(10, 8))
         
-        colors = plt.cm.plasma(np.linspace(0, 1, len(delta_values)))
+        # Get unique deltas
+        deltas = sorted(df_N['delta'].unique())
+        colors = plt.cm.viridis(np.linspace(0, 1, len(deltas)))
         
-        for idx, delta in enumerate(delta_values):
-            df_delta = self.processed_df[
-                (self.processed_df['N'] == N_fixed) &
-                (abs(self.processed_df['delta'] - delta) < 0.05)
-            ]
+        for i, delta in enumerate(deltas):
+            df_delta = df_N[df_N['delta'] == delta].copy()
             
-            if not df_delta.empty:
-                M_values = sorted(df_delta['M'].unique())
-                mean_errors = []
-                
-                for M in M_values:
-                    M_data = df_delta[df_delta['M'] == M]
-                    if not M_data.empty:
-                        mean_errors.append(M_data['final_logical_error'].mean())
-                
-                if mean_errors:
-                    ax.semilogy(M_values, mean_errors, 'o-', 
-                               linewidth=3, markersize=8,
-                               color=colors[idx], label=f'δ = {delta:.2f}')
+            # Group by depth and take best (max) fidelity
+            evolution = df_delta.groupby('depth')['fidelity'].max().reset_index()
+            
+            if len(evolution) > 0:
+                ax.plot(evolution['depth'], evolution['fidelity'], 'o-',
+                       color=colors[i], linewidth=3, markersize=8,
+                       label=f'$\delta={delta:.2f}$')
         
-        ax.set_xlabel(r'System Size $M$ (qubits)', fontsize=25)
-        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
-        ax.set_title(f'Error Scaling with System Size\n(N={N_fixed})', fontsize=30)
-        ax.legend(fontsize=16)
-        ax.tick_params(axis='both', which='major', labelsize=20)
-        # ax.grid(True, alpha=0.3)
+        # Target fidelity line
+        ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
+                  linewidth=2, label='Target 0.99')
+        
+        ax.set_xlabel('Purification Level', fontsize=25)
+        ax.set_ylabel('State Fidelity', fontsize=25)
+        
+        title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
+        ax.set_title(f'Fidelity Evolution\n({title_str}, M=1, N={max_N})', fontsize=30)
+        
+        ax.legend(fontsize=14, loc='best')
+        ax.set_ylim(0, 1.05)
         
         plt.tight_layout()
-        plt.savefig(self.figures_dir / f'error_scaling_system_size_N{N_fixed}.pdf', 
-                   dpi=300, bbox_inches='tight')
-        # plt.show()
+        
+        filename = f"fidelity_evolution_{noise_type}_M1.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved {filename}")
+        return str(filepath)
     
-    def plot_error_reduction_vs_system_size(self, N_fixed: Optional[int] = None):
-        """Plot error reduction ratios vs system size."""
+    def plot_threshold_vs_M(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+        """
+        NEW: Final error vs delta for different M values at fixed max N.
+        """
+        if noise_type == 'depolarizing':
+            df = self.depol_finals
+            color = COLORS['depolarizing']
+        else:
+            df = self.dephase_finals
+            color = COLORS['dephasing']
         
-        fig, ax = plt.subplots(figsize=(12, 9))
+        if df.empty:
+            return None
         
-        if self.processed_df.empty:
-            return
+        # Use max N
+        max_N = df['N'].max()
+        df_N = df[df['N'] == max_N].copy()
         
-        if N_fixed is None:
-            N_fixed = int(self.processed_df['N'].max())
+        fig, ax = plt.subplots(figsize=(10, 8))
         
-        df_N = self.processed_df[self.processed_df['N'] == N_fixed]
-        
-        # Plot for different M values
-        M_values = sorted(df_N['M'].unique())[:6]
-        colors = plt.cm.viridis(np.linspace(0, 1, len(M_values)))
+        # Get unique M values
+        M_values = sorted(df_N['M'].unique())
+        colors = plt.cm.plasma(np.linspace(0, 1, len(M_values)))
         
         for i, M in enumerate(M_values):
-            M_data = df_N[df_N['M'] == M].copy()
+            df_M = df_N[df_N['M'] == M].sort_values('delta')
             
-            # Group by delta and calculate mean reduction ratio
-            delta_values = []
-            reduction_ratios = []
-            
-            for delta in sorted(M_data['delta'].unique()):
-                delta_data = M_data[M_data['delta'] == delta]
-                mean_ratio = delta_data['error_reduction_ratio'].mean()
-                delta_values.append(delta)
-                reduction_ratios.append(mean_ratio)
-            
-            ax.semilogy(delta_values, reduction_ratios, 'o-',
-                       color=colors[i], linewidth=3, markersize=8,
-                       label=f'M = {M}')
+            if len(df_M) > 0:
+                ax.loglog(df_M['delta'], df_M['eps_L_final'], 'o-',
+                         color=colors[i], linewidth=3, markersize=8,
+                         label=f'M = {M}', alpha=0.85)
         
-        ax.axhline(y=1, color='gray', linestyle='--', alpha=0.7, linewidth=3,
-                   label='No improvement')
+        # No correction reference
+        delta_range = np.logspace(-2, 0, 100)
+        ax.loglog(delta_range, delta_range, '--',
+                 color='gray', linewidth=2, alpha=0.7, label='No Correction')
+        
+        ax.set_xscale('linear')
         ax.set_xlabel(r'Physical Error Rate, $\delta$', fontsize=25)
-        ax.set_ylabel(r'Error Reduction Ratio', fontsize=25)
-        ax.set_title(f'Error Reduction vs System Size\n(N={N_fixed})', fontsize=30)
-        ax.legend(fontsize=16)
-        ax.tick_params(axis='both', which='major', labelsize=20)
-        ax.set_xlim(0, 1)
-        # ax.grid(True, alpha=0.3)
+        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
+        
+        title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
+        ax.set_title(f'System Size Scaling\n({title_str}, N={max_N})', fontsize=30)
+        
+        ax.legend(fontsize=14, loc='lower right')
+        ax.set_xlim(0.09, 1.0)
+        ax.set_ylim(1e-5, 1.0)
         
         plt.tight_layout()
-        plt.savefig(self.figures_dir / f'error_reduction_vs_system_size_N{N_fixed}.pdf', 
-                   dpi=300, bbox_inches='tight')
-        # plt.show()
+        
+        filename = f"threshold_vs_M_{noise_type}.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved {filename}")
+        return str(filepath)
     
-    def print_data_summary(self):
-        """Print summary of available data."""
-        if self.processed_df.empty:
-            print("No data available")
-            return
+    def plot_fidelity_vs_M(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+        """
+        NEW: Final fidelity vs M for different delta values at fixed max N.
+        """
+        if noise_type == 'depolarizing':
+            df = self.depol_finals
+        else:
+            df = self.dephase_finals
         
-        print("\n" + "="*60)
-        print("THEORETICAL SIMULATION DATA SUMMARY")
-        print("="*60)
+        if df.empty:
+            return None
         
-        print(f"Total experiments: {len(self.processed_df)}")
-        print(f"System sizes (M): {sorted(self.processed_df['M'].unique())}")
-        print(f"Code sizes (N): {sorted(self.processed_df['N'].unique())}")
-        print(f"Error rates (δ): {sorted(self.processed_df['delta'].unique())}")
-        print(f"Noise types: {sorted(self.processed_df['noise_type'].unique())}")
+        # Use max N
+        max_N = df['N'].max()
+        df_N = df[df['N'] == max_N].copy()
         
-        # Summary statistics
-        print(f"\nFinal logical error range: {self.processed_df['final_logical_error'].min():.6f} - {self.processed_df['final_logical_error'].max():.6f}")
-        print(f"Final fidelity range: {self.processed_df['final_fidelity'].min():.6f} - {self.processed_df['final_fidelity'].max():.6f}")
-        print(f"Error reduction ratio range: {self.processed_df['error_reduction_ratio'].min():.6f} - {self.processed_df['error_reduction_ratio'].max():.6f}")
+        fig, ax = plt.subplots(figsize=(10, 8))
         
-        # System size effect preview
-        print(f"\nSystem size effect preview (δ≈0.1):")
-        sample_data = self.processed_df[abs(self.processed_df['delta'] - 0.1) < 0.05]
-        if not sample_data.empty:
-            for M in sorted(sample_data['M'].unique())[:4]:
-                M_data = sample_data[sample_data['M'] == M]
-                mean_error = M_data['final_logical_error'].mean()
-                print(f"  M={M}: mean εL = {mean_error:.6f}")
+        # Get unique deltas (select a representative subset)
+        all_deltas = sorted(df_N['delta'].unique())
+        # Choose ~5-6 well-spaced deltas
+        if len(all_deltas) > 6:
+            step = len(all_deltas) // 6
+            deltas = all_deltas[::step]
+        else:
+            deltas = all_deltas
+        
+        colors = plt.cm.viridis(np.linspace(0, 1, len(deltas)))
+        
+        for i, delta in enumerate(deltas):
+            df_delta = df_N[df_N['delta'] == delta].sort_values('M')
+            
+            if len(df_delta) > 0:
+                ax.plot(df_delta['M'], df_delta['fidelity_final'], 'o-',
+                       color=colors[i], linewidth=3, markersize=8,
+                       label=f'$\delta={delta:.2f}$')
+        
+        # Target fidelity line
+        ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
+                  linewidth=2, label='Target 0.99')
+        
+        ax.set_xlabel('System Size (M qubits)', fontsize=25)
+        ax.set_ylabel('Final Fidelity', fontsize=25)
+        
+        title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
+        ax.set_title(f'Fidelity vs System Size\n({title_str}, N={max_N})', fontsize=30)
+        
+        ax.legend(fontsize=14, loc='best')
+        ax.set_ylim(0, 1.05)
+        
+        plt.tight_layout()
+        
+        filename = f"fidelity_vs_M_{noise_type}.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved {filename}")
+        return str(filepath)
+    
+    def generate_all_plots(self, save_format: str = 'pdf') -> Dict[str, Optional[str]]:
+        """Generate all figures."""
+        print("\n" + "="*70)
+        print("GENERATING SIMULATION FIGURES")
+        print("="*70)
+        
+        plots = {}
+        
+        # M=1 threshold plots
+        print("\n1. Threshold plots (M=1)...")
+        plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
+        plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
+        
+        # M=1 error evolution
+        print("\n2. Error evolution (M=1)...")
+        plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
+        plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
+        
+        # M=1 fidelity evolution
+        print("\n3. Fidelity evolution (M=1)...")
+        plots['fidelity_evol_depol_m1'] = self.plot_fidelity_evolution_m1('depolarizing', save_format)
+        plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
+        
+        # NEW: Multi-M threshold
+        print("\n4. Threshold vs M (max N)...")
+        plots['threshold_vs_M_depol'] = self.plot_threshold_vs_M('depolarizing', save_format)
+        plots['threshold_vs_M_dephase'] = self.plot_threshold_vs_M('dephasing', save_format)
+        
+        # NEW: Fidelity vs M
+        print("\n5. Fidelity vs M (max N)...")
+        plots['fidelity_vs_M_depol'] = self.plot_fidelity_vs_M('depolarizing', save_format)
+        plots['fidelity_vs_M_dephase'] = self.plot_fidelity_vs_M('dephasing', save_format)
+        
+        # Summary
+        successful = [name for name, path in plots.items() if path is not None]
+        print(f"\n{len(successful)}/{len(plots)} plots generated successfully")
+        print(f"Figures saved to: {self.figures_dir}")
+        
+        return plots
+
 
 def main():
-    """Run complete theoretical data plotting analysis."""
+    """Main function."""
+    import sys
     
-    print("Theoretical Streaming QEC Data Analysis")
-    print("="*50)
+    data_dir = "data/simulations"
+    figures_dir = "figures/results_v3_sim"
+    save_format = "pdf"
     
-    # Initialize plotter
-    plotter = TheoreticalDataPlotter()
+    if '--data-dir' in sys.argv:
+        idx = sys.argv.index('--data-dir')
+        if idx + 1 < len(sys.argv):
+            data_dir = sys.argv[idx + 1]
     
-    # Print data summary
-    plotter.print_data_summary()
+    if '--figures-dir' in sys.argv:
+        idx = sys.argv.index('--figures-dir')
+        if idx + 1 < len(sys.argv):
+            figures_dir = sys.argv[idx + 1]
     
-    if plotter.processed_df.empty:
-        print("No data found! Make sure simulation results are in the current directory.")
-        return
+    if '--format' in sys.argv:
+        idx = sys.argv.index('--format')
+        if idx + 1 < len(sys.argv):
+            save_format = sys.argv[idx + 1]
     
-    # Generate key plots
-    print("\n1. Plotting final error vs system size (PRIMARY PLOT)...")
-    plotter.plot_final_error_vs_system_size(delta_fixed=0.1)
+    plotter = SimulationPlotter(data_dir, figures_dir)
+    plots = plotter.generate_all_plots(save_format)
     
-    print("\n2. Plotting threshold curves by system size...")
-    plotter.plot_threshold_curves_system_size()
+    print("\n" + "="*70)
+    print("COMPLETE")
+    print("="*70)
     
-    print("\n3. Plotting error evolution curves...")
-    plotter.plot_error_evolution_curves(M_fixed=1, delta_fixed=0.1)
-    
-    print("\n4. Plotting error scaling with system size...")
-    plotter.plot_error_scaling_with_system_size()
-    
-    print("\n5. Plotting error reduction vs system size...")
-    plotter.plot_error_reduction_vs_system_size()
-    
-    print(f"\nAnalysis complete! Figures saved to: {plotter.figures_dir}")
+    return plots
+
 
 if __name__ == "__main__":
     main()
