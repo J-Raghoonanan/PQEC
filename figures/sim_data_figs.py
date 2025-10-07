@@ -399,11 +399,13 @@ class SimulationPlotter:
         # Get unique deltas (select a representative subset)
         all_deltas = sorted(df_N['delta'].unique())
         # Choose ~5-6 well-spaced deltas
-        if len(all_deltas) > 6:
-            step = len(all_deltas) // 6
-            deltas = all_deltas[::step]
-        else:
-            deltas = all_deltas
+        # if len(all_deltas) > 6:
+        #     step = len(all_deltas) // 6
+        #     deltas = all_deltas[::step]
+        # else:
+        #     deltas = all_deltas
+        
+        deltas = all_deltas
     
         colors = plt.cm.viridis(np.linspace(0, 1, len(deltas)))
     
