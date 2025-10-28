@@ -273,8 +273,8 @@ class SimulationPlotter:
                     label=f'${param_symbol}={delta:.2f}$')
     
         # Target fidelity line
-        ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
-                linewidth=2, label='Target 0.99')
+        # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
+        #         linewidth=2, label='Target 0.99')
     
         ax.set_xlabel('Purification Level', fontsize=25)
         ax.set_ylabel('State Fidelity', fontsize=25)
@@ -417,9 +417,9 @@ class SimulationPlotter:
                     color=colors[i], linewidth=3, markersize=8,
                     label=f'${param_symbol}={delta:.2f}$')
     
-        # Target fidelity line
-        ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
-                linewidth=2, label='Target 0.99')
+        # Target fidelity line©
+        # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
+        #         linewidth=2, label='Target 0.99')
     
         ax.set_xlabel('System Size (M qubits)', fontsize=25)
         ax.set_ylabel('Final Fidelity', fontsize=25)
