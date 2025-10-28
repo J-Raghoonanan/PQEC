@@ -140,7 +140,7 @@ class SimulationPlotter:
                 color='gray', linewidth=2, alpha=0.7, label='No Correction')
     
         ax.set_xlabel(f'Physical Error Rate, {param_label}', fontsize=25)
-        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
+        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=25)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
         ax.set_title(f'QEC Threshold\n({title_str} Noise, M=1)', fontsize=30)
@@ -209,7 +209,7 @@ class SimulationPlotter:
                         label=f'${param_symbol}={delta:.2f}$', alpha=0.8)
     
         ax.set_xlabel(r'Purification Level, $n$', fontsize=25)
-        ax.set_ylabel(r'Logical Error Rate, $\varepsilon_L^{(n)}$', fontsize=25)
+        ax.set_ylabel(r'Error Rate, $\varepsilon^{(n)}$', fontsize=25)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
         ax.set_title(f'Error Evolution\n({title_str}, M=1, N={max_N})', fontsize=30)
@@ -346,7 +346,7 @@ class SimulationPlotter:
                 color='gray', linewidth=2, alpha=0.7, label='No Correction')
     
         ax.set_xlabel(f'Physical Error Rate, {param_label}', fontsize=25)
-        ax.set_ylabel(r'Final Logical Error Rate, $\varepsilon_L$', fontsize=25)
+        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=25)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
         ax.set_title(f'System Size Scaling\n({title_str}, N={max_N})', fontsize=30)
@@ -553,14 +553,14 @@ class SimulationPlotter:
         plots = {}
         
         # M=1 threshold plots
-        # print("\n1. Threshold plots (M=1)...")
-        # plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
-        # plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
+        print("\n1. Threshold plots (M=1)...")
+        plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
+        plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
         
         # M=1 error evolution
-        # print("\n2. Error evolution (M=1)...")
-        # plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
-        # plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
+        print("\n2. Error evolution (M=1)...")
+        plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
+        plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
         
         # M=1 fidelity evolution
         # print("\n3. Fidelity evolution (M=1)...")
@@ -568,9 +568,9 @@ class SimulationPlotter:
         # plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
         
         # NEW: Multi-M threshold
-        # print("\n4. Threshold vs M (max N)...")
-        # plots['threshold_vs_M_depol'] = self.plot_threshold_vs_M('depolarizing', save_format)
-        # plots['threshold_vs_M_dephase'] = self.plot_threshold_vs_M('dephasing', save_format)
+        print("\n4. Threshold vs M (max N)...")
+        plots['threshold_vs_M_depol'] = self.plot_threshold_vs_M('depolarizing', save_format)
+        plots['threshold_vs_M_dephase'] = self.plot_threshold_vs_M('dephasing', save_format)
         
         # NEW: Fidelity vs M
         # print("\n5. Fidelity vs M (max N)...")
@@ -578,8 +578,8 @@ class SimulationPlotter:
         # plots['fidelity_vs_M_dephase'] = self.plot_fidelity_vs_M('dephasing', save_format)
         
         # Plot lambda convergence
-        print("\n6. Lambda convergence plots...")
-        plots['lambda_convergence_d2'] = self.plot_lambda_convergence(d=2, save_format=save_format)
+        # print("\n6. Lambda convergence plots...")
+        # plots['lambda_convergence_d2'] = self.plot_lambda_convergence(d=2, save_format=save_format)
         
         # Summary
         successful = [name for name, path in plots.items() if path is not None]
