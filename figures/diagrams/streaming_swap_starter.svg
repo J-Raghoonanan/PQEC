@@ -1,0 +1,623 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Starter SVG for "Streaming SWAP Purification" diagram
+     - Layers: guides, blocks, arrows, text
+     - Styles for boxes, stacks, arrows
+     - LaTeX-ready labels (use PDF+LaTeX export in Inkscape)
+-->
+
+<svg
+   width="1200"
+   height="650"
+   viewBox="0 0 1200 650"
+   version="1.1"
+   id="svg34"
+   sodipodi:docname="streaming_swap_starter.svg"
+   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   inkscape:export-filename="streaming_swap_starter.pdf"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:document-units="pt"
+     showgrid="true"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.94848874"
+     inkscape:cx="733.79891"
+     inkscape:cy="361.62791"
+     inkscape:window-width="2288"
+     inkscape:window-height="1067"
+     inkscape:window-x="203"
+     inkscape:window-y="56"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer-text">
+    <inkscape:grid
+       type="xygrid"
+       id="grid1"
+       units="pt"
+       empspacing="4"
+       spacingx="12"
+       spacingy="12"
+       originx="0"
+       originy="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs">
+    <rect
+       x="1200"
+       y="650"
+       width="156"
+       height="22"
+       id="rect35" />
+    <!-- Arrowhead marker -->
+    <marker
+       id="arrow"
+       markerWidth="8"
+       markerHeight="8"
+       refX="8"
+       refY="4"
+       orient="auto-start-reverse">
+      <path
+         d="M0,0 L8,4 L0,8 z"
+         fill="#222222"
+         id="path1" />
+    </marker>
+    <!-- Common styles -->
+    <style
+       type="text/css"
+       id="style1"><![CDATA[
+      .box { fill:#f5f5f5; stroke:#222222; stroke-width:1.2; }
+      .stack { fill:#f9f9f9; stroke:#222222; stroke-width:1.2; }
+      .shelf { stroke:#666666; stroke-width:0.8; }
+      .arrow { stroke:#222222; stroke-width:1.2; fill:none; marker-end:url(#arrow); }
+      .label { fill:#000000; font-size:16px; font-family: "Latin Modern Roman", "Times New Roman", serif; }
+      .note { fill:#000000; font-size:14px; font-family: "Latin Modern Roman", "Times New Roman", serif; }
+      .panel { fill:#000000; font-size:16px; font-style: italic; font-family: "Latin Modern Roman", "Times New Roman", serif; }
+    ]]></style>
+    <marker
+       id="arrow-2"
+       markerWidth="8"
+       markerHeight="8"
+       refX="8"
+       refY="4"
+       orient="auto-start-reverse">
+      <path
+         d="M 0,0 8,4 0,8 Z"
+         fill="#222222"
+         id="path1-1" />
+    </marker>
+    <marker
+       id="arrow-4"
+       markerWidth="8"
+       markerHeight="8"
+       refX="8"
+       refY="4"
+       orient="auto-start-reverse">
+      <path
+         d="M 0,0 8,4 0,8 Z"
+         fill="#222222"
+         id="path1-2" />
+    </marker>
+    <marker
+       id="arrow-9"
+       markerWidth="8"
+       markerHeight="8"
+       refX="8"
+       refY="4"
+       orient="auto-start-reverse">
+      <path
+         d="M 0,0 8,4 0,8 Z"
+         fill="#222222"
+         id="path1-0" />
+    </marker>
+    <marker
+       id="arrow-7"
+       markerWidth="8"
+       markerHeight="8"
+       refX="8"
+       refY="4"
+       orient="auto-start-reverse">
+      <path
+         d="M 0,0 8,4 0,8 Z"
+         fill="#222222"
+         id="path1-3" />
+    </marker>
+    <marker
+       id="arrow-8"
+       markerWidth="8"
+       markerHeight="8"
+       refX="8"
+       refY="4"
+       orient="auto-start-reverse">
+      <path
+         d="M 0,0 8,4 0,8 Z"
+         fill="#222222"
+         id="path1-00" />
+    </marker>
+  </defs>
+  <!-- LAYERS -->
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="0-guides"
+     id="layer-guides">
+    <!-- (empty by default; add guides here if needed) -->
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="1-blocks"
+     id="layer-blocks">
+    <!-- Memory Stack (top center) -->
+    <!-- shelves -->
+    <!-- Memory Stack (middle left) -->
+    <rect
+       x="109.99609"
+       y="308.02802"
+       width="168"
+       height="189.94397"
+       rx="10.5"
+       ry="9.9970503"
+       class="stack"
+       id="rect4" />
+    <!-- shelves -->
+    <line
+       x1="113.99609"
+       y1="348"
+       x2="273.99609"
+       y2="348"
+       class="shelf"
+       id="line5" />
+    <line
+       x1="113.99609"
+       y1="378"
+       x2="273.99609"
+       y2="378"
+       class="shelf"
+       id="line6" />
+    <line
+       x1="113.99609"
+       y1="408"
+       x2="273.99609"
+       y2="408"
+       class="shelf"
+       id="line7" />
+    <line
+       x1="113.99609"
+       y1="438"
+       x2="273.99609"
+       y2="438"
+       class="shelf"
+       id="line8" />
+    <!-- Clifford Twirling block -->
+    <rect
+       x="343.99609"
+       y="333"
+       width="180"
+       height="80"
+       rx="10"
+       ry="10"
+       class="box"
+       id="rect8" />
+    <!-- SWAP + A.A. block -->
+    <rect
+       x="563.99609"
+       y="323"
+       width="190"
+       height="100"
+       rx="10"
+       ry="10"
+       class="box"
+       id="rect9" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;-inkscape-font-specification:'Latin Modern Roman, Times New Roman, serif, Normal';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000000;fill-opacity:1;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal"
+       x="121.15234"
+       y="464.54688"
+       id="text39-1-2"><tspan
+         sodipodi:role="line"
+         id="tspan9">$\rho^{(0)}(\delta) + \rho^{(0)}(\delta)$</tspan></text>
+    <rect
+       x="892"
+       y="18"
+       width="160"
+       height="190"
+       rx="10"
+       ry="10"
+       class="stack"
+       id="rect4-4"
+       style="fill:#f9f9f9;stroke:#222222;stroke-width:1.2" />
+    <line
+       x1="892"
+       y1="58"
+       x2="1052"
+       y2="58"
+       class="shelf"
+       id="line5-5"
+       style="stroke:#666666;stroke-width:0.8" />
+    <line
+       x1="892"
+       y1="88"
+       x2="1052"
+       y2="88"
+       class="shelf"
+       id="line6-1"
+       style="stroke:#666666;stroke-width:0.8" />
+    <line
+       x1="892"
+       y1="118"
+       x2="1052"
+       y2="118"
+       class="shelf"
+       id="line7-2"
+       style="stroke:#666666;stroke-width:0.8" />
+    <line
+       x1="892"
+       y1="148"
+       x2="1052"
+       y2="148"
+       class="shelf"
+       id="line8-8"
+       style="stroke:#666666;stroke-width:0.8" />
+    <text
+       x="906"
+       y="50"
+       class="label"
+       id="text24-0"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\rho^{(n)}(\delta)$</text>
+    <text
+       x="906"
+       y="80"
+       class="label"
+       id="text25-7"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\rho^{(n-1)}(\delta)$</text>
+    <text
+       x="906"
+       y="110"
+       class="label"
+       id="text26-7"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\dots$</text>
+    <text
+       x="906"
+       y="140"
+       class="label"
+       id="text27-9"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\rho^{(1)}(\delta)$</text>
+    <text
+       x="903.3125"
+       y="182.54688"
+       class="label"
+       id="text27-9-0"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\rho^{(0)}(\delta)$</text>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="2-arrows"
+     id="layer-arrows">
+    <!-- Incoming arrow -->
+    <!-- Arrow to top stack bubble -->
+    <line
+       x1="648"
+       y1="96"
+       x2="891.40002"
+       y2="96"
+       class="arrow"
+       id="line10" />
+    <!-- New copy (bottom left) to second stack -->
+    <!-- Second stack -> Twirling -->
+    <line
+       x1="278.61084"
+       y1="373"
+       x2="343.99609"
+       y2="373"
+       class="arrow"
+       id="line12" />
+    <!-- Twirling -> SWAP -->
+    <line
+       x1="523.99609"
+       y1="373"
+       x2="563.99609"
+       y2="373"
+       class="arrow"
+       id="line13" />
+    <!-- SWAP fan-out -->
+    <line
+       x1="753.99609"
+       y1="358"
+       x2="833.99609"
+       y2="298"
+       class="arrow"
+       id="line14" />
+    <line
+       x1="753.99609"
+       y1="373"
+       x2="833.99609"
+       y2="373"
+       class="arrow"
+       id="line15" />
+    <line
+       x1="754.47949"
+       y1="412.61163"
+       x2="829.47852"
+       y2="503.50854"
+       class="arrow"
+       id="line16" />
+    <line
+       x1="752.30811"
+       y1="390.38843"
+       x2="829.99609"
+       y2="444"
+       class="arrow"
+       id="line16-0"
+       style="fill:none;stroke:#222222;stroke-width:1.11781;marker-end:url(#arrow-2)" />
+    <rect
+       x="191.70312"
+       y="51.546875"
+       width="180"
+       height="80"
+       rx="10"
+       ry="10"
+       class="box"
+       id="rect8-0"
+       style="fill:#f5f5f5;stroke:#222222;stroke-width:1.2" />
+    <line
+       x1="96"
+       y1="91.546875"
+       x2="191.70312"
+       y2="91.546875"
+       class="arrow"
+       id="line12-4"
+       style="fill:none;stroke:#222222;stroke-width:1.40312;marker-end:url(#arrow-9)" />
+    <text
+       x="201.70312"
+       y="78.546875"
+       class="label"
+       id="text28-1"
+       style="font-size:16px;font-family:Sans;fill:#000000;-inkscape-font-specification:'Sans, Normal';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal"><tspan
+         sodipodi:role="line"
+         id="tspan10">Clifford twirling </tspan><tspan
+         sodipodi:role="line"
+         id="tspan11">(dephasing only)</tspan><tspan
+         sodipodi:role="line"
+         id="tspan12"></tspan></text>
+    <rect
+       x="467.70312"
+       y="56.109375"
+       width="180"
+       height="80"
+       rx="10"
+       ry="10"
+       class="box"
+       id="rect8-8"
+       style="fill:#f5f5f5;stroke:#222222;stroke-width:1.2" />
+    <text
+       x="492"
+       y="96"
+       class="label"
+       id="text28-5"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000"><tspan
+         sodipodi:role="line"
+         id="tspan43-8"
+         x="492"
+         y="96">Noise channel</tspan></text>
+    <line
+       x1="372"
+       y1="96"
+       x2="467.10312"
+       y2="96"
+       class="arrow"
+       id="line10-2"
+       style="fill:none;stroke:#222222;stroke-width:1.06829;marker-end:url(#arrow-8)" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="3-text"
+     id="layer-text">
+    <!-- Titles/text -->
+    <text
+       x="660"
+       y="84"
+       class="label"
+       id="text16">Incoming noisy copies</text>
+    <!-- Panel tags -->
+    <text
+       x="475.54239"
+       y="193.99075"
+       class="panel"
+       id="text18"
+       transform="scale(1.0341315,0.96699501)"
+       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:'Latin Modern Roman', 'Times New Roman', serif;-inkscape-font-specification:'Latin Modern Roman, Times New Roman, serif, Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:18.5925">(a)</text>
+    <text
+       x="490.54166"
+       y="535.4375"
+       class="panel"
+       id="text19"
+       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;font-family:'Latin Modern Roman', 'Times New Roman', serif;-inkscape-font-specification:'Latin Modern Roman, Times New Roman, serif, Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000">(b)</text>
+    <!-- Memory stack labels -->
+    <text
+       x="911.76758"
+       y="231.7207"
+       class="note"
+       id="text20">Memory Stack</text>
+    <text
+       x="133.76367"
+       y="524.97852"
+       class="note"
+       id="text21">Memory Stack</text>
+    <!-- State bubbles with LaTeX labels -->
+    <g
+       id="top-bubble"
+       transform="translate(-252,6)">
+      <ellipse
+         cx="300"
+         cy="90"
+         rx="48"
+         ry="28"
+         fill="none"
+         stroke="#222222"
+         stroke-width="1.2"
+         id="ellipse21" />
+      <text
+         x="274"
+         y="95"
+         class="label"
+         id="text22">$\rho^{(i)}(\delta)$</text>
+      <text
+         xml:space="preserve"
+         transform="translate(94,-25)"
+         id="text35"
+         style="font-size:18.6667px;font-family:Helvetica;-inkscape-font-specification:Helvetica;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect35);display:inline;fill:#ff0000;stroke:#ff0000" />
+      <text
+         xml:space="preserve"
+         style="font-size:18.6667px;font-family:Helvetica;-inkscape-font-specification:Helvetica;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#ff0000;stroke:#ff0000"
+         x="562"
+         y="167"
+         id="text36"><tspan
+           sodipodi:role="line"
+           id="tspan36"
+           x="562"
+           y="167" /></text>
+      <text
+         xml:space="preserve"
+         style="font-size:18.6667px;font-family:Helvetica;-inkscape-font-specification:Helvetica;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#ff0000;stroke:#ff0000"
+         x="538"
+         y="167"
+         id="text37"><tspan
+           sodipodi:role="line"
+           id="tspan37"
+           x="538"
+           y="167" /></text>
+      <text
+         xml:space="preserve"
+         style="font-size:18.6667px;font-family:Helvetica;-inkscape-font-specification:Helvetica;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#ff0000;stroke:#ff0000"
+         x="562"
+         y="383"
+         id="text38"><tspan
+           sodipodi:role="line"
+           id="tspan38"
+           x="562"
+           y="383" /></text>
+    </g>
+    <!-- Shelf labels (examples) -->
+    <text
+       x="127.99609"
+       y="340"
+       class="label"
+       id="text24">$\rho^{(n)}(\delta)$</text>
+    <text
+       x="127.99609"
+       y="370"
+       class="label"
+       id="text25">$\rho^{(n-1)}(\delta)$</text>
+    <text
+       x="127.99609"
+       y="400"
+       class="label"
+       id="text26">$\dots$</text>
+    <text
+       x="127.99609"
+       y="430"
+       class="label"
+       id="text27">$\rho^{(1)}(\delta)$</text>
+    <!-- Twirling label (two-line using tspans) -->
+    <text
+       x="353.99609"
+       y="360"
+       class="label"
+       id="text28"
+       style="-inkscape-font-specification:'Sans, Normal';font-family:Sans;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:16px;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000"><tspan
+         sodipodi:role="line"
+         id="tspan13">Clifford twirling</tspan><tspan
+         sodipodi:role="line"
+         id="tspan14">(dephasing only)</tspan></text>
+    <!-- SWAP + A.A. -->
+    <text
+       x="890"
+       y="327"
+       class="label"
+       id="text30"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;-inkscape-font-specification:'Latin Modern Roman, Times New Roman, serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:154;display:inline"
+       transform="translate(-307.6875,32.109375)"
+       xml:space="preserve"><tspan
+         x="890"
+         y="327"
+         id="tspan1">SWAP $+$
+</tspan><tspan
+         x="890"
+         y="347"
+         id="tspan2">Amplitude 
+</tspan><tspan
+         x="890"
+         y="367"
+         id="tspan3">Amplification</tspan></text>
+    <!-- Fan-out labels -->
+    <text
+       x="841.99609"
+       y="300"
+       class="label"
+       id="text31"
+       style="-inkscape-font-specification:'Latin Modern Roman, Times New Roman, serif, Normal';font-family:'Latin Modern Roman', 'Times New Roman', serif;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:16px;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000"><tspan
+         sodipodi:role="line"
+         id="tspan15">$\rho^{(n)} + \rho^{(n)} \;\to\; \rho^{(n+1)}$</tspan></text>
+    <text
+       x="841.99609"
+       y="378"
+       class="label"
+       id="text32">$\rho^{(i)} + \rho^{(i)} \;\to\; \rho^{(i+1)}$</text>
+    <text
+       x="841.15234"
+       y="515.48438"
+       class="label"
+       id="text33">$\rho^{(0)} + \rho^{(0)} \;\to\; \rho^{(1)}$</text>
+    <!-- Final state on the far right -->
+    <text
+       x="925.15234"
+       y="418.78125"
+       class="label"
+       id="text26-0-0"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\vdots$</text>
+    <text
+       x="925.15234"
+       y="335.48438"
+       class="label"
+       id="text26-0-0-8"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\vdots$</text>
+    <text
+       x="841.15234"
+       y="455.48438"
+       class="label"
+       id="text32-3"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000">$\rho^{(1)} + \rho^{(1)} \;\to\; \rho^{(2)}$</text>
+    <text
+       x="925.99609"
+       y="480"
+       class="label"
+       id="text26-0-0-3"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000"><tspan
+         sodipodi:role="line"
+         id="tspan47"
+         x="925.99609"
+         y="480">$\uparrow$</tspan></text>
+    <text
+       x="667.03906"
+       y="56.578125"
+       class="label"
+       id="text16-2"
+       style="font-size:16px;font-family:'Latin Modern Roman', 'Times New Roman', serif;fill:#000000"><tspan
+         sodipodi:role="line"
+         id="tspan48"
+         x="667.03906"
+         y="56.578125">Sequential arrival</tspan><tspan
+         sodipodi:role="line"
+         id="tspan49"
+         x="667.03906"
+         y="76.578125" /></text>
+  </g>
+</svg>
