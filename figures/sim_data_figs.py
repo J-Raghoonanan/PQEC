@@ -507,8 +507,8 @@ class SimulationPlotter:
         # Fixed-point reference at lambda=1
         # ax.axhline(1.0, linestyle=':', linewidth=2, alpha=0.7, color='black', label=r'Fixed point $\lambda=1$')
 
-        ax.set_xlabel('Purification level $n$', fontsize=22)
-        ax.set_ylabel(r'$\lambda_n$', fontsize=22)
+        ax.set_xlabel('Purification level $n$', fontsize=25)
+        ax.set_ylabel(r'$\lambda_n$', fontsize=25)
         # ax.set_title(rf'Convergence of $\lambda_{{n+1}}=f(\lambda_n)$  (d = {d})', fontsize=26)
         # ax.set_title(rf'$\lambda_{{n+1}}=f(\lambda_n)$', fontsize=26)
         ax.set_ylim(0.0, 1.02)
