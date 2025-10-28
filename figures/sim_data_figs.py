@@ -440,6 +440,110 @@ class SimulationPlotter:
         print(f"Saved {filename}")
         return str(filepath)
     
+    
+    def plot_lambda_convergence(
+    self,
+    d: int,
+    lambdas0: Optional[List[float]] = None,
+    n_levels: int = 10,
+    save_format: str = 'pdf'
+) -> Optional[str]:
+        """
+        Plot convergence of the recursion lambda_{n+1} = f(lambda_n),
+        where f(lambda) = [lambda(1 + lambda + 2(1-lambda)/d)] / [1 + lambda^2 + (1 - lambda^2)/d].
+
+        Args:
+            d: The 'd' parameter appearing in the recursion (must be >= 2).
+            lambdas0: Initial lambda values in (0, 1). If None, a default set is used.
+            n_levels: Number of recursion steps to plot (levels on the x-axis).
+            save_format: File format for saving (e.g., 'pdf', 'png').
+
+        Returns:
+            Path to the saved figure as a string, or None if the plot could not be produced.
+        """
+
+        # Validate inputs
+        if d < 2:
+            print("Parameter d must be >= 2.")
+            return None
+
+        if lambdas0 is None:
+            lambdas0 = [0.05, 0.2, 0.4, 0.6, 0.8]
+
+        # Clamp to (0, 1) and deduplicate
+        lambdas0 = sorted({float(max(1e-12, min(1.0 - 1e-12, lam))) for lam in lambdas0})
+
+        # Define the recursion map f(lambda)
+        def f_lambda(lam: float, dparam: int) -> float:
+            num = lam * (1.0 + lam + (2.0 * (1.0 - lam)) / dparam)
+            den = 1.0 + lam * lam + (1.0 - lam * lam) / dparam
+            return num / den
+
+        # Prepare figure
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        # Colors for each initial lambda
+        colors = plt.cm.viridis(np.linspace(0, 1, len(lambdas0)))
+
+        # x-axis: purification level n
+        ns = np.arange(n_levels + 1, dtype=int)
+
+        # Iterate for each initial lambda and plot
+        for i, lam0 in enumerate(lambdas0):
+            seq = [lam0]
+            lam = lam0
+            for _ in range(n_levels):
+                lam = f_lambda(lam, d)
+                # Numerical safety: keep in [0,1]
+                lam = float(max(0.0, min(1.0, lam)))
+                seq.append(lam)
+
+            ax.plot(
+                ns, seq, 'o-',
+                linewidth=3, markersize=8, color=colors[i],
+                label=rf'$\lambda_0={lam0:.2f}$'
+            )
+
+        # Fixed-point reference at lambda=1
+        # ax.axhline(1.0, linestyle=':', linewidth=2, alpha=0.7, color='black', label=r'Fixed point $\lambda=1$')
+
+        ax.set_xlabel('Purification level $n$', fontsize=22)
+        ax.set_ylabel(r'$\lambda_n$', fontsize=22)
+        # ax.set_title(rf'Convergence of $\lambda_{{n+1}}=f(\lambda_n)$  (d = {d})', fontsize=26)
+        # ax.set_title(rf'$\lambda_{{n+1}}=f(\lambda_n)$', fontsize=26)
+        ax.set_ylim(0.0, 1.02)
+        ax.set_xlim(ns.min(), ns.max())
+        ax.legend(fontsize=12, loc='best')
+        ax.grid(alpha=0.25)
+
+        # Optional mini-plot: f(λ) vs λ with y=x
+        # try:
+        #     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        #     axins = inset_axes(ax, width="45%", height="45%", loc='lower right', borderpad=1.0)
+        #     lam_grid = np.linspace(0, 1, 400)
+        #     f_grid = [f_lambda(lg, d) for lg in lam_grid]
+        #     axins.plot(lam_grid, f_grid, '-', linewidth=2)
+        #     axins.plot(lam_grid, lam_grid, '--', linewidth=1.5)
+        #     axins.set_xlabel(r'$\lambda$', fontsize=11)
+        #     axins.set_ylabel(r'$f(\lambda)$', fontsize=11)
+        #     axins.set_title(r'$f(\lambda)$ vs $\lambda$', fontsize=12)
+        #     axins.set_xlim(0, 1)
+        #     axins.set_ylim(0, 1.02)
+        #     axins.tick_params(labelsize=9)
+        # except Exception:
+        #     # In case inset locator isn't available in the environment
+        #     pass
+
+        plt.tight_layout()
+
+        filename = f"lambda_convergence_d{d}.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+
+        print(f"Saved {filename}")
+        return str(filepath)
+    
     def generate_all_plots(self, save_format: str = 'pdf') -> Dict[str, Optional[str]]:
         """Generate all figures."""
         print("\n" + "="*70)
@@ -449,29 +553,33 @@ class SimulationPlotter:
         plots = {}
         
         # M=1 threshold plots
-        print("\n1. Threshold plots (M=1)...")
-        plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
-        plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
+        # print("\n1. Threshold plots (M=1)...")
+        # plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
+        # plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
         
         # M=1 error evolution
-        print("\n2. Error evolution (M=1)...")
-        plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
-        plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
+        # print("\n2. Error evolution (M=1)...")
+        # plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
+        # plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
         
         # M=1 fidelity evolution
-        print("\n3. Fidelity evolution (M=1)...")
-        plots['fidelity_evol_depol_m1'] = self.plot_fidelity_evolution_m1('depolarizing', save_format)
-        plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
+        # print("\n3. Fidelity evolution (M=1)...")
+        # plots['fidelity_evol_depol_m1'] = self.plot_fidelity_evolution_m1('depolarizing', save_format)
+        # plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
         
         # NEW: Multi-M threshold
-        print("\n4. Threshold vs M (max N)...")
-        plots['threshold_vs_M_depol'] = self.plot_threshold_vs_M('depolarizing', save_format)
-        plots['threshold_vs_M_dephase'] = self.plot_threshold_vs_M('dephasing', save_format)
+        # print("\n4. Threshold vs M (max N)...")
+        # plots['threshold_vs_M_depol'] = self.plot_threshold_vs_M('depolarizing', save_format)
+        # plots['threshold_vs_M_dephase'] = self.plot_threshold_vs_M('dephasing', save_format)
         
         # NEW: Fidelity vs M
-        print("\n5. Fidelity vs M (max N)...")
-        plots['fidelity_vs_M_depol'] = self.plot_fidelity_vs_M('depolarizing', save_format)
-        plots['fidelity_vs_M_dephase'] = self.plot_fidelity_vs_M('dephasing', save_format)
+        # print("\n5. Fidelity vs M (max N)...")
+        # plots['fidelity_vs_M_depol'] = self.plot_fidelity_vs_M('depolarizing', save_format)
+        # plots['fidelity_vs_M_dephase'] = self.plot_fidelity_vs_M('dephasing', save_format)
+        
+        # Plot lambda convergence
+        print("\n6. Lambda convergence plots...")
+        plots['lambda_convergence_d2'] = self.plot_lambda_convergence(d=2, save_format=save_format)
         
         # Summary
         successful = [name for name, path in plots.items() if path is not None]
