@@ -36,6 +36,12 @@ COLORS = {
     'dephasing': '#F18F01',
 }
 
+# Chosen for clear distinctness in print; extend if you often have many series.
+MARKERS = ['o', 's', '^', 'D', 'P', 'X', 'v', '>', '<', 'h', '*']
+
+def _mk(i: int) -> str:
+    """Return a distinct marker for series index i (wraps automatically)."""
+    return MARKERS[i % len(MARKERS)]
 
 class SimulationPlotter:
     """Generate figures from simulation CSV data."""
@@ -130,7 +136,8 @@ class SimulationPlotter:
             df_N = df_m1[df_m1['N'] == N].sort_values('delta')
         
             if len(df_N) > 0:
-                ax.semilogy(df_N['delta'], df_N['eps_L_final'], 'o-',
+                ax.semilogy(df_N['delta'], df_N['eps_L_final'], 
+                            linestyle='-', marker=_mk(i),
                         color=colors[i], linewidth=3, markersize=8,
                         label=f'N = {N}', alpha=0.8)
     
@@ -204,7 +211,8 @@ class SimulationPlotter:
             evolution = df_delta.groupby('depth')['eps_L'].min().reset_index()
         
             if len(evolution) > 0:
-                ax.semilogy(evolution['depth'], evolution['eps_L'], 'o-',
+                ax.semilogy(evolution['depth'], evolution['eps_L'],
+                            linestyle='-', marker=_mk(i),
                         color=colors[i], linewidth=3, markersize=6,
                         label=f'${param_symbol}={delta:.2f}$', alpha=0.8)
     
@@ -268,9 +276,10 @@ class SimulationPlotter:
             evolution = df_delta.groupby('depth')['fidelity'].max().reset_index()
         
             if len(evolution) > 0:
-                ax.plot(evolution['depth'], evolution['fidelity'], 'o-',
-                    color=colors[i], linewidth=3, markersize=8,
-                    label=f'${param_symbol}={delta:.2f}$')
+                ax.plot(evolution['depth'], evolution['fidelity'],
+                        linestyle='-', marker=_mk(i),
+                        color=colors[i], linewidth=3, markersize=8,
+                        label=f'${param_symbol}={delta:.2f}$')
     
         # Target fidelity line
         # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
@@ -336,9 +345,10 @@ class SimulationPlotter:
             df_M = df_N[df_N['M'] == M].sort_values('delta')
         
             if len(df_M) > 0:
-                ax.semilogy(df_M['delta'], df_M['eps_L_final'], 'o-',
-                        color=colors[i], linewidth=3, markersize=8,
-                        label=f'M = {M}', alpha=0.85)
+                ax.semilogy(df_M['delta'], df_M['eps_L_final'], 
+                            linestyle='-', marker=_mk(i),
+                            color=colors[i], linewidth=3, markersize=8,
+                            label=f'M = {M}', alpha=0.85)
     
         # No correction reference
         delta_range = np.logspace(-2, 0, 100)
@@ -413,9 +423,10 @@ class SimulationPlotter:
             df_delta = df_N[df_N['delta'] == delta].sort_values('M')
         
             if len(df_delta) > 0:
-                ax.plot(df_delta['M'], df_delta['fidelity_final'], 'o-',
-                    color=colors[i], linewidth=3, markersize=8,
-                    label=f'${param_symbol}={delta:.2f}$')
+                ax.plot(df_delta['M'], df_delta['fidelity_final'],
+                        linestyle='-', marker=_mk(i),
+                        color=colors[i], linewidth=3, markersize=8,
+                        label=f'${param_symbol}={delta:.2f}$')
     
         # Target fidelity line©
         # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
@@ -499,7 +510,7 @@ class SimulationPlotter:
                 seq.append(lam)
 
             ax.plot(
-                ns, seq, 'o-',
+                ns, seq, linestyle='-', marker=_mk(i),
                 linewidth=3, markersize=8, color=colors[i],
                 label=rf'$\lambda_0={lam0:.2f}$'
             )
@@ -553,29 +564,29 @@ class SimulationPlotter:
         plots = {}
         
         # M=1 threshold plots
-        # print("\n1. Threshold plots (M=1)...")
-        # plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
-        # plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
+        print("\n1. Threshold plots (M=1)...")
+        plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
+        plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
         
         # M=1 error evolution
-        # print("\n2. Error evolution (M=1)...")
-        # plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
-        # plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
+        print("\n2. Error evolution (M=1)...")
+        plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
+        plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
         
         # M=1 fidelity evolution
-        # print("\n3. Fidelity evolution (M=1)...")
-        # plots['fidelity_evol_depol_m1'] = self.plot_fidelity_evolution_m1('depolarizing', save_format)
-        # plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
+        print("\n3. Fidelity evolution (M=1)...")
+        plots['fidelity_evol_depol_m1'] = self.plot_fidelity_evolution_m1('depolarizing', save_format)
+        plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
         
         # NEW: Multi-M threshold
-        # print("\n4. Threshold vs M (max N)...")
-        # plots['threshold_vs_M_depol'] = self.plot_threshold_vs_M('depolarizing', save_format)
-        # plots['threshold_vs_M_dephase'] = self.plot_threshold_vs_M('dephasing', save_format)
+        print("\n4. Threshold vs M (max N)...")
+        plots['threshold_vs_M_depol'] = self.plot_threshold_vs_M('depolarizing', save_format)
+        plots['threshold_vs_M_dephase'] = self.plot_threshold_vs_M('dephasing', save_format)
         
         # NEW: Fidelity vs M
-        # print("\n5. Fidelity vs M (max N)...")
-        # plots['fidelity_vs_M_depol'] = self.plot_fidelity_vs_M('depolarizing', save_format)
-        # plots['fidelity_vs_M_dephase'] = self.plot_fidelity_vs_M('dephasing', save_format)
+        print("\n5. Fidelity vs M (max N)...")
+        plots['fidelity_vs_M_depol'] = self.plot_fidelity_vs_M('depolarizing', save_format)
+        plots['fidelity_vs_M_dephase'] = self.plot_fidelity_vs_M('dephasing', save_format)
         
         # Plot lambda convergence
         print("\n6. Lambda convergence plots...")
