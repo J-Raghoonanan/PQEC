@@ -1,0 +1,103 @@
+%% Creator: Inkscape 1.4.2 (ebf0e940, 2025-05-08), www.inkscape.org
+%% PDF/EPS/PS + LaTeX output extension by Johan Engelen, 2010
+%% Accompanies image file 'main_use_case.pdf' (pdf, eps, ps)
+%%
+%% To include the image in your LaTeX document, write
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics{<filename>.pdf}
+%% To scale the image, write
+%%   \def\svgwidth{<desired width>}
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics[width=<desired width>]{<filename>.pdf}
+%%
+%% Images with a different path to the parent latex file can
+%% be accessed with the `import' package (which may need to be
+%% installed) using
+%%   \usepackage{import}
+%% in the preamble, and then including the image with
+%%   \import{<path to file>}{<filename>.pdf_tex}
+%% Alternatively, one can specify
+%%   \graphicspath{{<path to file>/}}
+%% 
+%% For more information, please see info/svg-inkscape on CTAN:
+%%   http://tug.ctan.org/tex-archive/info/svg-inkscape
+%%
+\begingroup%
+  \makeatletter%
+  \providecommand\color[2][]{%
+    \errmessage{(Inkscape) Color is used for the text in Inkscape, but the package 'color.sty' is not loaded}%
+    \renewcommand\color[2][]{}%
+  }%
+  \providecommand\transparent[1]{%
+    \errmessage{(Inkscape) Transparency is used (non-zero) for the text in Inkscape, but the package 'transparent.sty' is not loaded}%
+    \renewcommand\transparent[1]{}%
+  }%
+  \providecommand\rotatebox[2]{#2}%
+  \newcommand*\fsize{\dimexpr\f@size pt\relax}%
+  \newcommand*\lineheight[1]{\fontsize{\fsize}{#1\fsize}\selectfont}%
+  \ifx\svgwidth\undefined%
+    \setlength{\unitlength}{1050bp}%
+    \ifx\svgscale\undefined%
+      \relax%
+    \else%
+      \setlength{\unitlength}{\unitlength * \real{\svgscale}}%
+    \fi%
+  \else%
+    \setlength{\unitlength}{\svgwidth}%
+  \fi%
+  \global\let\svgwidth\undefined%
+  \global\let\svgscale\undefined%
+  \makeatother%
+  \begin{picture}(1,0.58571429)%
+    \lineheight{1}%
+    \setlength\tabcolsep{0pt}%
+    \put(-0.06034546,0.53087602){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{0}^{(0)}$\end{tabular}}}}%
+    \put(0.15251168,0.52944745){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(0)}$\end{tabular}}}}%
+    \put(0.15251168,0.39944745){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(0)}$\end{tabular}}}}%
+    \put(0.14675914,0.19161424){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(0)}$\end{tabular}}}}%
+    \put(0.14675914,0.06161425){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(0)}$\end{tabular}}}}%
+    \put(0.39522849,0.47490271){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(1)}$\end{tabular}}}}%
+    \put(0.3996163,0.12732844){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(1)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=1]{main_use_case.pdf}}%
+    \put(0.87219284,0.48206541){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(2)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=2]{main_use_case.pdf}}%
+    \put(0.68571431,0.5){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{SWAP test}\\\textbf{with amplitude}\\\textbf{amplification}\end{tabular}}}}%
+    \put(0.58072602,0.50683482){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(1)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=3]{main_use_case.pdf}}%
+    \put(0.58072602,0.45540625){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(1)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=4]{main_use_case.pdf}}%
+    \put(0.50390207,0.20925709){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(1)}$\end{tabular}}}}%
+    \put(0.71675903,0.20782853){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{2}^{(0)}$\end{tabular}}}}%
+    \put(0.71675903,0.07782853){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{2}^{(0)}$\end{tabular}}}}%
+    \put(0.95947587,0.15328376){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{2}^{(1)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=5]{main_use_case.pdf}}%
+    \put(0.50197439,0.0780161){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{1}^{(1)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=6]{main_use_case.pdf}}%
+    \put(0.62104487,0.07925709){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$U_2$\end{tabular}}}}%
+    \put(0.62104487,0.20782853){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$U_2$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=7]{main_use_case.pdf}}%
+    \put(0.77299743,0.17121835){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{SWAP test}\\\textbf{with amplitude}\\\textbf{amplification}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=8]{main_use_case.pdf}}%
+    \put(0.17857142,0.28571427){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\vdots$\end{tabular}}}}%
+    \put(0.24840952,0.02691203){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{(a)}\end{tabular}}}}%
+    \put(0.76177895,0.36119743){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{(b)}\end{tabular}}}}%
+    \put(0.76177958,0.02691148){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{(c)}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=9]{main_use_case.pdf}}%
+    \put(-0.06227316,0.39963505){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{0}^{(0)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=10]{main_use_case.pdf}}%
+    \put(-0.06038372,0.06018569){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{0}^{(0)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=11]{main_use_case.pdf}}%
+    \put(-0.06038372,0.19018566){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\ket{\psi}_{0}^{(0)}$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=12]{main_use_case.pdf}}%
+    \put(0.0567974,0.40087602){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$U_1$\end{tabular}}}}%
+    \put(0.05533056,0.19161427){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$U_1$\end{tabular}}}}%
+    \put(0.0567974,0.52944745){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$U_1$\end{tabular}}}}%
+    \put(0.04961628,0.05875714){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$U_1$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=13]{main_use_case.pdf}}%
+    \put(0.20874994,0.49283729){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{SWAP test}\\\textbf{with amplitude}\\\textbf{amplification}\end{tabular}}}}%
+    \put(0.2058928,0.14801712){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{SWAP test}\\\textbf{with amplitude}\\\textbf{amplification}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=14]{main_use_case.pdf}}%
+  \end{picture}%
+\endgroup%

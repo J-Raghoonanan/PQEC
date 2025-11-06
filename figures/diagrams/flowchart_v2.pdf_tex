@@ -1,0 +1,102 @@
+%% Creator: Inkscape 1.4.2 (ebf0e940, 2025-05-08), www.inkscape.org
+%% PDF/EPS/PS + LaTeX output extension by Johan Engelen, 2010
+%% Accompanies image file 'flowchart_v2.pdf' (pdf, eps, ps)
+%%
+%% To include the image in your LaTeX document, write
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics{<filename>.pdf}
+%% To scale the image, write
+%%   \def\svgwidth{<desired width>}
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics[width=<desired width>]{<filename>.pdf}
+%%
+%% Images with a different path to the parent latex file can
+%% be accessed with the `import' package (which may need to be
+%% installed) using
+%%   \usepackage{import}
+%% in the preamble, and then including the image with
+%%   \import{<path to file>}{<filename>.pdf_tex}
+%% Alternatively, one can specify
+%%   \graphicspath{{<path to file>/}}
+%% 
+%% For more information, please see info/svg-inkscape on CTAN:
+%%   http://tug.ctan.org/tex-archive/info/svg-inkscape
+%%
+\begingroup%
+  \makeatletter%
+  \providecommand\color[2][]{%
+    \errmessage{(Inkscape) Color is used for the text in Inkscape, but the package 'color.sty' is not loaded}%
+    \renewcommand\color[2][]{}%
+  }%
+  \providecommand\transparent[1]{%
+    \errmessage{(Inkscape) Transparency is used (non-zero) for the text in Inkscape, but the package 'transparent.sty' is not loaded}%
+    \renewcommand\transparent[1]{}%
+  }%
+  \providecommand\rotatebox[2]{#2}%
+  \newcommand*\fsize{\dimexpr\f@size pt\relax}%
+  \newcommand*\lineheight[1]{\fontsize{\fsize}{#1\fsize}\selectfont}%
+  \ifx\svgwidth\undefined%
+    \setlength{\unitlength}{1050bp}%
+    \ifx\svgscale\undefined%
+      \relax%
+    \else%
+      \setlength{\unitlength}{\unitlength * \real{\svgscale}}%
+    \fi%
+  \else%
+    \setlength{\unitlength}{\svgwidth}%
+  \fi%
+  \global\let\svgwidth\undefined%
+  \global\let\svgscale\undefined%
+  \makeatother%
+  \begin{picture}(1,0.58571429)%
+    \lineheight{1}%
+    \setlength\tabcolsep{0pt}%
+    \put(0,0){\includegraphics[width=\unitlength,page=1]{flowchart_v2.pdf}}%
+    \put(0.74605473,0.48311973){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}$\rho^{(0)}(\delta)$\\\textbf{arrives}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=2]{flowchart_v2.pdf}}%
+    \put(0.37679002,0.05226854){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{(a)}\end{tabular}}}}%
+    \put(0.86622768,0.05393066){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{(b)}\end{tabular}}}}%
+    \put(0.93442982,0.459593){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(0)}(\delta)$\end{tabular}}}}%
+    \put(0.82330873,0.54320619){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{Current}\\\textbf{memory}\\\textbf{stack}\end{tabular}}}}%
+    \put(0.93489793,0.54320618){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{New}\\\textbf{memory}\\\textbf{stack}\end{tabular}}}}%
+    \put(0.40285715,0.29428572){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{(Near unit}\\\textit{success}\\\textit{probability)}\end{tabular}}}}%
+    \put(0.74329176,0.4006398){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}$\rho^{(0)}(\delta)$\\\textbf{arrives}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=3]{flowchart_v2.pdf}}%
+    \put(0.83142446,0.38233896){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(0)}(\delta)$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=4]{flowchart_v2.pdf}}%
+    \put(0.93216909,0.40562023){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(1)}(\delta)$\end{tabular}}}}%
+    \put(0.74257638,0.31826244){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}$\rho^{(0)}(\delta)$\\\textbf{arrives}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=5]{flowchart_v2.pdf}}%
+    \put(0.83142446,0.31366871){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(1)}(\delta)$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=6]{flowchart_v2.pdf}}%
+    \put(0.93156869,0.28362551){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(0)}(\delta)$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=7]{flowchart_v2.pdf}}%
+    \put(0.93421669,0.3113012){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(1)}(\delta)$\end{tabular}}}}%
+    \put(0.85145337,0.14095362){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\vdots$\end{tabular}}}}%
+    \put(0.73594969,0.14095362){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\vdots$\end{tabular}}}}%
+    \put(0.95340528,0.1397685){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\vdots$\end{tabular}}}}%
+    \put(0.74236331,0.23005713){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}$\rho^{(0)}(\delta)$\\\textbf{arrives}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=8]{flowchart_v2.pdf}}%
+    \put(0.83059442,0.1992183){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(0)}(\delta)$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=9]{flowchart_v2.pdf}}%
+    \put(0.83121133,0.22546341){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(1)}(\delta)$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=10]{flowchart_v2.pdf}}%
+    \put(0.93216917,0.24929032){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$\rho^{(2)}(\delta)$\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=11]{flowchart_v2.pdf}}%
+    \put(0.62694677,0.17121801){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{H}\end{tabular}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=12]{flowchart_v2.pdf}}%
+    \put(0.54980388,0.17121801){\color[rgb]{0,0,0}\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textit{H}\end{tabular}}}}%
+    \put(0.1115293,0.41543495){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}\textbf{New noisy state}\\\textbf{$\rho^{(i=0)}(\delta)$} \textbf{arrives}\end{tabular}}}}%
+    \put(0.3855397,0.40700718){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}\textbf{Insert into}\\\textbf{ memory stack}\end{tabular}}}}%
+    \put(0.59582676,0.43229049){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}\textbf{Another}\\\textbf{state with}\\\textbf{same index}\\$i$?\end{tabular}}}}%
+    \put(0.59999998,0.21857148){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}\textbf{Amplified}\\\textbf{SWAP test}\end{tabular}}}}%
+    \put(0.3857143,0.18285715){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}\textbf{Measure}\\\textbf{ ancilla}\\$\ket{a}$\end{tabular}}}}%
+    \put(0.11427397,0.16688746){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}\textbf{Delete output}\end{tabular}}}}%
+    \put(0.61428569,0.31142856){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}Yes\end{tabular}}}}%
+    \put(0.61427174,0.4912978){\makebox(0,0)[t]{\lineheight{1.25}\smash{\begin{tabular}[t]{c}No\end{tabular}}}}%
+    \put(0.28532481,0.17981942){\makebox(0,0)[rt]{\lineheight{1.25}\smash{\begin{tabular}[t]{r}$a=1$\end{tabular}}}}%
+    \put(0.31661881,0.26100115){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}$a=0$\end{tabular}}}}%
+  \end{picture}%
+\endgroup%
