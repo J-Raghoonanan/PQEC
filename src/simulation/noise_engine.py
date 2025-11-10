@@ -5,7 +5,7 @@ This module builds *noisy input copies* ρ from a given target preparation
 circuit U_psi. Two modes are supported:
 
 (A) iid_p      – Apply a CPTP channel independently to each qubit with
-                 probability p (maps manuscript's δ to p via configs).
+                 probability p.
 (B) exact_k    – Deterministically inject exactly k single-qubit Pauli faults
                  (Z/X for dephasing, uniform {X,Y,Z} for depolarizing).
 
@@ -114,6 +114,7 @@ def _sample_clifford_gate(mode: str, index: int, seed: Optional[int] = None) -> 
     
     Returns gate name as string.
     """
+    # options = ['i', 'h', 'sh']
     options = ['i', 'h', 's', 'sdg', 'sh', 'sdgh']
     
     if mode == "random":

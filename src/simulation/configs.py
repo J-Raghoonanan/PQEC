@@ -98,17 +98,29 @@ class NoiseSpec:
     noise_type: NoiseType = NoiseType.depolarizing
     mode: NoiseMode = NoiseMode.iid_p
     # Physical error rate δ (primary knob for manuscripts/figures)
-    delta: float = 0.1
+    p: float = 0.1
     # exact-k mode controls
     exact_k: int = 0  # number of single-qubit errors to inject deterministically
     
-    # Optional explicit p override; if None we derive it from δ
-    p_override: Optional[float] = None
-
     def kraus_p(self) -> float:
-        if self.p_override is not None:
-            return float(self.p_override)
-        return delta_to_kraus_p(self.noise_type, self.delta)
+        """Return the channel probability p directly."""
+        return float(self.p)
+    
+    def manuscript_delta(self) -> float:
+        """Convert to manuscript's δ parameter if needed for comparison."""
+        if self.noise_type == NoiseType.depolarizing:
+            return (4.0 / 3.0) * self.p  # δ = (4/3)p
+        else:
+            return self.p  # For dephasing, δ = p
+    
+    # Remove the old conversion functions since we work with p directly  
+    # # Optional explicit p override; if None we derive it from δ
+    # p_override: Optional[float] = None
+
+    # def kraus_p(self) -> float:
+    #     if self.p_override is not None:
+    #         return float(self.p_override)
+    #     return delta_to_kraus_p(self.noise_type, self.delta)
 
 
 @dataclass
@@ -156,8 +168,8 @@ class RunSpec:
     def validate(self) -> None:
         if self.target.M <= 0:
             raise ValueError("M must be positive")
-        if not (0.0 <= self.noise.delta <= 1.0):
-            raise ValueError("delta must be in [0,1]")
+        if not (0.0 <= self.noise.p <= 1.0):
+            raise ValueError("p must be in [0,1]")
         if self.noise.mode == NoiseMode.exact_k:
             if self.noise.exact_k < 0:
                 raise ValueError("exact_k must be >= 0")
@@ -174,7 +186,7 @@ class RunSpec:
             f"N{self.N}",
             self.noise.noise_type.value,
             self.noise.mode.value,
-            f"d{self.noise.delta:.5f}",
+            f"p{self.noise.p:.5f}",
         ]
         if self.noise.mode == NoiseMode.exact_k:
             parts.append(f"k{self.noise.exact_k}")

@@ -3,7 +3,7 @@ Main entry point to run a grid sweep of circuit-level purification simulations.
 
 This script uses the *density-matrix* Aer simulator and the SWAP-test based
 purification implemented in this package. It writes CSVs under
-`data/simulations/` that are directly consumable by your figure-generation
+`data/simulations_v2/` that are directly consumable by your figure-generation
 scripts.
 
 UPDATED FEATURES:
@@ -30,14 +30,19 @@ CHOICES (documented):
 You can run this file directly:
 
     python -m src.simulation.main_grid_run \
-        --out data/simulations \
+        --out data/simulations_v2 \
         --max-m 4 \
         --noise all
         
     python -m src.simulation.main_grid_run \
-        --out data/simulations \
+        --out data/simulations_v2 \
         --max-m 5 \
         --noise z
+        
+    python -m src.simulation.main_grid_run \
+        --out data/simulations_v2 \
+        --max-m 5 \
+        --noise depol
 
 It will append to `steps_circuit.csv` and `finals_circuit.csv`.
 """
@@ -59,7 +64,7 @@ from .configs import (
     NoiseMode,
     StateKind,
 )
-from src.simulation.streaming_runner import run_and_save
+from .streaming_runner import run_and_save
 
 # Setup logging
 logging.basicConfig(
@@ -73,7 +78,8 @@ logger = logging.getLogger(__name__)
 # -----------------------------
 M_LIST: List[int] = [1, 2, 3, 4, 5, 6]  # keep ≤ 6 for density-matrix practicality
 N_LIST: List[int] = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
-DELTA_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+# DELTA_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99] # No longer using delta; sticking to Kraus p directly
+P_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 NOISES: List[NoiseType] = [NoiseType.depolarizing, NoiseType.dephase_z, NoiseType.dephase_x]
 TARGET_KIND: StateKind = StateKind.hadamard  # change to StateKind.haar for random pure states
 BACKEND_METHOD: str = "density_matrix"
@@ -91,7 +97,7 @@ TWIRLING = TwirlingSpec(enabled=True, mode="random", seed=None)
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Grid sweep for SWAP-QEC circuit simulation")
-    p.add_argument("--out", type=Path, default=Path("data/simulations"), help="Output directory for CSVs")
+    p.add_argument("--out", type=Path, default=Path("data/simulations_v2"), help="Output directory for CSVs")
     p.add_argument("--max-m", type=int, default=6, help="Maximum M to include (≤ 6 recommended)")
     p.add_argument("--seed", type=int, default=1, help="Seed for target-state generation where applicable")
     p.add_argument(
@@ -166,11 +172,11 @@ def main() -> None:
         logger.info("QUICK TEST MODE: Using reduced parameter space")
         Ms = [1, 2]
         Ns = [4, 16, 64]
-        deltas = [0.1, 0.5, 0.9]
+        ps = [0.1, 0.5, 0.9]
     else:
         Ns = N_LIST
-        deltas = DELTA_LIST
-    
+        ps = P_LIST
+
     # Twirling config
     twirling = TwirlingSpec(enabled=not args.no_twirl, mode="random", seed=args.seed)
 
@@ -179,7 +185,7 @@ def main() -> None:
         "Running grid sweep with:\n"
         f"  Ms           = {Ms}\n"
         f"  Ns           = {Ns}\n"
-        f"  deltas       = {deltas}\n"
+        f"  ps           = {ps}\n"
         f"  noises       = {[n.value for n in noises]}\n"
         f"  mode         = {mode.value}\n"
         f"  target_kind  = {target_kind.value}\n"
@@ -190,7 +196,7 @@ def main() -> None:
     )
 
     started = time.time()
-    total_runs = len(noises) * len(Ms) * len(Ns) * len(deltas)
+    total_runs = len(noises) * len(Ms) * len(Ns) * len(ps)
     current_run = 0
 
     for noise in noises:
@@ -198,12 +204,12 @@ def main() -> None:
             # Target |ψ⟩ spec:
             target = TargetSpec(M=M, kind=target_kind, seed=args.seed)
             for N in Ns:
-                for delta in deltas:
+                for p in ps: 
                     current_run += 1
                     
                     spec = RunSpec(
                         target=target,
-                        noise=NoiseSpec(noise_type=noise, mode=mode, delta=delta),
+                        noise=NoiseSpec(noise_type=noise, mode=mode, p=p),
                         aa=AA,
                         twirling=twirling,
                         N=N,
