@@ -558,6 +558,244 @@ class SimulationPlotter:
     
     
     
+    def plot_threshold_multi_M(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+        """
+        Threshold plots for M=1 through M=5: Final error vs physical error rate for different N.
+        Creates 5 subplots, one for each M value.
+        """
+        # Select data and set twirling filter
+        if noise_type == 'depolarizing':
+            df = self.depol_finals
+            color = COLORS['depolarizing']
+            twirling_filter = False
+            param_label = r'$p$'
+        else:  # dephasing
+            df = self.dephase_finals
+            color = COLORS['dephasing']
+            twirling_filter = True
+            param_label = r'$p$'
+
+        if df.empty:
+            print(f"No data for {noise_type} threshold plot")
+            return None
+
+        # Filter by twirling condition
+        df_filtered = df[df['twirling_enabled'] == twirling_filter].copy()
+
+        if df_filtered.empty:
+            print(f"No data for {noise_type} with twirling={twirling_filter}")
+            return None
+
+        # Create 1x5 subplot grid
+        fig, axes = plt.subplots(1, 5, figsize=(25, 5))
+        title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
+        fig.suptitle(f'QEC Threshold vs System Size\n({title_str} Noise)', fontsize=32, y=1.02)
+
+        # M values to plot
+        M_values = [1, 2, 3, 4, 5]
+
+        for subplot_idx, M in enumerate(M_values):
+            ax = axes[subplot_idx]
+            
+            # Filter for this M value
+            df_M = df_filtered[df_filtered['M'] == M].copy()
+            
+            if df_M.empty:
+                # If no data for this M, show empty subplot with message
+                ax.text(0.5, 0.5, f'No data\nfor M={M}', 
+                    horizontalalignment='center', verticalalignment='center',
+                    transform=ax.transAxes, fontsize=16, alpha=0.7)
+                ax.set_title(f'M = {M}', fontsize=20)
+                continue
+
+            # Get unique N values for this M
+            N_values = sorted(df_M['N'].unique())
+            colors = plt.cm.viridis(np.linspace(0, 1, len(N_values)))
+
+            # Plot curves for different N values
+            for i, N in enumerate(N_values):
+                df_N = df_M[df_M['N'] == N].sort_values('p_channel')
+                
+                if len(df_N) > 0:
+                    ax.semilogy(df_N['p_channel'], df_N['eps_L_final'],
+                            linestyle='-', marker=_mk(i),
+                            color=colors[i], linewidth=2, markersize=6,
+                            label=f'N = {N}', alpha=0.8)
+
+            # No correction reference line
+            p_range = np.logspace(-2, 0, 100)
+            ax.semilogy(p_range, p_range, '--',
+                    color='gray', linewidth=1.5, alpha=0.7, label='No Correction')
+
+            # Subplot formatting
+            ax.set_title(f'M = {M}', fontsize=20)
+            ax.set_xlabel(f'Physical Error Rate, {param_label}', fontsize=16)
+            if subplot_idx == 0:  # Only label y-axis on first subplot
+                ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=16)
+            
+            ax.set_xlim(0.09, 1.0)
+            ax.set_ylim(1e-5, 1.0)
+            ax.grid(True, alpha=0.3)
+            
+            # Add legend only to first subplot to avoid clutter
+            if subplot_idx == 0 and len(N_values) > 0:
+                ax.legend(fontsize=12, loc='lower right')
+
+        plt.tight_layout()
+
+        filename = f"threshold_multi_M_{noise_type}.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+
+        print(f"Saved {filename}")
+        return str(filepath)
+    
+    
+    
+    def plot_threshold_combined_M(self, save_format: str = 'pdf') -> Optional[str]:
+        """
+        Combined threshold plots: 2x5 grid with depolarizing (top) and dephasing (bottom).
+        Each column represents M=1 through M=5.
+        """
+        # Check if we have data for both noise types
+        if self.depol_finals.empty and self.dephase_finals.empty:
+            print("No data for threshold plots")
+            return None
+
+        # Create 2x5 subplot grid
+        fig, axes = plt.subplots(2, 5, figsize=(25, 10))
+        fig.suptitle('QEC Threshold vs System Size', fontsize=36, y=0.95)
+
+        # Noise type configurations
+        noise_configs = [
+            {
+                'type': 'depolarizing',
+                'df': self.depol_finals,
+                'twirling_filter': False,
+                'row_idx': 0,
+                'row_label': 'Depolarizing Noise'
+            },
+            {
+                'type': 'dephasing', 
+                'df': self.dephase_finals,
+                'twirling_filter': True,
+                'row_idx': 1,
+                'row_label': 'Dephasing Noise'
+            }
+        ]
+
+        # M values to plot
+        M_values = [1, 2, 3, 4, 5]
+        
+        for noise_config in noise_configs:
+            df = noise_config['df']
+            twirling_filter = noise_config['twirling_filter']
+            row_idx = noise_config['row_idx']
+            noise_type = noise_config['type']
+            
+            if df.empty:
+                # If no data for this noise type, show empty row with message
+                for col_idx in range(5):
+                    ax = axes[row_idx, col_idx]
+                    ax.text(0.5, 0.5, f'No {noise_type}\ndata', 
+                        horizontalalignment='center', verticalalignment='center',
+                        transform=ax.transAxes, fontsize=14, alpha=0.7)
+                    if col_idx == 0:
+                        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=16)
+                    if row_idx == 1:  # Bottom row
+                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=16)
+                continue
+
+            # Filter by twirling condition
+            df_filtered = df[df['twirling_enabled'] == twirling_filter].copy()
+            
+            if df_filtered.empty:
+                # If no data after filtering, show empty row
+                for col_idx in range(5):
+                    ax = axes[row_idx, col_idx]
+                    ax.text(0.5, 0.5, f'No data\n(twirling={twirling_filter})', 
+                        horizontalalignment='center', verticalalignment='center',
+                        transform=ax.transAxes, fontsize=14, alpha=0.7)
+                    if col_idx == 0:
+                        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=16)
+                    if row_idx == 1:  # Bottom row
+                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=16)
+                continue
+
+            # Plot each M value
+            for col_idx, M in enumerate(M_values):
+                ax = axes[row_idx, col_idx]
+                
+                # Filter for this M value
+                df_M = df_filtered[df_filtered['M'] == M].copy()
+                
+                if df_M.empty:
+                    # If no data for this M, show message
+                    ax.text(0.5, 0.5, f'No data\nfor M={M}', 
+                        horizontalalignment='center', verticalalignment='center',
+                        transform=ax.transAxes, fontsize=12, alpha=0.7)
+                else:
+                    # Get unique N values for this M
+                    N_values = sorted(df_M['N'].unique())
+                    colors = plt.cm.viridis(np.linspace(0, 1, len(N_values)))
+
+                    # Plot curves for different N values
+                    for i, N in enumerate(N_values):
+                        df_N = df_M[df_M['N'] == N].sort_values('p_channel')
+                        
+                        if len(df_N) > 0:
+                            ax.semilogy(df_N['p_channel'], df_N['eps_L_final'],
+                                    linestyle='-', marker=_mk(i),
+                                    color=colors[i], linewidth=2, markersize=6,
+                                    label=f'N = {N}', alpha=0.8)
+
+                    # No correction reference line
+                    p_range = np.logspace(-2, 0, 100)
+                    ax.semilogy(p_range, p_range, '--',
+                            color='gray', linewidth=1.5, alpha=0.7, label='No Correction')
+
+                    # Set axis limits and grid
+                    ax.set_xlim(0.09, 1.0)
+                    ax.set_ylim(1e-5, 1.0)
+                    # ax.grid(True, alpha=0.3)
+                    
+                    # Add legend only to last subplot of second row
+                    if row_idx == 1 and col_idx == 4 and len(N_values) > 0:
+                        ax.legend(fontsize=11, loc='lower right')
+
+                # Subplot titles (M values) only on top row
+                if row_idx == 0:
+                    ax.set_title(f'M = {M}', fontsize=20)
+                
+                # Y-axis label only on first column
+                if col_idx == 0:
+                    ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=16)
+                
+                # X-axis label only on bottom row
+                if row_idx == 1:
+                    ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=16)
+
+        # Add row labels
+        fig.text(0.02, 0.69, 'Depolarizing Noise', rotation=90, fontsize=20, 
+                verticalalignment='center', weight='bold')
+        fig.text(0.02, 0.27, 'Dephasing Noise', rotation=90, fontsize=20, 
+                verticalalignment='center', weight='bold')
+
+        plt.tight_layout()
+        plt.subplots_adjust(left=0.08)  # Make room for row labels
+
+        filename = f"threshold_combined_M.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+
+        print(f"Saved {filename}")
+        return str(filepath)
+    
+    
+    
+    
     
     
     
@@ -572,20 +810,20 @@ class SimulationPlotter:
         
         plots = {}
         
-        # M=1 threshold plots
-        print("\n1. Threshold plots (M=1)...")
-        plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
-        plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
+        # # M=1 threshold plots
+        # print("\n1. Threshold plots (M=1)...")
+        # plots['threshold_depol_m1'] = self.plot_threshold_m1('depolarizing', save_format)
+        # plots['threshold_dephase_m1'] = self.plot_threshold_m1('dephasing', save_format)
         
-        # M=1 error evolution
-        print("\n2. Error evolution (M=1)...")
-        plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
-        plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
+        # # M=1 error evolution
+        # print("\n2. Error evolution (M=1)...")
+        # plots['error_evol_depol_m1'] = self.plot_error_evolution_m1('depolarizing', save_format)
+        # plots['error_evol_dephase_m1'] = self.plot_error_evolution_m1('dephasing', save_format)
         
-        # M=1 fidelity evolution
-        print("\n3. Fidelity evolution (M=1)...")
-        plots['fidelity_evol_depol_m1'] = self.plot_fidelity_evolution_m1('depolarizing', save_format)
-        plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
+        # # M=1 fidelity evolution
+        # print("\n3. Fidelity evolution (M=1)...")
+        # plots['fidelity_evol_depol_m1'] = self.plot_fidelity_evolution_m1('depolarizing', save_format)
+        # plots['fidelity_evol_dephase_m1'] = self.plot_fidelity_evolution_m1('dephasing', save_format)
         
         # # NEW: Multi-M threshold
         # print("\n4. Threshold vs M (max N)...")
@@ -601,6 +839,12 @@ class SimulationPlotter:
         # print("\n6. Fidelity grid vs purification level...")
         # plots['fidelity_grid_depol'] = self.plot_fidelity_grid_vs_depth('depolarizing', save_format)
         # plots['fidelity_grid_dephase'] = self.plot_fidelity_grid_vs_depth('dephasing', save_format)
+        
+        print("\n7. Multi-M threshold plots...")
+        # plots['threshold_multi_M_depol'] = self.plot_threshold_multi_M('depolarizing', save_format)
+        # plots['threshold_multi_M_dephase'] = self.plot_threshold_multi_M('dephasing', save_format)
+        plots['threshold_combined_M'] = self.plot_threshold_combined_M(save_format)
+
         
         # Summary
         successful = [name for name, path in plots.items() if path is not None]
