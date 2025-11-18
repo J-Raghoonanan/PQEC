@@ -164,6 +164,10 @@ class RunSpec:
     run_id: Optional[str] = None
     # Verbosity for logging
     verbose: bool = False
+    
+    # For IBMQ only
+    manual_noise: bool = False
+    manual_noise_mode: str = "identical"  # one of {"identical", "twirled"}
         
     def validate(self) -> None:
         if self.target.M <= 0:
