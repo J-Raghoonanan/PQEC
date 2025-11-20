@@ -667,7 +667,7 @@ class SimulationPlotter:
 
         # Create 2x5 subplot grid
         fig, axes = plt.subplots(2, 5, figsize=(25, 12))
-        fig.suptitle('PEC Threshold vs System Size', fontsize=36, y=0.95)
+        fig.suptitle('PEC Threshold vs System Size', fontsize=40, y=0.97)
 
         # Noise type configurations
         noise_configs = [
@@ -768,20 +768,20 @@ class SimulationPlotter:
 
                 # Subplot titles (M values) only on top row
                 if row_idx == 0:
-                    ax.set_title(f'M = {M}', fontsize=20)
+                    ax.set_title(f'M = {M}', fontsize=25)
                 
                 # Y-axis label only on first column
                 if col_idx == 0:
-                    ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=16)
+                    ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=20)
                 
                 # X-axis label only on bottom row
                 if row_idx == 1:
-                    ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=16)
+                    ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=20)
 
         # Add row labels
-        fig.text(0.02, 0.69, 'Depolarizing Noise', rotation=90, fontsize=20, 
+        fig.text(0.02, 0.69, 'Depolarizing Noise', rotation=90, fontsize=25, 
                 verticalalignment='center', weight='bold')
-        fig.text(0.02, 0.27, 'Dephasing Noise', rotation=90, fontsize=20, 
+        fig.text(0.02, 0.27, 'Dephasing Noise', rotation=90, fontsize=25, 
                 verticalalignment='center', weight='bold')
 
         plt.tight_layout()
