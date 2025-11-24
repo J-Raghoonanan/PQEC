@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 import numpy as np
 
-# Import our SWAP purification implementation
+# Import our SWAP purification implementation (fixed version)
 from .IBMQ_components import (
     PurificationConfig,
     run_complete_purification_experiment,

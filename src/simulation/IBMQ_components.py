@@ -226,6 +226,7 @@ def create_batch_purification_circuit(config: PurificationConfig) -> QuantumCirc
 def add_measurements(qc: QuantumCircuit, config: PurificationConfig) -> QuantumCircuit:
     """
     Add measurements for post-selection and fidelity calculation.
+    Compatible with SamplerV2 result structure.
     
     Args:
         qc: Purification circuit
@@ -240,23 +241,22 @@ def add_measurements(qc: QuantumCircuit, config: PurificationConfig) -> QuantumC
     total_data_qubits = N * M
     ancilla_start = total_data_qubits
     
-    # Create classical registers
-    final_state_bits = ClassicalRegister(M, 'final_state')
-    ancilla_bits = ClassicalRegister(num_levels, 'ancillas')
+    # Use single classical register for all measurements (SamplerV2 compatible)
+    total_measurements = M + num_levels
+    meas_register = ClassicalRegister(total_measurements, 'meas')
     
-    # Create new circuit with classical registers
+    # Create new circuit with single classical register
     measured_qc = QuantumCircuit(qc.num_qubits)
-    measured_qc.add_register(final_state_bits)
-    measured_qc.add_register(ancilla_bits)
+    measured_qc.add_register(meas_register)
     measured_qc.compose(qc, inplace=True)
     
-    # Measure ancillas for post-selection
-    for i in range(num_levels):
-        measured_qc.measure(ancilla_start + i, ancilla_bits[i])
-    
-    # Measure final state (register 0) for fidelity calculation
+    # Measure final state (register 0) first - these go in first M bits
     for i in range(M):
-        measured_qc.measure(i, final_state_bits[i])
+        measured_qc.measure(i, meas_register[i])
+    
+    # Measure ancillas for post-selection - these go in last num_levels bits
+    for i in range(num_levels):
+        measured_qc.measure(ancilla_start + i, meas_register[M + i])
     
     return measured_qc
 
@@ -268,6 +268,7 @@ def add_measurements(qc: QuantumCircuit, config: PurificationConfig) -> QuantumC
 def analyze_results(counts: Dict[str, int], config: PurificationConfig) -> Tuple[float, float]:
     """
     Analyze measurement results with post-selection.
+    Updated for single classical register structure.
     
     Args:
         counts: Raw measurement counts from circuit execution
@@ -289,14 +290,14 @@ def analyze_results(counts: Dict[str, int], config: PurificationConfig) -> Tuple
     perfect_final_state_count = 0
     
     for outcome_str, count in counts.items():
-        # Parse outcome: "final_state_bits ancilla_bits"
-        # Expected format: M bits for final state + num_levels bits for ancillas
-        if len(outcome_str) != M + num_levels:
-            logger.warning(f"Unexpected outcome format: {outcome_str}")
+        # Parse outcome: first M bits are final state, last num_levels bits are ancillas
+        expected_length = M + num_levels
+        if len(outcome_str) != expected_length:
+            logger.warning(f"Unexpected outcome format: '{outcome_str}' (expected {expected_length} bits)")
             continue
         
-        final_state_bits = outcome_str[:M]
-        ancilla_bits = outcome_str[M:]
+        final_state_bits = outcome_str[:M]           # First M bits
+        ancilla_bits = outcome_str[M:]              # Last num_levels bits
         
         # Check if all SWAP tests succeeded (all ancillas = 0)
         if ancilla_bits == "0" * num_levels:
@@ -314,8 +315,10 @@ def analyze_results(counts: Dict[str, int], config: PurificationConfig) -> Tuple
     else:
         fidelity = 0.0
     
-    logger.debug(f"Analysis: {successful_shots}/{total_shots} successful shots, "
-                f"{perfect_final_state_count}/{successful_shots} perfect final states")
+    logger.debug(f"Analysis: {successful_shots}/{total_shots} successful shots "
+                f"({100*success_probability:.1f}%), "
+                f"{perfect_final_state_count}/{successful_shots} perfect final states "
+                f"({100*fidelity:.1f}% fidelity)")
     
     return fidelity, success_probability
 
@@ -343,7 +346,7 @@ def execute_with_retry(circuit: QuantumCircuit, config: PurificationConfig,
     total_attempts = 0
     all_counts = {}
     
-    # Use SamplerV2 directly without Session (for IBM open plan compatibility)
+    # Use SamplerV2 with correct syntax (per IBM docs)
     sampler = SamplerV2(backend)
     
     while total_attempts < config.max_retry_attempts:
@@ -353,7 +356,37 @@ def execute_with_retry(circuit: QuantumCircuit, config: PurificationConfig,
         # Execute circuit
         job = sampler.run([transpiled], shots=config.shots)
         result = job.result()
-        counts = result[0].data.meas.get_counts()
+        
+        # SamplerV2 has different result structure - try multiple access patterns
+        pub_result = result[0]
+        
+        # Try to get measurement counts from the 'meas' register
+        if hasattr(pub_result.data, 'meas'):
+            counts = pub_result.data.meas.get_counts()
+            logger.debug(f"Found measurement counts via 'meas' register")
+        else:
+            # Debug: print available attributes
+            data_attrs = [attr for attr in dir(pub_result.data) if not attr.startswith('_')]
+            logger.info(f"Available data attributes: {data_attrs}")
+            
+            # Try each attribute to find one with get_counts method
+            counts = None
+            for attr_name in data_attrs:
+                try:
+                    attr = getattr(pub_result.data, attr_name)
+                    if hasattr(attr, 'get_counts'):
+                        counts = attr.get_counts()
+                        logger.info(f"Found counts via '{attr_name}.get_counts()'")
+                        break
+                except Exception as e:
+                    logger.debug(f"Failed to access {attr_name}: {e}")
+            
+            if counts is None:
+                raise RuntimeError(f"Cannot find measurement counts in SamplerV2 result. "
+                                 f"Available data attributes: {data_attrs}")
+        
+        logger.debug(f"Retrieved {len(counts)} unique measurement outcomes, "
+                    f"total shots: {sum(counts.values())}")
         
         # Accumulate counts across attempts
         for outcome, count in counts.items():
@@ -402,12 +435,55 @@ def setup_ibm_backend(backend_name: str):
 
 
 def transpile_circuit_for_backend(circuit: QuantumCircuit, backend, optimization_level: int = 2):
-    """Transpile circuit for target backend."""
-    pass_manager = generate_preset_pass_manager(
-        optimization_level=optimization_level,
-        backend=backend
-    )
-    return pass_manager.run(circuit)
+    """Transpile circuit with aggressive constraints to prevent qubit expansion."""
+    
+    num_circuit_qubits = circuit.num_qubits
+    backend_qubits = backend.configuration().n_qubits
+    
+    logger.info(f"Circuit requires {num_circuit_qubits} qubits, backend has {backend_qubits}")
+    
+    if num_circuit_qubits > backend_qubits:
+        raise ValueError(f"Circuit needs {num_circuit_qubits} qubits but backend only has {backend_qubits}")
+    
+    # For small circuits, use very aggressive constraints to prevent expansion
+    if num_circuit_qubits <= 20:
+        # Create a minimal coupling map for just the qubits we need
+        from qiskit.transpiler import CouplingMap
+        
+        # Create a simple linear coupling map for our qubits: 0-1-2-3-...-n
+        edges = [(i, i+1) for i in range(num_circuit_qubits - 1)]
+        if len(edges) == 0:  # Single qubit case
+            edges = []
+        
+        coupling_map = CouplingMap(couplinglist=edges)
+        
+        logger.info(f"Using constrained coupling map with {len(edges)} edges for {num_circuit_qubits} qubits")
+        
+        # Create pass manager with constrained coupling map
+        pass_manager = generate_preset_pass_manager(
+            optimization_level=1,  # Lower optimization to prevent expansion
+            backend=backend,
+            coupling_map=coupling_map,
+            initial_layout=list(range(num_circuit_qubits))
+        )
+    else:
+        # For larger circuits, use normal transpilation
+        pass_manager = generate_preset_pass_manager(
+            optimization_level=optimization_level,
+            backend=backend,
+            initial_layout=list(range(num_circuit_qubits))
+        )
+    
+    transpiled = pass_manager.run(circuit)
+    
+    logger.info(f"Transpiled: {num_circuit_qubits} → {transpiled.num_qubits} qubits")
+    
+    # For small circuits, if we still have expansion, something is wrong
+    if num_circuit_qubits <= 20 and transpiled.num_qubits > num_circuit_qubits * 1.5:
+        logger.error(f"Excessive qubit expansion detected! Consider using simulator instead.")
+        logger.error(f"Original: {num_circuit_qubits}, Transpiled: {transpiled.num_qubits}")
+    
+    return transpiled
 
 
 # =============================================================================
