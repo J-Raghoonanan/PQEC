@@ -1,33 +1,24 @@
 """
-IBM Quantum grid run for SWAP-based purification error correction.
+Optimized grid run for SWAP purification experiments on IBM Quantum hardware.
+Targeted for specific parameter ranges: M=1,2; p=0.01,0.1,0.2,0.3; N=2,4,8
 
-This script runs a parameter sweep over system sizes M and error rates p,
-executing the purification protocol on IBM quantum hardware and saving
-results in a format compatible with the simulation data.
-
-Usage:
-    python -m src.simulation.IBMQ_grid_run --backend ibm_torino --shots 1024
-    python -m src.simulation.IBMQ_grid_run --backend ibm_torino --quick --verbose
+This script generates exactly the data needed to validate the theoretical predictions
+from the SWAP purification paper against real quantum hardware.
 """
 import argparse
+import csv
 import logging
 import time
-import traceback
 from pathlib import Path
 from typing import List, Dict, Any
+import numpy as np
 
-# Local imports
+# Import our SWAP purification implementation
 from .IBMQ_components import (
-    IBMQRunSpec,
+    PurificationConfig,
+    run_complete_purification_experiment,
     setup_ibm_backend,
-    build_full_purification_experiment,
-    transpile_for_backend,
-    run_circuit_with_retries,
-    save_ibmq_results,
-    calculate_fidelity_from_counts,
-    analyze_sequential_results,
 )
-from .configs import NoiseSpec, NoiseType, NoiseMode
 
 # Setup logging
 logging.basicConfig(
@@ -37,387 +28,366 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# =============================
-# Experimental Parameters
-# =============================
+# =============================================================================
+# Target Parameter Ranges (Based on Paper Requirements)
+# =============================================================================
 
-# Grid parameters
-M_LIST: List[int] = [1, 2]  # System sizes  
-N_LIST: List[int] = [2, 4, 8, 16]  # Number of input copies
-P_LIST: List[float] = [0.01, 0.1, 0.2, 0.3]  # Error rates
-NOISE_TYPES: List[NoiseType] = [NoiseType.depolarizing, NoiseType.dephase_z]
-TARGET_TYPES: List[str] = ["hadamard"]  # Start with Hadamard only
+TARGET_M_VALUES = [1, 2]  # Number of qubits
+TARGET_P_VALUES = [0.01, 0.1, 0.2, 0.3]  # Error probabilities  
+TARGET_N_VALUES = [2, 4, 8]  # Copy counts (1, 2, 3 rounds of purification)
 
-# Hardware settings
-DEFAULT_BACKEND = "ibm_torino"
-DEFAULT_SHOTS = 8192
-DEFAULT_OPTIMIZATION = 2
+# Quick test subset for debugging
+QUICK_M_VALUES = [1]
+QUICK_P_VALUES = [0.1, 0.2]
+QUICK_N_VALUES = [2, 4]
 
 
-def run_single_experiment(run_spec: IBMQRunSpec, service, backend) -> Dict[str, Any]:
+def estimate_qubit_requirements(M: int, N: int) -> int:
     """
-    Run a single purification experiment.
+    Estimate qubits needed for SWAP purification tree.
     
-    Args:
-        run_spec: Experiment configuration
-        backend: IBM quantum backend
-        
+    Formula: N copies of M qubits + log2(N) ancillas for SWAP tests
+    """
+    return N * M + int(np.log2(N))
+
+
+def validate_parameter_feasibility(M: int, N: int, p: float, backend_name: str) -> tuple[bool, str]:
+    """
+    Check if parameter combination is feasible for the target backend.
+    
     Returns:
-        Dictionary of experimental results
+        (is_feasible, reason) tuple
     """
-    logger.info(f"Starting experiment: M={run_spec.M}, N={run_spec.N}, p={run_spec.noise.p:.3f}, "
-                f"noise={run_spec.noise.noise_type.value}, target={run_spec.target_type}")
+    # Check qubit requirements
+    required_qubits = estimate_qubit_requirements(M, N)
     
+    # Conservative limits based on current NISQ hardware
+    if required_qubits > 50:  # Well below IBM's ~127 limit for safety
+        return False, f"Requires {required_qubits} qubits, exceeds conservative limit"
+    
+    # Check error probability range
+    if not (0.0 <= p <= 0.5):  # Beyond p=0.5, noise dominates
+        return False, f"Error probability p={p} outside reasonable range [0, 0.5]"
+    
+    # Check N is power of 2
+    if N <= 1 or (N & (N - 1)) != 0:
+        return False, f"N={N} must be a power of 2 and > 1"
+        
+    # Check M is reasonable
+    if M <= 0 or M > 5:  # Conservative limit for current hardware fidelity
+        return False, f"M={M} outside practical range [1, 5]"
+    
+    return True, f"Feasible: {required_qubits} qubits"
+
+
+def generate_experiment_configurations(M_values: List[int], N_values: List[int], 
+                                     P_values: List[float], backend_name: str, 
+                                     shots: int) -> List[PurificationConfig]:
+    """
+    Generate all valid experiment configurations.
+    """
+    configs = []
+    
+    for M in M_values:
+        for N in N_values:
+            for p in P_values:
+                # Validate feasibility
+                is_feasible, reason = validate_parameter_feasibility(M, N, p, backend_name)
+                
+                if not is_feasible:
+                    logger.warning(f"Skipping M={M}, N={N}, p={p}: {reason}")
+                    continue
+                
+                # Create configuration
+                config = PurificationConfig(
+                    M=M,
+                    N=N,
+                    p=p,
+                    backend_name=backend_name,
+                    shots=shots,
+                    max_retry_attempts=3,  # Conservative for stability
+                    min_success_rate=0.05,  # Lower threshold for noisy hardware
+                )
+                
+                try:
+                    config.validate()
+                    configs.append(config)
+                    qubits = estimate_qubit_requirements(M, N)
+                    rounds = int(np.log2(N))
+                    logger.info(f"✓ Valid config: M={M}, N={N} ({rounds} rounds), p={p}, ~{qubits} qubits")
+                except ValueError as e:
+                    logger.warning(f"✗ Invalid config M={M}, N={N}, p={p}: {e}")
+    
+    return configs
+
+
+def save_results_to_csv(results: List[Dict[str, Any]], output_file: Path) -> None:
+    """Save experimental results to CSV."""
+    if not results:
+        logger.warning("No results to save")
+        return
+    
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Define exact fieldnames for consistent CSV format
+    fieldnames = [
+        'run_id',
+        'M', 'N', 'p',
+        'purification_rounds',
+        'estimated_qubits',
+        'final_fidelity',
+        'swap_success_probability', 
+        'total_shots',
+        'backend_name',
+        'circuit_depth',
+        'circuit_qubits',
+        'error_message'  # Empty if successful
+    ]
+    
+    with open(output_file, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for result in results:
+            # Ensure all required fields are present
+            clean_result = {field: result.get(field, '') for field in fieldnames}
+            # Add computed fields
+            clean_result['purification_rounds'] = int(np.log2(result.get('N', 2)))
+            clean_result['estimated_qubits'] = estimate_qubit_requirements(
+                result.get('M', 1), result.get('N', 2))
+            writer.writerow(clean_result)
+    
+    logger.info(f"💾 Saved {len(results)} results to {output_file}")
+
+
+def load_existing_results(output_file: Path) -> set[str]:
+    """Load existing run IDs to avoid duplicate experiments."""
+    if not output_file.exists():
+        return set()
+    
+    existing_run_ids = set()
     try:
-        # Step 1: Build the experimental circuit
-        qc = build_full_purification_experiment(
-            M=run_spec.M,
-            noise_spec=run_spec.noise,
-            target_type=run_spec.target_type,
-            N=run_spec.N
-        )
-        
-        logger.info(f"Built circuit: {qc.num_qubits} qubits, depth {qc.depth()}")
-        
-        # Step 2: Transpile for backend
-        transpiled_qc = transpile_for_backend(qc, backend, run_spec.transpilation_level)
-        logger.info(f"Transpiled depth: {transpiled_qc.depth()}")
-        
-        # Step 3: Execute on hardware
-        result = run_circuit_with_retries(transpiled_qc, service, backend, run_spec.shots)
-        
-        # Step 4: Analyze results
-        counts = result.get_counts()
-        logger.info(f"Total measurement outcomes: {len(counts)}")
-        
-        if run_spec.N == 2:
-            # Single SWAP test analysis
-            results = _analyze_single_swap_results(counts, run_spec)
-        else:
-            # Sequential purification analysis  
-            results = analyze_sequential_results(counts, run_spec.N, run_spec.M, run_spec.target_type)
-            
-            # Add circuit info
-            results.update({
-                'total_shots': sum(counts.values()),
-                'circuit_depth': qc.depth(),
-                'transpiled_depth': transpiled_qc.depth(),
-                'all_counts': dict(counts),
-            })
-        
-        logger.info(f"Results: fidelity={results.get('fidelity', -1):.4f}, "
-                   f"success_prob={results.get('success_probability', -1):.4f}")
-        return results
-        
+        with open(output_file, 'r') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                existing_run_ids.add(row.get('run_id', ''))
+        logger.info(f"📂 Found {len(existing_run_ids)} existing results")
     except Exception as e:
-        logger.error(f"Experiment failed: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        
-        # Return error results
-        return {
-            'fidelity': -1.0,  # Indicate failure
-            'success_probability': -1.0,
-            'error': str(e),
-            'total_shots': 0,
-            'success_shots': 0,
-            'circuit_depth': -1,
-            'transpiled_depth': -1,
-        }
+        logger.warning(f"⚠️  Could not load existing results: {e}")
+    
+    return existing_run_ids
 
 
-def _analyze_single_swap_results(counts: Dict[str, int], run_spec: IBMQRunSpec) -> Dict[str, Any]:
+def run_swap_purification_grid_sweep(
+    backend_name: str = "ibm_torino",
+    shots: int = 8192,
+    output_dir: Path = Path("data/SWAP_experiments"),
+    quick_mode: bool = False,
+    resume: bool = True
+) -> None:
     """
-    Analyze results from single SWAP test (N=2).
-    
-    Args:
-        counts: Measurement outcome dictionary
-        run_spec: Run specification
-        
-    Returns:
-        Analysis results dictionary
+    Run the complete SWAP purification parameter grid sweep.
     """
-    total_shots = sum(counts.values())
-    if total_shots == 0:
-        return {'fidelity': 0.0, 'success_probability': 0.0}
+    logger.info("🚀 " + "="*60)
+    logger.info("🚀 STARTING SWAP PURIFICATION GRID EXPERIMENT")
+    logger.info("🚀 " + "="*60)
     
-    # For N=2: measurement format is "fidelity_bits ancilla_bit"
-    M = run_spec.M
-    ancilla_counts = {}
-    fidelity_counts = {}
+    # Setup output
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    output_file = output_dir / f"SWAP_purification_results_{backend_name}_{timestamp}.csv"
+    logger.info(f"📊 Results will be saved to: {output_file}")
     
-    for outcome, count in counts.items():
-        if len(outcome) != M + 1:  # M fidelity bits + 1 ancilla bit
-            continue
-            
-        # ancilla_bit = outcome[0]  # First bit is ancilla
-        # fidelity_bits = outcome[1:]  # Rest are fidelity measurement
-        
-        ############################################################### NOT SURE WHICH IS CORRECT
-        ancilla_bit = outcome[-1] # Last char = ancilla register
-        fidelity_bits = outcome[:-1]  # First M chars = fidelity registers
-        
-        # Count ancilla outcomes
-        if ancilla_bit not in ancilla_counts:
-            ancilla_counts[ancilla_bit] = 0
-        ancilla_counts[ancilla_bit] += count
-        
-        # Count fidelity outcomes (conditioned on ancilla = 0 for successful SWAP)
-        if ancilla_bit == '0':
-            if fidelity_bits not in fidelity_counts:
-                fidelity_counts[fidelity_bits] = 0
-            fidelity_counts[fidelity_bits] += count
-    
-    # Calculate metrics
-    success_count = ancilla_counts.get('0', 0)
-    success_probability = success_count / total_shots
-    
-    # Calculate fidelity (conditioned on successful SWAP)
-    if fidelity_counts:
-        fidelity = calculate_fidelity_from_counts(
-            fidelity_counts, M, run_spec.target_type
-        )
+    # Choose parameter values
+    if quick_mode:
+        logger.info("🏃 QUICK MODE: Using reduced parameter space")
+        M_values, P_values, N_values = QUICK_M_VALUES, QUICK_P_VALUES, QUICK_N_VALUES
     else:
-        fidelity = 0.0
+        M_values, P_values, N_values = TARGET_M_VALUES, TARGET_P_VALUES, TARGET_N_VALUES
     
-    return {
-        'fidelity': fidelity,
-        'success_probability': success_probability,
-        'total_shots': total_shots,
-        'success_shots': success_count,
-        'ancilla_counts': ancilla_counts,
-        'fidelity_counts': dict(fidelity_counts),
-        'all_counts': dict(counts),
-    }
+    logger.info(f"📋 Parameter space:")
+    logger.info(f"   M values: {M_values}")
+    logger.info(f"   P values: {P_values}")  
+    logger.info(f"   N values: {N_values} (corresponding to {[int(np.log2(N)) for N in N_values]} rounds)")
+    logger.info(f"   Total combinations: {len(M_values) * len(P_values) * len(N_values)}")
     
-   
+    # Generate configurations
+    configs = generate_experiment_configurations(
+        M_values, N_values, P_values, backend_name, shots)
     
-   
-
-
-def run_parameter_grid(backend_name: str, shots: int, out_dir: Path, 
-                      quick_test: bool = False, target_types: List[str] = None) -> None:
-    """
-    Run the full parameter grid sweep.
+    if not configs:
+        logger.error("❌ No valid configurations generated!")
+        return
     
-    Args:
-        backend_name: IBM backend name
-        shots: Number of measurement shots per experiment
-        out_dir: Output directory for results
-        quick_test: If True, run reduced parameter space for testing
-        target_types: Target state types to test
-    """
-    logger.info("="*70)
-    logger.info("Starting IBMQ SWAP Purification Grid Run")
-    logger.info("="*70)
+    logger.info(f"✅ Generated {len(configs)} valid configurations")
     
-    # Setup
-    if target_types is None:
-        target_types = TARGET_TYPES
-        
-    if quick_test:
-        logger.info("QUICK TEST MODE: Using reduced parameter space")
-        M_list = [1, 2]
-        N_list = [2, 4]  # Include N in quick test
-        p_list = [0.1, 0.2]
-        noise_types = [NoiseType.depolarizing]
-    else:
-        M_list = M_LIST
-        N_list = N_LIST  # Include full N range
-        p_list = P_LIST  
-        noise_types = NOISE_TYPES
+    # Show resource requirements
+    for config in configs[:5]:  # Show first 5 as examples
+        qubits = estimate_qubit_requirements(config.M, config.N)
+        rounds = int(np.log2(config.N))
+        logger.info(f"   📊 M={config.M}, N={config.N} ({rounds} rounds), p={config.p}: ~{qubits} qubits")
+    if len(configs) > 5:
+        logger.info(f"   ... and {len(configs)-5} more configurations")
     
-    # Connect to backend
-    logger.info(f"Connecting to backend: {backend_name}")
-    service, backend = setup_ibm_backend(backend_name)
-    logger.info(f"Backend status: {backend.status()}")
+    # Filter existing results if resuming
+    if resume:
+        existing_run_ids = load_existing_results(output_file)
+        configs = [c for c in configs if c.synthesize_run_id() not in existing_run_ids]
+        logger.info(f"📝 After filtering existing: {len(configs)} experiments to run")
     
-    # Create output directory
-    out_dir.mkdir(parents=True, exist_ok=True)
-    results_file = out_dir / f"ibmq_results_{backend_name}.csv"
+    if not configs:
+        logger.info("✅ All configurations already completed!")
+        return
     
-    # Calculate total experiments
-    total_experiments = len(M_list) * len(N_list) * len(p_list) * len(noise_types) * len(target_types)
-    logger.info(f"Total experiments planned: {total_experiments}")
-    logger.info(f"Results will be saved to: {results_file}")
+    # Setup IBM backend
+    logger.info(f"🔗 Connecting to IBM backend: {backend_name}")
+    try:
+        service, backend = setup_ibm_backend(backend_name)
+        logger.info(f"✅ Backend status: {backend.status()}")
+        logger.info(f"📊 Backend qubits: {backend.configuration().n_qubits}")
+    except Exception as e:
+        logger.error(f"❌ Failed to connect to backend: {e}")
+        return
     
     # Run experiments
-    experiment_count = 0
+    results = []
     start_time = time.time()
     
-    for target_type in target_types:
-        for noise_type in noise_types:
-            for M in M_list:
-                for N in N_list:
-                    # Skip invalid combinations where total qubits exceed reasonable limits
-                    max_ancilla = N // 2 if N > 2 else 1
-                    total_qubits = N * M + max_ancilla
-                    if total_qubits > 100:  # Conservative limit
-                        logger.warning(f"Skipping M={M}, N={N}: too many qubits ({total_qubits})")
-                        continue
-                        
-                    for p in p_list:
-                        experiment_count += 1
-                        
-                        logger.info(f"\n{'='*50}")
-                        logger.info(f"Experiment {experiment_count}/{total_experiments}")
-                        logger.info(f"M={M}, N={N}, p={p:.3f}, noise={noise_type.value}, target={target_type}")
-                        logger.info(f"{'='*50}")
-                        
-                        # Create run specification
-                        noise_spec = NoiseSpec(
-                            noise_type=noise_type,
-                            mode=NoiseMode.iid_p,
-                            p=p
-                        )
-                        
-                        run_spec = IBMQRunSpec(
-                            M=M,
-                            N=N,
-                            noise=noise_spec,
-                            target_type=target_type,
-                            backend_name=backend_name,
-                            shots=shots,
-                            out_dir=out_dir,
-                            run_id=f"M{M}_N{N}_p{p:.3f}_{noise_type.value}_{target_type}"
-                        )
-                    
-                    # Validate configuration
-                    try:
-                        run_spec.validate()
-                    except ValueError as e:
-                        logger.error(f"Invalid configuration: {e}")
-                        continue
-                    
-                    # Run experiment
-                    exp_start = time.time()
-                    results = run_single_experiment(run_spec, service, backend)
-                    exp_duration = time.time() - exp_start
-                    
-                    # Save results
-                    try:
-                        save_ibmq_results(results, results_file, run_spec)
-                        logger.info(f"✓ Experiment completed in {exp_duration:.1f}s")
-                    except Exception as e:
-                        logger.error(f"✗ Failed to save results: {e}")
-                    
-                    # Progress update
-                    elapsed = time.time() - start_time
-                    avg_time = elapsed / experiment_count
-                    remaining = (total_experiments - experiment_count) * avg_time
-                    
-                    logger.info(f"Progress: {experiment_count}/{total_experiments} "
-                              f"({100*experiment_count/total_experiments:.1f}%)")
-                    logger.info(f"Elapsed: {elapsed/60:.1f}min, "
-                              f"Estimated remaining: {remaining/60:.1f}min")
+    for i, config in enumerate(configs):
+        logger.info(f"\n{'='*60}")
+        logger.info(f"🧪 Experiment {i+1}/{len(configs)}: {config.synthesize_run_id()}")
+        logger.info(f"📊 M={config.M}, N={config.N}, p={config.p}")
+        qubits = estimate_qubit_requirements(config.M, config.N)
+        rounds = int(np.log2(config.N))
+        logger.info(f"🔬 {rounds} purification rounds, ~{qubits} qubits")
+        logger.info(f"{'='*60}")
+        
+        exp_start_time = time.time()
+        
+        try:
+            # Run the experiment
+            result = run_complete_purification_experiment(config, service, backend)
+            results.append(result)
+            
+            exp_duration = time.time() - exp_start_time
+            
+            logger.info(f"✅ Experiment completed in {exp_duration:.1f}s")
+            logger.info(f"📈 Fidelity: {result['final_fidelity']:.4f}")
+            logger.info(f"🎯 Success probability: {result['swap_success_probability']:.4f}")
+            
+        except Exception as e:
+            logger.error(f"❌ Experiment failed: {e}")
+            
+            # Save error result
+            error_result = {
+                'run_id': config.synthesize_run_id(),
+                'M': config.M,
+                'N': config.N,
+                'p': config.p,
+                'final_fidelity': -1.0,
+                'swap_success_probability': -1.0,
+                'total_shots': config.shots,
+                'backend_name': config.backend_name,
+                'circuit_depth': -1,
+                'circuit_qubits': -1,
+                'error_message': str(e),
+            }
+            results.append(error_result)
+        
+        # Save intermediate results every 3 experiments
+        if (i + 1) % 3 == 0:
+            save_results_to_csv(results, output_file)
+            logger.info(f"💾 Saved intermediate results ({len(results)} total)")
+        
+        # Progress update
+        elapsed_time = time.time() - start_time
+        avg_time_per_exp = elapsed_time / (i + 1)
+        estimated_remaining = avg_time_per_exp * (len(configs) - i - 1)
+        
+        logger.info(f"⏱️  Progress: {i+1}/{len(configs)} ({100*(i+1)/len(configs):.1f}%)")
+        logger.info(f"⏱️  Elapsed: {elapsed_time/60:.1f} min, Est. remaining: {estimated_remaining/60:.1f} min")
     
-    # Final summary
+    # Final save
+    save_results_to_csv(results, output_file)
+    
+    # Summary
     total_time = time.time() - start_time
-    logger.info("\n" + "="*70)
-    logger.info("Grid run completed!")
-    logger.info(f"Total experiments: {experiment_count}")
-    logger.info(f"Total time: {total_time/60:.1f} minutes")
-    logger.info(f"Average per experiment: {total_time/experiment_count:.1f}s")
-    logger.info(f"Results saved to: {results_file}")
-    logger.info("="*70)
+    successful_experiments = sum(1 for r in results if r.get('final_fidelity', -1) >= 0)
+    
+    logger.info(f"\n{'='*60}")
+    logger.info(f"🏁 SWAP PURIFICATION GRID EXPERIMENT COMPLETED")
+    logger.info(f"{'='*60}")
+    logger.info(f"📊 Total experiments: {len(results)}")
+    logger.info(f"✅ Successful: {successful_experiments}")
+    logger.info(f"❌ Failed: {len(results) - successful_experiments}")
+    logger.info(f"⏱️  Total time: {total_time/60:.1f} minutes")
+    logger.info(f"⏱️  Average per experiment: {total_time/len(configs):.1f} seconds")
+    logger.info(f"💾 Results saved to: {output_file}")
+    logger.info(f"{'='*60}")
 
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="IBM Quantum SWAP purification grid run")
-    
-    parser.add_argument(
-        "--backend", 
-        type=str, 
-        default=DEFAULT_BACKEND,
-        help=f"IBM Quantum backend name (default: {DEFAULT_BACKEND})"
+    parser = argparse.ArgumentParser(
+        description="SWAP Purification Grid Experiment for IBM Quantum Hardware",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Full experiment (recommended)
+  python optimized_IBMQ_grid_run.py --backend ibm_torino --shots 8192
+  
+  # Quick test
+  python optimized_IBMQ_grid_run.py --quick --shots 2048
+  
+  # High-statistics run  
+  python optimized_IBMQ_grid_run.py --backend ibm_torino --shots 16384
+        """
     )
     
-    parser.add_argument(
-        "--shots",
-        type=int,
-        default=DEFAULT_SHOTS,
-        help=f"Number of measurement shots (default: {DEFAULT_SHOTS})"
-    )
-    
-    parser.add_argument(
-        "--out-dir",
-        type=Path,
-        default=Path("data/IBMQ"),
-        help="Output directory for results (default: data/IBMQ)"
-    )
-    
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help="Run quick test with reduced parameter space"
-    )
-    
-    parser.add_argument(
-        "--verbose", 
-        action="store_true",
-        help="Enable debug-level logging"
-    )
-    
-    parser.add_argument(
-        "--noise-types",
-        nargs="+",
-        choices=["depolarizing", "dephasing_z", "dephasing_x"],
-        default=["depolarizing", "dephasing_z"],
-        help="Noise types to test"
-    )
-    
-    parser.add_argument(
-        "--target-types",
-        nargs="+", 
-        choices=["hadamard", "ghz"],
-        default=["hadamard"],
-        help="Target state types to test"
-    )
+    parser.add_argument("--backend", type=str, default="ibm_torino",
+                       help="IBM Quantum backend name")
+    parser.add_argument("--shots", type=int, default=8192,
+                       help="Number of measurement shots per experiment")
+    parser.add_argument("--output-dir", type=Path, default=Path("data/SWAP_experiments"),
+                       help="Output directory for results")
+    parser.add_argument("--quick", action="store_true",
+                       help="Quick test mode with reduced parameter space")
+    parser.add_argument("--no-resume", action="store_true",
+                       help="Don't skip existing experiments")
+    parser.add_argument("--verbose", action="store_true",
+                       help="Enable debug-level logging")
     
     args = parser.parse_args()
     
-    # Setup logging level
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    # Map noise type strings to enums
-    noise_type_map = {
-        "depolarizing": NoiseType.depolarizing,
-        "dephasing_z": NoiseType.dephase_z,
-        "dephasing_x": NoiseType.dephase_x,
-    }
-    
-    selected_noise_types = [noise_type_map[nt] for nt in args.noise_types]
-    
-    # Update global noise types
-    global NOISE_TYPES
-    NOISE_TYPES = selected_noise_types
-    
-    logger.info(f"Configuration:")
-    logger.info(f"  Backend: {args.backend}")
-    logger.info(f"  Shots: {args.shots}")
-    logger.info(f"  Output: {args.out_dir}")
-    logger.info(f"  Quick test: {args.quick}")
-    logger.info(f"  Noise types: {[nt.value for nt in selected_noise_types]}")
-    logger.info(f"  Target types: {args.target_types}")
+    # Print configuration
+    logger.info(f"🔧 Configuration:")
+    logger.info(f"   Backend: {args.backend}")
+    logger.info(f"   Shots per experiment: {args.shots}")
+    logger.info(f"   Output directory: {args.output_dir}")
+    logger.info(f"   Quick mode: {args.quick}")
+    logger.info(f"   Resume mode: {not args.no_resume}")
     
     try:
-        run_parameter_grid(
+        run_swap_purification_grid_sweep(
             backend_name=args.backend,
             shots=args.shots,
-            out_dir=args.out_dir,
-            quick_test=args.quick,
-            target_types=args.target_types
+            output_dir=args.output_dir,
+            quick_mode=args.quick,
+            resume=not args.no_resume
         )
+        logger.info("🎉 Grid sweep completed successfully!")
+        return 0
         
     except KeyboardInterrupt:
-        logger.info("\nGrid run interrupted by user")
-    except Exception as e:
-        logger.error(f"Grid run failed: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.info("\n⚠️  Grid sweep interrupted by user")
         return 1
-    
-    return 0
+    except Exception as e:
+        logger.error(f"❌ Grid sweep failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return 1
 
 
 if __name__ == "__main__":
