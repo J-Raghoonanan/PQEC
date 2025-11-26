@@ -42,7 +42,8 @@ class PurificationConfig:
     """Configuration for batch purification experiment."""
     M: int  # Number of qubits in target Hadamard state
     N: int  # Total number of input copies (must be power of 2)
-    p: float  # Error probability for depolarizing noise
+    p: float  # Error probability for noise
+    noise_type: str = "depolarizing"  # "depolarizing" or "dephasing"
     backend_name: str = "ibm_torino"
     shots: int = 8192
     transpilation_level: int = 2
@@ -57,6 +58,8 @@ class PurificationConfig:
             raise ValueError(f"N must be a power of 2 and > 1, got {self.N}")
         if not (0.0 <= self.p <= 1.0):
             raise ValueError(f"p must be in [0, 1], got {self.p}")
+        if self.noise_type not in ["depolarizing", "dephasing"]:
+            raise ValueError(f"noise_type must be 'depolarizing' or 'dephasing', got {self.noise_type}")
         if self.shots <= 0:
             raise ValueError(f"shots must be positive, got {self.shots}")
         
@@ -68,7 +71,7 @@ class PurificationConfig:
     
     def synthesize_run_id(self) -> str:
         """Create a unique identifier for this run."""
-        return f"batch_M{self.M}_N{self.N}_p{self.p:.4f}"
+        return f"batch_M{self.M}_N{self.N}_p{self.p:.4f}_{self.noise_type}"
 
 
 # =============================================================================
@@ -128,6 +131,121 @@ def apply_depolarizing_noise(qc: QuantumCircuit, qubits: List[int], p: float,
         # else: no error (probability 1-p)
 
 
+def apply_dephasing_noise(qc: QuantumCircuit, qubits: List[int], p: float, 
+                         seed: Optional[int] = None) -> None:
+    """
+    Apply pure dephasing noise (Z errors only).
+    
+    For dephasing parameter p:
+    - With probability (1-p): no error
+    - With probability p: apply Z error
+    
+    Args:
+        qc: Circuit to modify in-place
+        qubits: Qubits to apply noise to
+        p: Dephasing error probability
+        seed: Random seed for reproducibility
+    """
+    if not (0.0 <= p <= 1.0):
+        raise ValueError(f"p must be in [0, 1], got {p}")
+    
+    if p == 0.0:
+        return  # No noise to apply
+    
+    rng = np.random.default_rng(seed)
+    
+    for qubit in qubits:
+        rand_val = rng.random()
+        if rand_val < p:  # Z error
+            qc.z(qubit)
+        # else: no error (probability 1-p)
+
+
+def apply_clifford_twirled_dephasing(qc: QuantumCircuit, qubits: List[int], p: float,
+                                   seed: Optional[int] = None) -> None:
+    """
+    Apply Clifford-twirled dephasing noise.
+    
+    As described in the manuscript Eq. (54):
+    1. Apply random Clifford gate C
+    2. Apply Z dephasing noise 
+    3. Apply C†
+    
+    This converts anisotropic dephasing to effective depolarization
+    with parameter α = (1 + 2p)/3 where p is the Z dephasing rate.
+    
+    Args:
+        qc: Circuit to modify in-place
+        qubits: Qubits to apply noise to
+        p: Dephasing error probability
+        seed: Random seed for reproducibility
+    """
+    if not (0.0 <= p <= 1.0):
+        raise ValueError(f"p must be in [0, 1], got {p}")
+    
+    if p == 0.0:
+        return  # No noise to apply
+    
+    rng = np.random.default_rng(seed)
+    
+    # Single-qubit Clifford group: {I, X, Y, Z, H, S}
+    clifford_gates = ['i', 'x', 'y', 'z', 'h', 's']
+    
+    for qubit in qubits:
+        # Step 1: Apply random Clifford
+        clifford = rng.choice(clifford_gates)
+        if clifford == 'x':
+            qc.x(qubit)
+        elif clifford == 'y':
+            qc.y(qubit)
+        elif clifford == 'z':
+            qc.z(qubit)
+        elif clifford == 'h':
+            qc.h(qubit)
+        elif clifford == 's':
+            qc.s(qubit)
+        # 'i' does nothing
+        
+        # Step 2: Apply dephasing noise (Z errors)
+        if rng.random() < p:
+            qc.z(qubit)
+        
+        # Step 3: Apply Clifford inverse
+        if clifford == 'x':
+            qc.x(qubit)  # X† = X
+        elif clifford == 'y':
+            qc.y(qubit)  # Y† = Y
+        elif clifford == 'z':
+            qc.z(qubit)  # Z† = Z
+        elif clifford == 'h':
+            qc.h(qubit)  # H† = H
+        elif clifford == 's':
+            qc.sdg(qubit)  # S† = S†
+
+
+def apply_noise(qc: QuantumCircuit, qubits: List[int], noise_type: str, p: float, 
+               seed: Optional[int] = None) -> None:
+    """
+    Apply specified noise type to qubits.
+    
+    Args:
+        qc: Circuit to modify in-place
+        qubits: Qubits to apply noise to
+        noise_type: "depolarizing", "dephasing", or "twirled_dephasing"
+        p: Error probability
+        seed: Random seed for reproducibility
+    """
+    if noise_type == "depolarizing":
+        apply_depolarizing_noise(qc, qubits, p, seed)
+    elif noise_type == "dephasing":
+        apply_dephasing_noise(qc, qubits, p, seed)
+    elif noise_type == "twirled_dephasing":
+        apply_clifford_twirled_dephasing(qc, qubits, p, seed)
+    else:
+        raise ValueError(f"Unknown noise type: {noise_type}. "
+                        f"Must be 'depolarizing', 'dephasing', or 'twirled_dephasing'")
+
+
 # =============================================================================
 # Batch Circuit Construction
 # =============================================================================
@@ -179,8 +297,8 @@ def create_batch_purification_circuit(config: PurificationConfig) -> QuantumCirc
         for q in data_registers[i]:
             qc.h(q)
         
-        # Apply depolarizing noise to register i
-        apply_depolarizing_noise(qc, data_registers[i], config.p, seed=42 + i)
+        # Apply specified noise to register i
+        apply_noise(qc, data_registers[i], config.noise_type, config.p, seed=42 + i)
     
     # Step 2: Tree of pairwise SWAP purifications
     qc.barrier()
@@ -353,9 +471,24 @@ def execute_with_retry(circuit: QuantumCircuit, config: PurificationConfig,
         total_attempts += 1
         logger.info(f"Execution attempt {total_attempts}/{config.max_retry_attempts}")
         
-        # Execute circuit
-        job = sampler.run([transpiled], shots=config.shots)
-        result = job.result()
+        # Execute circuit with timeout handling
+        try:
+            logger.info("📤 Submitting job to quantum backend...")
+            job = sampler.run([transpiled], shots=config.shots)
+            
+            # Add timeout to prevent infinite hanging
+            logger.info(f"⏳ Waiting for job {job.job_id()} to complete (max 300s)...")
+            result = job.result(timeout=300)  # 5 minute timeout
+            
+            logger.info("✅ Job completed successfully")
+            
+        except Exception as e:
+            if "timeout" in str(e).lower():
+                logger.error(f"⏰ Job timed out after 300 seconds - backend queue likely busy")
+                raise RuntimeError(f"Job timeout - try different backend or smaller experiment")
+            else:
+                logger.error(f"💥 Job execution failed: {e}")
+                raise
         
         # SamplerV2 has different result structure - try multiple access patterns
         pub_result = result[0]
@@ -504,6 +637,7 @@ def run_complete_purification_experiment(config: PurificationConfig,
         'M': config.M,
         'N': config.N, 
         'p': config.p,
+        'noise_type': config.noise_type,
         'max_purification_level': int(np.log2(config.N)),
         'final_fidelity': fidelity,
         'swap_success_probability': success_prob,

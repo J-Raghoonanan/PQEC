@@ -244,7 +244,7 @@ def build_copy_iid_p(
 ) -> QuantumCircuit:
     """Build a noisy copy by applying i.i.d. CPTP channels to each qubit.
     
-    CRITICAL: Implements channel twirling for dephasing noise per manuscript Eq. (54):
+    CRITICAL: Implements channel twirling for dephasing noise per manuscript:
       ρ_twirled = C† E_deph(C ρ C†) C
     where C is a random single-qubit Clifford sampled independently per qubit.
     

@@ -65,7 +65,7 @@ def validate_parameter_feasibility(M: int, N: int, p: float, backend_name: str) 
     if required_qubits > 50:  # Well below IBM's ~127 limit for safety
         return False, f"Requires {required_qubits} qubits, exceeds conservative limit"
     
-    # Check error probability range
+    # # Check error probability range
     # if not (0.0 <= p <= 0.5):  # Beyond p=0.5, noise dominates
     #     return False, f"Error probability p={p} outside reasonable range [0, 0.5]"
     
@@ -81,42 +81,45 @@ def validate_parameter_feasibility(M: int, N: int, p: float, backend_name: str) 
 
 
 def generate_experiment_configurations(M_values: List[int], N_values: List[int], 
-                                     P_values: List[float], backend_name: str, 
-                                     shots: int) -> List[PurificationConfig]:
+                                     P_values: List[float], noise_types: List[str],
+                                     backend_name: str, shots: int) -> List[PurificationConfig]:
     """
-    Generate all valid experiment configurations.
+    Generate all valid experiment configurations for multiple noise types.
     """
     configs = []
     
     for M in M_values:
         for N in N_values:
             for p in P_values:
-                # Validate feasibility
-                is_feasible, reason = validate_parameter_feasibility(M, N, p, backend_name)
-                
-                if not is_feasible:
-                    logger.warning(f"Skipping M={M}, N={N}, p={p}: {reason}")
-                    continue
-                
-                # Create configuration
-                config = PurificationConfig(
-                    M=M,
-                    N=N,
-                    p=p,
-                    backend_name=backend_name,
-                    shots=shots,
-                    max_retry_attempts=3,  # Conservative for stability
-                    min_success_rate=0.05,  # Lower threshold for noisy hardware
-                )
-                
-                try:
-                    config.validate()
-                    configs.append(config)
-                    qubits = estimate_qubit_requirements(M, N)
-                    rounds = int(np.log2(N))
-                    logger.info(f"✓ Valid config: M={M}, N={N} ({rounds} rounds), p={p}, ~{qubits} qubits")
-                except ValueError as e:
-                    logger.warning(f"✗ Invalid config M={M}, N={N}, p={p}: {e}")
+                for noise_type in noise_types:
+                    # Validate feasibility
+                    is_feasible, reason = validate_parameter_feasibility(M, N, p, backend_name)
+                    
+                    if not is_feasible:
+                        logger.warning(f"Skipping M={M}, N={N}, p={p}, {noise_type}: {reason}")
+                        continue
+                    
+                    # Create configuration
+                    config = PurificationConfig(
+                        M=M,
+                        N=N,
+                        p=p,
+                        noise_type=noise_type,
+                        backend_name=backend_name,
+                        shots=shots,
+                        max_retry_attempts=3,  # Conservative for stability
+                        min_success_rate=0.05,  # Lower threshold for noisy hardware
+                    )
+                    
+                    try:
+                        config.validate()
+                        configs.append(config)
+                        qubits = estimate_qubit_requirements(M, N)
+                        rounds = int(np.log2(N))
+                        logger.info(f"✓ Valid config: M={M}, N={N} ({rounds} rounds), p={p}, "
+                                  f"{noise_type}, ~{qubits} qubits")
+                    except ValueError as e:
+                        logger.warning(f"✗ Invalid config M={M}, N={N}, p={p}, {noise_type}: {e}")
     
     return configs
 
@@ -133,6 +136,7 @@ def save_results_to_csv(results: List[Dict[str, Any]], output_file: Path) -> Non
     fieldnames = [
         'run_id',
         'M', 'N', 'p',
+        'noise_type',
         'purification_rounds',
         'estimated_qubits',
         'final_fidelity',
@@ -181,20 +185,20 @@ def load_existing_results(output_file: Path) -> set[str]:
 def run_swap_purification_grid_sweep(
     backend_name: str = "ibm_torino",
     shots: int = 8192,
-    output_dir: Path = Path("data/IBMQ"),
+    output_dir: Path = Path("data/IBMQ"),  # Updated to match user requirement
     quick_mode: bool = False,
     resume: bool = True
 ) -> None:
     """
-    Run the complete SWAP purification parameter grid sweep.
+    Run the complete SWAP purification parameter grid sweep with both noise types.
     """
     logger.info("🚀 " + "="*60)
-    logger.info("🚀 STARTING SWAP PURIFICATION GRID EXPERIMENT")
+    logger.info("🚀 STARTING SWAP PURIFICATION GRID EXPERIMENT (DUAL NOISE)")
     logger.info("🚀 " + "="*60)
     
     # Setup output
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    output_file = output_dir / f"SWAP_purification_results_{backend_name}_{timestamp}.csv"
+    output_file = output_dir / f"IBM_results_all_{backend_name}.csv"
     logger.info(f"📊 Results will be saved to: {output_file}")
     
     # Choose parameter values
@@ -204,15 +208,24 @@ def run_swap_purification_grid_sweep(
     else:
         M_values, P_values, N_values = TARGET_M_VALUES, TARGET_P_VALUES, TARGET_N_VALUES
     
+    # Test both noise types as per manuscript requirements
+    # But allow single-noise testing to avoid queue issues
+    if quick_mode:
+        noise_types = ["depolarizing"]  # Test only one type in quick mode
+        logger.info("🏃 QUICK MODE: Testing depolarizing noise only")
+    else:
+        noise_types = ["depolarizing", "dephasing"]  # Full test
+    
     logger.info(f"📋 Parameter space:")
     logger.info(f"   M values: {M_values}")
     logger.info(f"   P values: {P_values}")  
     logger.info(f"   N values: {N_values} (corresponding to {[int(np.log2(N)) for N in N_values]} rounds)")
-    logger.info(f"   Total combinations: {len(M_values) * len(P_values) * len(N_values)}")
+    logger.info(f"   Noise types: {noise_types}")
+    logger.info(f"   Total combinations: {len(M_values) * len(P_values) * len(N_values) * len(noise_types)}")
     
     # Generate configurations
     configs = generate_experiment_configurations(
-        M_values, N_values, P_values, backend_name, shots)
+        M_values, N_values, P_values, noise_types, backend_name, shots)
     
     if not configs:
         logger.error("❌ No valid configurations generated!")
@@ -255,7 +268,7 @@ def run_swap_purification_grid_sweep(
     for i, config in enumerate(configs):
         logger.info(f"\n{'='*60}")
         logger.info(f"🧪 Experiment {i+1}/{len(configs)}: {config.synthesize_run_id()}")
-        logger.info(f"📊 M={config.M}, N={config.N}, p={config.p}")
+        logger.info(f"📊 M={config.M}, N={config.N}, p={config.p}, noise={config.noise_type}")
         qubits = estimate_qubit_requirements(config.M, config.N)
         rounds = int(np.log2(config.N))
         logger.info(f"🔬 {rounds} purification rounds, ~{qubits} qubits")
@@ -283,6 +296,7 @@ def run_swap_purification_grid_sweep(
                 'M': config.M,
                 'N': config.N,
                 'p': config.p,
+                'noise_type': config.noise_type,
                 'final_fidelity': -1.0,
                 'swap_success_probability': -1.0,
                 'total_shots': config.shots,
