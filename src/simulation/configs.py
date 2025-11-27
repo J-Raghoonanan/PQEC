@@ -214,7 +214,5 @@ __all__ = [
     "NoiseSpec",
     "AASpec",
     "TwirlingSpec",
-    "RunSpec",
-    "delta_to_kraus_p",
-    "kraus_p_to_delta",
+    "RunSpec"
 ]
