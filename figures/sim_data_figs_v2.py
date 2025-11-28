@@ -1271,7 +1271,7 @@ class SimulationPlotter:
         # Formatting
         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=25)
         ax.set_ylabel(r'Final Fidelity', fontsize=25)
-        ax.set_title('Fidelity vs System Size (M=1,3,5)', fontsize=30)
+        ax.set_title('Fidelity vs System Size', fontsize=30)
         
         ax.legend(fontsize=12, loc='lower left', handlelength=3)
         ax.set_xlim(0.09, 1.0)
