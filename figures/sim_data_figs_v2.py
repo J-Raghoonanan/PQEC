@@ -1155,7 +1155,7 @@ class SimulationPlotter:
         # Formatting
         ax.set_xlabel('System Size (M qubits)', fontsize=25)
         ax.set_ylabel('Final Fidelity', fontsize=25)
-        ax.set_title('Fidelity vs System Size (Both Noise Types)', fontsize=30)
+        ax.set_title('Fidelity vs System Size', fontsize=30)
         
         # Force x-axis to show only integer values
         M_values = []
