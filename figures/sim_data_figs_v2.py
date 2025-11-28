@@ -1079,6 +1079,9 @@ class SimulationPlotter:
         target_p_values = [0.1, 0.3, 0.5, 0.7]
         colors = plt.cm.viridis(np.linspace(0, 1, len(target_p_values)))
 
+        # Store plot information for custom legend
+        plot_info = []
+
         for noise_config in noise_configs:
             df = noise_config['df']
             twirling_filter = noise_config['twirling_filter']
@@ -1114,15 +1117,45 @@ class SimulationPlotter:
                     if len(df_p) > 0:
                         label = f'$p={target_p:.1f}$ ({label_prefix})'
                         
-                        ax.plot(df_p['M'], df_p['fidelity_final'],
-                               linestyle=linestyle, marker=_mk(p_idx),
-                               color=colors[p_idx], linewidth=3, markersize=8,
-                               label=label, alpha=0.85)
+                        line = ax.plot(df_p['M'], df_p['fidelity_final'],
+                                    linestyle=linestyle, marker=_mk(p_idx),
+                                    color=colors[p_idx], linewidth=3, markersize=8,
+                                    label=label, alpha=0.85)[0]
+                        
+                        # Store info for custom legend
+                        plot_info.append({
+                            'line': line,
+                            'label': label,
+                            'linestyle': linestyle,
+                            'color': colors[p_idx],
+                            'marker': _mk(p_idx),
+                            'p': target_p,
+                            'noise_type': noise_config['type']
+                        })
 
+        # Create custom legend with explicit line styles
+        from matplotlib.lines import Line2D
+        
+        legend_elements = []
+        
+        # Sort plot_info by p value, then by noise type (depolarizing first)
+        plot_info.sort(key=lambda x: (x['p'], x['noise_type'] == 'dephasing'))
+        
+        for info in plot_info:
+            legend_elements.append(
+                Line2D([0], [0], 
+                    color=info['color'], 
+                    linestyle=info['linestyle'],
+                    marker=info['marker'],
+                    linewidth=3,
+                    markersize=8,
+                    label=info['label'])
+            )
+        
         # Formatting
         ax.set_xlabel('System Size (M qubits)', fontsize=25)
         ax.set_ylabel('Final Fidelity', fontsize=25)
-        ax.set_title('Simulation: Fidelity vs System Size (Both Noise Types)', fontsize=30)
+        ax.set_title('Fidelity vs System Size (Both Noise Types)', fontsize=30)
         
         # Force x-axis to show only integer values
         M_values = []
@@ -1139,7 +1172,8 @@ class SimulationPlotter:
             ax.set_xticks(M_values)
             ax.set_xlim(min(M_values) - 0.1, max(M_values) + 0.1)
         
-        ax.legend(fontsize=12, loc='best')
+        # Create the custom legend
+        ax.legend(handles=legend_elements, fontsize=11, loc='best')
         ax.set_ylim(0, 1.05)
         
         plt.tight_layout()
@@ -1155,7 +1189,7 @@ class SimulationPlotter:
     def plot_fidelity_threshold_vs_M_combined(self, save_format: str = 'pdf') -> Optional[str]:
         """
         NEW: Final fidelity vs p for different M values, combining both noise types.
-        Depolarizing: solid lines, Dephasing: dashed lines.
+        Only plots M=1,3,5. Depolarizing: solid lines, Dephasing: dashed lines.
         """
         # Check if we have data for both noise types
         if self.depol_finals.empty and self.dephase_finals.empty:
@@ -1184,6 +1218,11 @@ class SimulationPlotter:
 
         # Better color palette avoiding yellow
         GOOD_COLORS = ['#1f77b4', '#d62728', '#2ca02c', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+        
+        # Only plot these M values
+        target_M_values = [1, 3, 5]
+        # Create consistent color mapping for these M values
+        M_color_map = {M: GOOD_COLORS[i] for i, M in enumerate(target_M_values)}
 
         for noise_config in noise_configs:
             df = noise_config['df']
@@ -1207,19 +1246,21 @@ class SimulationPlotter:
             if df_N.empty:
                 continue
 
-            # Get unique M values
-            M_values = sorted(df_N['M'].unique())
+            # Get unique M values and filter to only target values
+            available_M_values = sorted(df_N['M'].unique())
+            M_values = [M for M in target_M_values if M in available_M_values]
             
             # Plot each M value for this noise type
-            for M_idx, M in enumerate(M_values):
+            for M in M_values:
                 df_M = df_N[df_N['M'] == M].sort_values('p_channel')
                 
                 if len(df_M) > 0:
                     # Convert error to fidelity: fidelity = 1 - eps_L_final
                     fidelity = 1 - df_M['eps_L_final']
                     
-                    # Use better colors
-                    color = GOOD_COLORS[M_idx % len(GOOD_COLORS)]
+                    # Use consistent color mapping
+                    color = M_color_map[M]
+                    M_idx = target_M_values.index(M)  # For consistent marker
                     label = f'M={M} ({label_prefix})'
                     
                     ax.plot(df_M['p_channel'], fidelity,
@@ -1227,16 +1268,10 @@ class SimulationPlotter:
                         color=color, linewidth=3, markersize=8,
                         label=label, alpha=0.85)
 
-        # No correction reference line (fidelity = 1 - p)
-        p_range = np.linspace(0.09, 1.0, 100)
-        fidelity_no_correction = 1 - p_range
-        ax.plot(p_range, fidelity_no_correction, ':',
-            color='gray', linewidth=2, alpha=0.7, label='No Correction')
-
         # Formatting
         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=25)
         ax.set_ylabel(r'Final Fidelity', fontsize=25)
-        ax.set_title('Fidelity vs System Size (Both Noise Types)', fontsize=30)
+        ax.set_title('Fidelity vs System Size (M=1,3,5)', fontsize=30)
         
         ax.legend(fontsize=12, loc='lower left', handlelength=3)
         ax.set_xlim(0.09, 1.0)
