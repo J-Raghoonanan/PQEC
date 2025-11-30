@@ -1173,7 +1173,7 @@ class SimulationPlotter:
             ax.set_xlim(min(M_values) - 0.1, max(M_values) + 0.1)
         
         # Create the custom legend
-        ax.legend(handles=legend_elements, fontsize=11, loc='best')
+        ax.legend(handles=legend_elements, fontsize=11, loc='best', handlelength=4)
         ax.set_ylim(0, 1.05)
         
         plt.tight_layout()
@@ -1271,9 +1271,9 @@ class SimulationPlotter:
         # Formatting
         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=25)
         ax.set_ylabel(r'Final Fidelity', fontsize=25)
-        ax.set_title('Fidelity vs System Size', fontsize=30)
+        ax.set_title('Fidelity vs Error Rate', fontsize=30)
         
-        ax.legend(fontsize=12, loc='lower left', handlelength=3)
+        ax.legend(fontsize=12, loc='lower left', handlelength=4)
         ax.set_xlim(0.09, 1.0)
         ax.set_ylim(0, 1.05)
         
