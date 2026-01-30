@@ -17,18 +17,18 @@ sns.set_palette("husl")
 
 plt.rcParams.update({
     'font.size': 20,
-    'axes.titlesize': 30,
-    'axes.labelsize': 25,
-    'xtick.labelsize': 20,
-    'ytick.labelsize': 20,
+    'axes.titlesize': 40,
+    'axes.labelsize': 40,
+    'xtick.labelsize': 28,
+    'ytick.labelsize': 28,
     'legend.fontsize': 20,
-    'figure.titlesize': 30,
+    'figure.titlesize': 40,
     'font.family': 'Times New Roman',
     'mathtext.fontset': 'dejavusans',
     'axes.linewidth': 1.2,
     'grid.linewidth': 0.8,
     'lines.linewidth': 3,
-    'lines.markersize': 8
+    'lines.markersize': 12
 })
 
 COLORS = {
@@ -55,8 +55,8 @@ class SimulationPlotter:
         # Load data
         self.depol_finals = self._load_csv('finals_circuit_depolarizing.csv')
         self.depol_steps = self._load_csv('steps_circuit_depolarizing.csv')
-        self.dephase_finals = self._load_csv('finals_circuit_dephasing_v3.csv')
-        self.dephase_steps = self._load_csv('steps_circuit_dephasing_v3.csv')
+        self.dephase_finals = self._load_csv('finals_circuit_dephasing_v4.csv')
+        self.dephase_steps = self._load_csv('steps_circuit_dephasing_v4.csv')
         
         print(f"Loaded simulation data:")
         print(f"  Depolarizing finals: {len(self.depol_finals)} runs")
@@ -146,11 +146,11 @@ class SimulationPlotter:
         ax.semilogy(p_range, p_range, '--',
                 color='gray', linewidth=2, alpha=0.7, label='No Correction')
     
-        ax.set_xlabel(f'Physical Error Rate, {param_label}', fontsize=25)
-        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=25)
+        ax.set_xlabel(f'Physical Error Rate, {param_label}', fontsize=30)
+        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=30)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
-        ax.set_title(f'PEC Threshold\n({title_str} Noise, M=1)', fontsize=30)
+        ax.set_title(f'PEC Threshold\n({title_str} Noise, M=1)', fontsize=40)
     
         ax.legend(fontsize=14, loc='lower right')
         ax.set_xlim(0.09, 1.0)
@@ -216,11 +216,11 @@ class SimulationPlotter:
                         color=colors[i], linewidth=3, markersize=6,
                         label=f'${param_symbol}={p:.2f}$', alpha=0.8)  # Changed from delta to p
     
-        ax.set_xlabel(r'Rounds of Purification, $n$', fontsize=25)
-        ax.set_ylabel(r'Error Rate, $\varepsilon^{(n)}$', fontsize=25)
+        ax.set_xlabel(r'Rounds of Purification, $n$', fontsize=30)
+        ax.set_ylabel(r'Error Rate, $\varepsilon^{(n)}$', fontsize=30)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
-        ax.set_title(f'Error Evolution\n({title_str}, M=1, N={max_N})', fontsize=30)
+        ax.set_title(f'Error Evolution\n({title_str}, M=1, N={max_N})', fontsize=40)
     
         ax.legend(fontsize=14, loc='best')
 
@@ -285,11 +285,11 @@ class SimulationPlotter:
         # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
         #         linewidth=2, label='Target 0.99')
     
-        ax.set_xlabel('Rounds of Purification', fontsize=25)
-        ax.set_ylabel('State Fidelity', fontsize=25)
+        ax.set_xlabel('Rounds of Purification', fontsize=30)
+        ax.set_ylabel('State Fidelity', fontsize=30)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
-        ax.set_title(f'Fidelity Evolution\n({title_str}, M=1, N={max_N})', fontsize=30)
+        ax.set_title(f'Fidelity Evolution\n({title_str}, M=1, N={max_N})', fontsize=40)
     
         ax.legend(fontsize=14, loc='best')
         ax.set_ylim(0, 1.05)
@@ -355,12 +355,12 @@ class SimulationPlotter:
         ax.semilogy(p_range, p_range, '--',
                 color='gray', linewidth=2, alpha=0.7, label='No Correction')
     
-        ax.set_xlabel(f'Physical Error Rate, {param_label}', fontsize=25)
-        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=25)
+        ax.set_xlabel(f'Physical Error Rate, {param_label}', fontsize=30)
+        ax.set_ylabel(r'Final Error Rate, $\varepsilon$', fontsize=30)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
         # ax.set_title(f'System Size Scaling\n({title_str}, N={max_N})', fontsize=30)
-        ax.set_title(f'System Size Scaling ({title_str})', fontsize=30)
+        ax.set_title(f'System Size Scaling ({title_str})', fontsize=40)
     
         ax.legend(fontsize=14, loc='lower right')
         ax.set_xlim(0.09, 1.0)
@@ -433,12 +433,12 @@ class SimulationPlotter:
         # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
         #         linewidth=2, label='Target 0.99')
     
-        ax.set_xlabel('System Size (M qubits)', fontsize=25)
-        ax.set_ylabel('Final Fidelity', fontsize=25)
+        ax.set_xlabel('System Size (M qubits)', fontsize=30)
+        ax.set_ylabel('Final Fidelity', fontsize=30)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
         # ax.set_title(f'Fidelity vs System Size\n({title_str}, N={max_N})', fontsize=30)
-        ax.set_title(f'Fidelity vs System Size ({title_str})', fontsize=30)
+        ax.set_title(f'Fidelity vs System Size ({title_str})', fontsize=40)
     
         ax.legend(fontsize=14, loc='best')
         ax.set_ylim(0, 1.05)
@@ -768,7 +768,7 @@ class SimulationPlotter:
 
                 # Subplot titles (M values) only on top row
                 if row_idx == 0:
-                    ax.set_title(f'M = {M}', fontsize=25)
+                    ax.set_title(f'M = {M}', fontsize=30)
                 
                 # Y-axis label only on first column
                 if col_idx == 0:
@@ -1025,9 +1025,9 @@ class SimulationPlotter:
         #        color='gray', linewidth=2, alpha=0.7, label='No Correction')
 
         # Formatting
-        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=25)
-        ax.set_ylabel('Final Fidelity', fontsize=25)
-        ax.set_title('Fidelity vs System Size', fontsize=30)
+        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=30)
+        ax.set_ylabel('Final Fidelity', fontsize=30)
+        ax.set_title('Fidelity vs System Size', fontsize=40)
         
         ax.legend(fontsize=12, loc='lower left')
         ax.set_xlim(0.09, 1.0)
@@ -1153,8 +1153,8 @@ class SimulationPlotter:
             )
         
         # Formatting
-        ax.set_xlabel('System Size (M qubits)', fontsize=25)
-        ax.set_ylabel('Final Fidelity', fontsize=25)
+        ax.set_xlabel('System Size (M qubits)', fontsize=30)
+        ax.set_ylabel('Final Fidelity', fontsize=30)
         ax.set_title('Fidelity vs System Size', fontsize=30)
         
         # Force x-axis to show only integer values
@@ -1269,8 +1269,8 @@ class SimulationPlotter:
                         label=label, alpha=0.85)
 
         # Formatting
-        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=25)
-        ax.set_ylabel(r'Final Fidelity', fontsize=25)
+        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=30)
+        ax.set_ylabel(r'Final Fidelity', fontsize=30)
         ax.set_title('Fidelity vs Error Rate', fontsize=30)
         
         ax.legend(fontsize=12, loc='lower left', handlelength=4)
@@ -1340,12 +1340,12 @@ class SimulationPlotter:
 
         # Get unique M values
         M_values = sorted(df_N['M'].unique())
-        colors = plt.cm.plasma(np.linspace(0, 1, len(M_values)))
+        # colors = plt.cm.plasma(np.linspace(0, 1, len(M_values)))
+        colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'cyan']
 
         # Create 2x2 subplot grid
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-        fig.suptitle(f'Fidelity Evolution ({noise_type.title()})', 
-                    fontsize=28, y=0.95)
+        # fig.suptitle(f'Fidelity Evolution ({noise_type.title()})', fontsize=28, y=0.95)
 
         # Flatten axes for easier iteration
         axes_flat = axes.flatten()
@@ -1368,18 +1368,27 @@ class SimulationPlotter:
                     if len(evolution) > 0:
                         ax.plot(evolution['depth'], evolution['fidelity'],
                             linestyle='-', marker=_mk(i),
-                            color=colors[i], linewidth=2, markersize=6,
+                            color=colors[i], linewidth=2, markevery=1, markersize=8,
                             label=f'M = {M}', alpha=0.8)
 
             # Subplot formatting
-            ax.set_title(f'${param_symbol} = {p:.1f}$', fontsize=22)
-            ax.set_xlabel('Rounds of Purification', fontsize=18)
-            ax.set_ylabel('Fidelity', fontsize=18)
+            ax.set_title(f'${param_symbol} = {p:.1f}$', fontsize=30)
+            # ax.set_xlabel('Rounds of Purification', fontsize=30)
+            # ax.set_ylabel('Fidelity', fontsize=35)
             ax.set_ylim(0, 1.05)
+            ax.set_xticks([2, 4, 6, 8, 10])
             
             # Add legend to top-right subplot
             if plot_idx == 0:  # Top-left position in 2x2 grid
-                ax.legend(fontsize=12, loc='best')
+                ax.legend(fontsize=20, loc='best')
+                
+            # Y-axis label only on first column
+            if plot_idx == 0 or plot_idx == 2:
+                ax.set_ylabel('Fidelity', fontsize=35)
+                
+            # X-axis label only on bottom row
+            if plot_idx == 2 or plot_idx == 3:
+                ax.set_xlabel('Rounds of Purification', fontsize=35)
 
         # Hide unused subplots (if less than 4 p values found)
         for plot_idx in range(len(ps), 4):
@@ -1408,7 +1417,7 @@ class SimulationPlotter:
 
         # Create 2x2 subplot grid
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-        fig.suptitle('PEC Fidelity across System Size', fontsize=32, y=0.95)
+        # fig.suptitle('PEC Fidelity across System Size', fontsize=32, y=0.95)
 
         # Noise type configurations
         noise_configs = [
@@ -1445,9 +1454,9 @@ class SimulationPlotter:
                         horizontalalignment='center', verticalalignment='center',
                         transform=ax.transAxes, fontsize=14, alpha=0.7)
                     if col_idx == 0:
-                        ax.set_ylabel('Final Fidelity', fontsize=22)
+                        ax.set_ylabel('Final Fidelity', fontsize=40)
                     if row_idx == 1:  # Bottom row
-                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=20)
+                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
                 continue
 
             # Filter by twirling condition
@@ -1461,9 +1470,9 @@ class SimulationPlotter:
                         horizontalalignment='center', verticalalignment='center',
                         transform=ax.transAxes, fontsize=14, alpha=0.7)
                     if col_idx == 0:
-                        ax.set_ylabel('Final Fidelity', fontsize=22)
+                        ax.set_ylabel('Final Fidelity', fontsize=40)
                     if row_idx == 1:  # Bottom row
-                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=20)
+                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
                 continue
 
             # Plot each M value
@@ -1481,7 +1490,8 @@ class SimulationPlotter:
                 else:
                     # Get unique N values for this M
                     N_values = sorted(df_M['N'].unique())
-                    colors = plt.cm.viridis(np.linspace(0, 1, len(N_values)))
+                    # colors = plt.cm.viridis(np.linspace(0, 1, len(N_values)))
+                    colors = ['red', 'green', 'blue', 'orange', 'purple', 'saddlebrown', 'deeppink', 'darkslategrey', 'fuchsia', 'gold']
 
                     # Plot curves for different N values
                     for i, N in enumerate(N_values):
@@ -1492,7 +1502,7 @@ class SimulationPlotter:
                             fidelity = 1 - df_N['eps_L_final']
                             ax.plot(df_N['p_channel'], fidelity,
                                 linestyle='-', marker=_mk(i),
-                                color=colors[i], linewidth=2, markersize=6,
+                                color=colors[i], linewidth=2, markersize=8,
                                 label=rf'$\ell$ = {int(np.log2(N))}', alpha=0.8)
 
                     # Set axis limits
@@ -1500,31 +1510,32 @@ class SimulationPlotter:
                     ax.set_ylim(1e-3, 1.0)
                     ax.set_xscale('linear')
                     ax.set_yscale('linear')
+                    ax.set_xticks([0.2, 0.4, 0.6, 0.8, 1.0])
                     
-                    # Add legend only to top-right subplot
-                    if row_idx == 0 and col_idx == 0 and len(N_values) > 0:
-                        ax.legend(fontsize=12, loc='lower left')
+                    # Add legend to one subplot
+                    if row_idx == 1 and col_idx == 1 and len(N_values) > 0:
+                        ax.legend(fontsize=14, loc='lower right')
 
                 # Subplot titles (M values) only on top row
                 if row_idx == 0:
-                    ax.set_title(f'M = {M}', fontsize=26)
+                    ax.set_title(f'M = {M}', fontsize=40)
                 
                 # Y-axis label only on first column
                 if col_idx == 0:
-                    ax.set_ylabel('Final Fidelity', fontsize=22)
+                    ax.set_ylabel('Final Fidelity', fontsize=35)
                 
                 # X-axis label only on bottom row
                 if row_idx == 1:
-                    ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=20)
+                    ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
 
         # Add row labels
-        fig.text(0.02, 0.72, 'Depolarizing Noise', rotation=90, fontsize=24, 
+        fig.text(0.02, 0.75, 'Depolarizing Noise', rotation=90, fontsize=30, 
                 verticalalignment='center', weight='bold')
-        fig.text(0.02, 0.28, 'Dephasing Noise', rotation=90, fontsize=24, 
+        fig.text(0.02, 0.30, 'Dephasing Noise', rotation=90, fontsize=30, 
                 verticalalignment='center', weight='bold')
 
         plt.tight_layout()
-        plt.subplots_adjust(left=0.12)  # Make room for row labels
+        plt.subplots_adjust(left=0.18)  # Make room for row labels
 
         filename = f"fidelity_combined_M.{save_format}"
         filepath = self.figures_dir / filename

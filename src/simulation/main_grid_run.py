@@ -88,7 +88,7 @@ BACKEND_METHOD: str = "density_matrix"
 AA = AASpec(target_success=0.99, max_iters=32, use_postselection_only=False)
 
 # Twirling configuration (auto-enabled for dephasing)
-TWIRLING = TwirlingSpec(enabled=True, mode="random", seed=None)
+TWIRLING = TwirlingSpec(enabled=True, mode="cyclic", seed=None)
 
 
 # -----------------------------
@@ -178,7 +178,7 @@ def main() -> None:
         ps = P_LIST
 
     # Twirling config
-    twirling = TwirlingSpec(enabled=not args.no_twirl, mode="random", seed=args.seed)
+    twirling = TwirlingSpec(enabled=not args.no_twirl, mode="cyclic", seed=args.seed)
 
     logger.info(
         "="*70 + "\n"

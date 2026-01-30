@@ -27,8 +27,8 @@ plt.rcParams.update({
     'font.size': 20,
     'axes.titlesize': 30,
     'axes.labelsize': 25,
-    'xtick.labelsize': 20,
-    'ytick.labelsize': 20,
+    'xtick.labelsize': 28,
+    'ytick.labelsize': 28,
     'legend.fontsize': 20,
     'figure.titlesize': 30,
     'font.family': 'Times New Roman',
@@ -36,7 +36,7 @@ plt.rcParams.update({
     'axes.linewidth': 1.2,
     'grid.linewidth': 0.8,
     'lines.linewidth': 3,
-    'lines.markersize': 8
+    'lines.markersize': 12
 })
 
 # Markers (same approach as your sample)
@@ -57,6 +57,12 @@ def Fout_isotropic(F: np.ndarray, D: int) -> np.ndarray:
     """Exact F_out(F, D) for isotropic/commuting family."""
     denom = 1 + F**2 + (1 - F)**2 / (D - 1)
     return (F + F**2) / denom
+
+def Fout_isotropic_v2(F: np.ndarray, D: int) -> np.ndarray:
+    """Exact F_out(F, D) for isotropic/commuting family for the updated equation model."""
+    numerator = F * (1+F) * (D-1)
+    denominator = D-2*F+D*(F**2)
+    return numerator / denominator
 
 def err_bounds(F: float, D: int) -> Tuple[float, float]:
     """
@@ -109,121 +115,36 @@ class AnalyticTheoryPlotter:
         self.figures_dir.mkdir(parents=True, exist_ok=True)
 
     # (1) F_out vs F, isotropic family (use viridis shades per D)
-    # def plot_fout_vs_f_isotropic(self,
-    #                              D_list: Optional[List[int]] = None,
-    #                              save_format: str = "pdf") -> str:
-    #     if D_list is None:
-    #         D_list = [2, 4, 8, 16, 32]
-    #     F = np.linspace(0.0, 1.0, 500)
-
-    #     fig, ax = plt.subplots(figsize=(10, 8))
-    #     colors = plt.cm.viridis(np.linspace(0.0, 1.0, len(D_list)))
-
-    #     for i, D in enumerate(D_list):
-    #         Fout = Fout_isotropic(F, D)
-    #         ax.plot(F, Fout, marker='', color=colors[i], label=f'D={D}')
-    #     ax.plot(F, F, '--', color='gray', linewidth=2, alpha=0.7, label='Identity')
-
-    #     ax.set_xlabel(r'Input Fidelity, $F$', fontsize=25)
-    #     ax.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=25)
-    #     ax.set_title(r'Fidelity Evolution (Isotropic Family)', fontsize=30)
-    #     ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-    #     ax.legend(loc='lower right', fontsize=14)
-    #     plt.tight_layout()
-
-    #     filename = f"fout_vs_f_isotropic.{save_format}"
-    #     filepath = self.figures_dir / filename
-    #     plt.savefig(filepath, dpi=300, bbox_inches='tight'); plt.close()
-    #     print(f"Saved {filename}")
-    #     return str(filepath)
-    
     def plot_fout_vs_f_isotropic(self,
                                  D_list: Optional[List[int]] = None,
                                  save_format: str = "pdf") -> str:
-        """
-        Plot fidelity evolution and error reduction ratio for isotropic family.
-        
-        Creates two vertically aligned subplots:
-        - Top: Output fidelity vs input fidelity 
-        - Bottom: Error reduction ratio vs input fidelity
-        
-        Parameters:
-        -----------
-        D_list : List[int], optional
-            List of D values to plot. Default: [2, 4, 8, 16, 32]
-        save_format : str, optional
-            File format for saving. Default: "pdf"
-            
-        Returns:
-        --------
-        str : Path to saved figure
-        """
         if D_list is None:
             D_list = [2, 4, 8, 16, 32]
         F = np.linspace(0.0, 1.0, 500)
 
-        # Create 2x1 subplot layout with shared x-axis
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
-        colors = plt.cm.viridis(np.linspace(0.0, 1.0, len(D_list)))
+        fig, ax = plt.subplots(figsize=(10, 8))
+        # colors = plt.cm.viridis(np.linspace(0.0, 1.0, len(D_list)))
+        # colors = ['#E74C3C', '#2ECC71', '#3498DB', '#F39C12', '#9B59B6']  # Red, Green, Blue, Orange, Purple
+        colors = ["red", "green", "blue", "orange", "purple"]
 
-        # Top subplot: Original fidelity plot
         for i, D in enumerate(D_list):
-            Fout = Fout_isotropic(F, D)
-            ax1.plot(F, Fout, marker='', color=colors[i], linewidth=3, label=f'D={D}')
-        ax1.plot(F, F, '--', color='gray', linewidth=2, alpha=0.7, label='Identity')
-        # ax1.axvline(x=0.5, linestyle='--', color='red', linewidth=2, alpha=0.8)
+            Fout = Fout_isotropic_v2(F, D)
+            ax.plot(F, Fout, marker=_mk(i), color=colors[i], label=f'D={D}', markevery=50, markersize=12)
+        ax.plot(F, F, '--', color='gray', linewidth=2, alpha=0.7, label='Identity')
 
-        ax1.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=25)
-        ax1.set_title(r'Fidelity Evolution (Isotropic Family)', fontsize=30)
-        ax1.set_xlim(0, 1)
-        ax1.set_ylim(0, 1)
-        ax1.legend(loc='lower right', fontsize=14)
-        # ax1.grid(True, alpha=0.3)
-
-        # Bottom subplot: Error reduction ratio
-        for i, D in enumerate(D_list):
-            # Calculate error reduction ratio using the formula:
-            # ε_out/ε = [1 - 2F + (1-F)²/(D-1)] / [(1-F)(1+F²+(1-F)²/(D-1))]
-            
-            F_calc = F[F <= 0.99999]  # Avoid numerical issues near F=1
-            
-            # Calculate components
-            one_minus_F = 1 - F_calc
-            term = one_minus_F**2 / (D - 1)
-            
-            # Numerator and denominator
-            numerator = 1 - F_calc + term
-            denominator = one_minus_F * (1 + F_calc**2 + term)
-            
-            # Calculate ratio with error handling
-            with np.errstate(divide='ignore', invalid='ignore'):
-                error_ratio = numerator / denominator
-                
-            # Filter valid values
-            valid_mask = np.isfinite(error_ratio)
-            ax2.plot(F_calc[valid_mask], error_ratio[valid_mask], 
-                    marker='', color=colors[i], linewidth=3, label=f'D={D}')
-
-        # Reference line at y=1 (no improvement)
-        ax2.axhline(y=1, linestyle='--', color='gray', linewidth=2, alpha=0.7, label='No Improvement')
-        # ax2.axvline(x=0.5, linestyle='--', color='red', linewidth=2, alpha=0.8)
-        
-        ax2.set_xlabel(r'Input Fidelity, $F$', fontsize=25)
-        ax2.set_ylabel(r'Error Reduction Ratio, $\frac{\varepsilon_{\mathrm{out}}}{\varepsilon}$', fontsize=25)
-        ax2.set_title(r'Error Reduction Ratio (Isotropic Family)', fontsize=30)
-        ax2.set_xlim(0, 1)
-        ax2.set_ylim(0, 1.2)
-        # ax2.legend(loc='upper right', fontsize=14)
-        # ax2.grid(True, alpha=0.3)
-
+        ax.set_xlabel(r'Input Fidelity, $F$', fontsize=40)
+        ax.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=40)
+        # ax.set_title(r'Fidelity Evolution (Isotropic Family)', fontsize=40)
+        ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+        ax.legend(loc='lower right', fontsize=14)
         plt.tight_layout()
 
-        filename = f"fout_vs_f_isotropic_combined.{save_format}"
+        filename = f"fout_vs_f_isotropic.{save_format}"
         filepath = self.figures_dir / filename
-        plt.savefig(filepath, dpi=300, bbox_inches='tight')
-        plt.close()
+        plt.savefig(filepath, dpi=300, bbox_inches='tight'); plt.close()
         print(f"Saved {filename}")
         return str(filepath)
+    
 
     # (2) Error evolution with bounds (isotropic recursion) — optional viridis touch
     def plot_error_evolution_with_bounds(self,
@@ -412,77 +333,6 @@ class AnalyticTheoryPlotter:
         return str(filepath)
     
     
-    # def plot_fout_vs_f_gamma_system(self,
-    #                                 save_format: str = "pdf") -> str:
-    #     """
-    #     Plot fidelity evolution and error reduction ratio for gamma-based system.
-        
-    #     Uses the equations:
-    #     - γ ∈ [0,1]
-    #     - γ' = 4γ/(3+γ²)  
-    #     - F = (1+γ)/2
-    #     - F_out = (1+γ')/2
-    #     - Error reduction ratio = (3-γ)/(3+γ²)
-        
-    #     Creates two vertically aligned subplots:
-    #     - Top: Output fidelity vs input fidelity 
-    #     - Bottom: Error reduction ratio vs input fidelity
-    #     Both plots include a vertical red dashed line at F = 0.5
-    #     """
-        
-    #     # Create F range - since γ ∈ [0,1] and F = (1+γ)/2, valid F ∈ [0.5, 1]
-    #     # But keeping full range [0, 1] for consistency with previous plots
-    #     F = np.linspace(0.0, 1.0, 500)
-        
-    #     # Convert F to γ: F = (1+γ)/2 => γ = 2F - 1
-    #     gamma = 2 * F - 1
-        
-    #     # Only use values where γ ∈ [0, 1] (i.e., F ∈ [0.5, 1])
-    #     valid_mask = (gamma >= 0) & (gamma <= 1)
-    #     F_valid = F[valid_mask]
-    #     gamma_valid = gamma[valid_mask]
-        
-    #     # Apply transformations
-    #     gamma_prime = 4 * gamma_valid / (3 + gamma_valid**2)
-    #     F_out = (1 + gamma_prime) / 2
-    #     error_reduction_ratio = (3 - gamma_valid) / (3 + gamma_valid**2)
-
-    #     # Create subplots
-    #     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
-
-    #     # Top subplot: Fidelity evolution
-    #     ax1.plot(F_valid, F_out, marker='', color='blue', linewidth=3)
-    #     ax1.plot(F, F, '--', color='gray', linewidth=2, alpha=0.7, label='Identity')
-    #     # ax1.axvline(x=0.5, linestyle='--', color='red', linewidth=2, alpha=0.8)
-
-    #     ax1.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=25)
-    #     ax1.set_title(r'Fidelity Evolution (GHZ Family)', fontsize=30)
-    #     ax1.set_xlim(0.5, 1)
-    #     ax1.set_ylim(0, 1)
-    #     ax1.legend(loc='lower right', fontsize=14)
-    #     # ax1.grid(True, alpha=0.3)
-
-    #     # Bottom subplot: Error reduction ratio
-    #     ax2.plot(F_valid, error_reduction_ratio, marker='', color='blue', linewidth=3)
-    #     ax2.axhline(y=1, linestyle='--', color='gray', linewidth=2, alpha=0.7, label='No Improvement')
-    #     # ax2.axvline(x=0.5, linestyle='--', color='red', linewidth=2, alpha=0.8)
-        
-    #     ax2.set_xlabel(r'Input Fidelity, $F$', fontsize=25)
-    #     ax2.set_ylabel(r'Error Reduction Ratio, $\frac{\varepsilon_{\mathrm{out}}}{\varepsilon}$', fontsize=25)
-    #     ax2.set_title(r'Error Reduction Ratio (GHZ Family)', fontsize=30)
-    #     ax2.set_xlim(0.5, 1)
-    #     ax2.set_ylim(0, 1.2)
-    #     ax2.legend(loc='upper left', fontsize=14)
-    #     # ax2.grid(True, alpha=0.3)
-
-    #     plt.tight_layout()
-
-    #     filename = f"fout_vs_f_gamma_system.{save_format}"
-    #     filepath = self.figures_dir / filename
-    #     plt.savefig(filepath, dpi=300, bbox_inches='tight')
-    #     plt.close()
-    #     print(f"Saved {filename}")
-    #     return str(filepath)
     
     def plot_fout_vs_f_gamma_system(self,
                                 save_format: str = "pdf") -> str:
@@ -518,12 +368,12 @@ class AnalyticTheoryPlotter:
         fig, ax = plt.subplots(1, 1, figsize=(10, 8))
 
         # Fidelity evolution plot
-        ax.plot(F_valid, F_out, marker='', color='blue', linewidth=3)
+        ax.plot(F_valid, F_out, marker='o', color='blue', linewidth=3, markevery=25, markersize=12)
         ax.plot(F, F, '--', color='gray', linewidth=2, alpha=0.7, label='Identity')
 
-        ax.set_xlabel(r'Input Fidelity, $F$', fontsize=25)
-        ax.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=25)
-        ax.set_title(r'Fidelity Evolution (GHZ Family)', fontsize=30)
+        ax.set_xlabel(r'Input Fidelity, $F$', fontsize=40)
+        ax.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=40)
+        # ax.set_title(r'Fidelity Evolution (GHZ Family)', fontsize=30)
         ax.set_xlim(0.5, 1)
         ax.set_ylim(0, 1)
         ax.legend(loc='lower right', fontsize=14)
@@ -536,6 +386,129 @@ class AnalyticTheoryPlotter:
         plt.close()
         print(f"Saved {filename}")
         return str(filepath)
+    
+    
+    ##############################################################
+    ########
+    
+    def P(self, x: np.ndarray) -> np.ndarray:
+        """One PQEC radial update: x -> 4x/(3+x^2)."""
+        return 4.0 * x / (3.0 + x**2)
+    
+    def iterate_r(self, r0: float, p: float, ell: int, n_iter: int) -> np.ndarray:
+        """
+        Iterate r_{n+1} = P^{(ell)}((1-p) r_n), for n_iter steps.
+        """
+        a = 1.0 - p
+        r = float(r0)
+        traj = [r]
+        for _ in range(n_iter):
+            x = a * r              # noise once per iteration
+            for _ in range(ell):   # ell PQEC layers
+                x = self.P(x)
+            r = x
+            traj.append(r)
+        return np.array(traj)
+    
+    def plot_r_vs_iteration_multi_r0(
+        self,
+        p: float = 0.1,
+        ell_list=(1, 2),
+        r0_list=(0.1, 0.5, 1.0),
+        n_iter: int = 30,
+        save_format: str = "pdf",
+    ):
+        plt.style.use("seaborn-v0_8-paper")
+        colors = ["red", "green", "blue", "orange", "purple"]
+
+        for ell in ell_list:
+            fig, ax = plt.subplots(figsize=(10, 8))
+
+            for i, r0 in enumerate(r0_list):
+                traj = self.iterate_r(r0=r0, p=p, ell=ell, n_iter=n_iter)
+                it = np.arange(len(traj))
+                ax.plot(
+                    it,
+                    traj,
+                    marker=_mk(i),
+                    color=colors[i % len(colors)],
+                    label=fr"$r_0={r0}$",
+                    markevery=max(1, len(it) // 10),
+                    markersize=12,
+                    linewidth=2,
+                )
+
+            ax.set_title(fr"$\ell={ell},\; p={p}$", fontsize=40)
+            ax.set_xlabel("Iteration", fontsize=40)
+            ax.set_ylabel(r"Bloch radius, $r=|\vec r|$", fontsize=40)
+            ax.set_xlim(0, n_iter)
+            ax.set_ylim(0, 1.05)
+            ax.set_xticks([0, n_iter // 4, n_iter // 2, 3 * n_iter // 4, n_iter])
+            ax.tick_params(axis="both", which="major", labelsize=26, length=8, width=2)
+
+            # Legend inside the plot
+            ax.legend(
+                loc="lower right",   # good default for these monotone curves
+                fontsize=16,
+                frameon=True,
+                framealpha=0.9,
+            )
+
+            plt.tight_layout()
+            filename = f"r_vs_iteration_p{p}_ell{ell}_multi_r0.{save_format}"
+            filepath = self.figures_dir / filename
+            plt.savefig(filepath, dpi=300, bbox_inches="tight")
+            plt.close()
+            print(f"Saved {filename}")
+        return str(filepath)
+            
+    def rfix_ell1(self, p: np.ndarray) -> np.ndarray:
+        p = np.asarray(p, dtype=float)
+        num = 1.0 - 4.0*p
+        den = (1.0 - p)**2
+        r2 = np.where(num > 0.0, num/den, 0.0)
+        return np.sqrt(r2)
+
+    def rfix_ell2(self, p: np.ndarray) -> np.ndarray:
+        p = np.asarray(p, dtype=float)
+        u = (4.0*np.sqrt(4.0*p**2 + 9.0) - 8.0*p - 9.0)/3.0
+        r2 = np.where(u > 0.0, u/(1.0 - p)**2, 0.0)
+        return np.sqrt(r2)
+
+    def plot_rfix_vs_p(self, figures_dir, p_max=1.0, n=500, save_format="pdf"):
+        plt.style.use("seaborn-v0_8-paper")
+        colors = ["red", "blue"]
+
+        p = np.linspace(0.0, p_max, n)
+        r1 = self.rfix_ell1(p)
+        r2 = self.rfix_ell2(p)
+
+        fig, ax = plt.subplots(figsize=(10, 8))
+        ax.plot(p, r1, color=colors[0], linewidth=3, marker="o", markevery=50,
+                markersize=10, label=r"$\ell=1$")
+        ax.plot(p, r2, color=colors[1], linewidth=3, marker="s", markevery=50,
+                markersize=10, label=r"$\ell=2$")
+
+        ax.set_xlim(0, p_max)
+        ax.set_ylim(0, 1.05)
+        ax.set_xlabel(r"Physical Error Rate, $p$", fontsize=40)
+        ax.set_ylabel(r"$r_{\mathrm{fix}}$", fontsize=40)
+
+        # Bigger tick numbers (this is the main knob you asked for)
+        ax.tick_params(axis="both", which="major", labelsize=24, length=8, width=2)
+        # ax.tick_params(axis="both", which="minor", labelsize=24, length=4, width=1.5)
+
+        # Legend inside the axes
+        ax.legend(loc="lower left", fontsize=18, frameon=True)
+
+        plt.tight_layout()
+        out = self.figures_dir / f"rfix_vs_p.{save_format}"
+        plt.savefig(out, dpi=300, bbox_inches="tight")
+        plt.close()
+        print(f"Saved {out}")
+        return str(out)
+
+        
 
     # Convenience driver
     def generate_all_requested(self, save_format: str = "pdf") -> Dict[str, Optional[str]]:
@@ -573,6 +546,22 @@ class AnalyticTheoryPlotter:
         
         print("\n10. F_out vs F (GHZ system with gamma)...") 
         out['fout_vs_f_GHZ_system'] = self.plot_fout_vs_f_gamma_system(save_format=save_format)
+        
+        print("\n11. Bloch radius vs iteration under depolarizing + PQEC...")
+        out['r_vs_iteration_multi_r0'] = self.plot_r_vs_iteration_multi_r0(
+            p=0.1,
+            ell_list=(1, 2),
+            r0_list=(0.1, 0.5, 1.0),
+            n_iter=20,
+            save_format=save_format
+        )
+        print("\n12. Fixed-point Bloch radius vs depolarizing strength...")
+        out['rfix_vs_p'] = self.plot_rfix_vs_p(
+            figures_dir=self.figures_dir,
+            p_max=0.5,
+            n=500,
+            save_format=save_format
+        )
 
         print("\n" + "="*70)
         print("COMPLETE")

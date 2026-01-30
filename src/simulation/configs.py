@@ -137,7 +137,7 @@ class TwirlingSpec:
     """Clifford twirling configuration for dephasing noise mitigation."""
     
     enabled: bool = True  # Auto-enable for dephasing noise types
-    mode: Literal["random", "cyclic"] = "random"  # random or deterministic cycle
+    mode: Literal["random", "cyclic"] = "cyclic"  # random or deterministic cycle
     seed: Optional[int] = None  # for reproducibility in random mode
 
 
