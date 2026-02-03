@@ -136,7 +136,7 @@ class AnalyticTheoryPlotter:
         ax.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=40)
         # ax.set_title(r'Fidelity Evolution (Isotropic Family)', fontsize=40)
         ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-        ax.legend(loc='lower right', fontsize=14)
+        ax.legend(loc='lower right', fontsize=16)
         plt.tight_layout()
 
         filename = f"fout_vs_f_isotropic.{save_format}"
@@ -475,6 +475,62 @@ class AnalyticTheoryPlotter:
         r2 = np.where(u > 0.0, u/(1.0 - p)**2, 0.0)
         return np.sqrt(r2)
 
+    def rfix_general(self, p: np.ndarray, ell: int) -> np.ndarray:
+        """
+        General fixed point calculation for any ell using iterative approach.
+        For ell=0 (no purification), r_fix = (1-p)*r_init, so fix point is 0.
+        For ell>=1, solve iteratively.
+        """
+        p = np.asarray(p, dtype=float)
+        
+        if ell == 0:
+            # No purification: r -> (1-p)*r, so r_fix = 0
+            return np.zeros_like(p)
+        elif ell == 1:
+            return self.rfix_ell1(p)
+        elif ell == 2:
+            return self.rfix_ell2(p)
+        else:
+            # For higher ell, use iterative approach
+            r_fix = np.zeros_like(p)
+            for i, p_val in enumerate(p):
+                if p_val >= 1.0:
+                    r_fix[i] = 0.0
+                    continue
+                
+                # Binary search for fixed point
+                r_low, r_high = 0.0, 1.0
+                for _ in range(50):  # iterations for convergence
+                    r_test = (r_low + r_high) / 2.0
+                    r_next = self.iterate_r(r_test, p_val, ell, 1)[1]
+                    
+                    if abs(r_next - r_test) < 1e-10:
+                        r_fix[i] = r_test
+                        break
+                    elif r_next > r_test:
+                        r_low = r_test
+                    else:
+                        r_high = r_test
+                else:
+                    r_fix[i] = r_test
+                    
+            return r_fix
+
+    def calculate_gamma_first_drop(self, r0: float, p: float, ell: int) -> float:
+        """
+        Calculate gamma = F(t=0) - F(t=1) where F = (1+r)/2.
+        Returns the fidelity drop after first iteration.
+        """
+        traj = self.iterate_r(r0, p, ell, 1)
+        r_initial = traj[0]
+        r_after_one = traj[1]
+        
+        F_initial = (1 + r_initial) / 2
+        F_after_one = (1 + r_after_one) / 2
+        
+        gamma = F_initial - F_after_one
+        return max(0.0, gamma)  # Ensure non-negative
+
     def plot_rfix_vs_p(self, figures_dir, p_max=1.0, n=500, save_format="pdf"):
         plt.style.use("seaborn-v0_8-paper")
         colors = ["red", "blue"]
@@ -507,6 +563,164 @@ class AnalyticTheoryPlotter:
         plt.close()
         print(f"Saved {out}")
         return str(out)
+
+    def plot_comprehensive_2x2_grid(self, save_format: str = "pdf") -> str:
+        """
+        Create a 2x2 grid of plots:
+        1. Top left: Fidelity vs iteration rounds for p=0.1 with ℓ = 0,1,2,3
+        2. Top right: Fidelity vs iteration rounds for ℓ=1 with p=0.1,0.2,0.3
+        3. Bottom left: r_fix vs p with ℓ=0,1,2,3
+        4. Bottom right: gamma vs p with ℓ=0,1,2,3,10,20
+        """
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        colors = ["red", "green", "blue", "orange", "purple", "brown", "pink", "gray", "olive", "cyan"]
+        
+        # Top left: Fidelity vs iteration for p=0.1, different ell values
+        ax = axes[0, 0]
+        p_fixed = 0.1
+        ell_list = [0, 1, 2, 3]
+        r0 = 1.0  # Initial Bloch radius
+        n_iter = 20
+        
+        for i, ell in enumerate(ell_list):
+            traj_r = self.iterate_r(r0=r0, p=p_fixed, ell=ell, n_iter=n_iter)
+            traj_F = (1 + traj_r) / 2  # Convert to fidelity
+            iterations = np.arange(len(traj_F))
+            if ell == 0:
+                ax.plot(
+                iterations, traj_F,
+                marker=_mk(i), color=colors[i % len(colors)], linestyle=':',
+                label=rf'$\ell={ell}$',
+                markevery=max(1, len(iterations) // 8),
+                markersize=8, linewidth=2
+            )
+            else:
+                ax.plot(
+                    iterations, traj_F,
+                    marker=_mk(i), color=colors[i % len(colors)],
+                    label=rf'$\ell={ell}$',
+                    markevery=max(1, len(iterations) // 8),
+                    markersize=8, linewidth=2
+                )
+        
+        ax.set_xlabel(r'PQEC Iterations, $t$', fontsize=35)
+        ax.set_ylabel('Fidelity, F', fontsize=40)
+        # ax.set_title(f'Fidelity vs Iterations\n(p={p_fixed})', fontsize=40)
+        ax.set_xlim(0, n_iter)
+        ax.set_ylim(0.5, 1.05)
+        ax.legend(fontsize=12, loc='lower left')
+        ax.tick_params(axis="both", which="major", labelsize=16)
+        
+        # Add subplot label (a)
+        ax.text(0.97, 0.98, 'a', transform=ax.transAxes, fontsize=26, 
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # Top right: Fidelity vs iteration for ell=1, different p values
+        ax = axes[0, 1]
+        ell_fixed = 1
+        p_list = [0.1, 0.2, 0.3]
+        
+        for i, p in enumerate(p_list):
+            traj_r = self.iterate_r(r0=r0, p=p, ell=ell_fixed, n_iter=n_iter)
+            traj_F = (1 + traj_r) / 2  # Convert to fidelity
+            iterations = np.arange(len(traj_F))
+            
+            ax.plot(
+                iterations, traj_F,
+                marker=_mk(i), color=colors[i % len(colors)],
+                label=rf'$p={p}$',
+                markevery=max(1, len(iterations) // 8),
+                markersize=8, linewidth=2
+            )
+        
+        ax.set_xlabel(r'PQEC Iterations, $t$', fontsize=35)
+        ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
+        ax.set_title(f'Fidelity vs Iterations\n(ℓ={ell_fixed})', fontsize=20)
+        ax.set_xlim(0, n_iter)
+        ax.set_ylim(0.5, 1.05)
+        ax.legend(fontsize=12, loc='lower left')
+        ax.tick_params(axis="both", which="major", labelsize=16)
+        
+        # Add subplot label (b)
+        ax.text(0.97, 0.98, 'b', transform=ax.transAxes, fontsize=26, 
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # Bottom left: r_fix vs p for different ell values
+        ax = axes[1, 0]
+        p_range = np.linspace(0.0, 0.6, 300)
+        ell_list_fix = [0, 1, 2, 3]
+        
+        for i, ell in enumerate(ell_list_fix):
+            r_fix = self.rfix_general(p_range, ell)
+            if ell == 0:
+                ax.plot(p_range, r_fix, 
+                   color=colors[i % len(colors)], linewidth=3,
+                   marker=_mk(i), markevery=30, markersize=8,
+                   label=rf'$\ell={ell}$', linestyle=':')
+            else:   
+                ax.plot(p_range, r_fix, 
+                    color=colors[i % len(colors)], linewidth=3, 
+                    marker=_mk(i), markevery=30, markersize=8,
+                    label=rf'$\ell={ell}$')
+        
+        # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
+        ax.set_xlabel('Physical Error Rate, p', fontsize=35)
+        ax.set_ylabel(r'$F_{0}$', fontsize=40)
+        # ax.set_title('Fixed Point vs Error Rate', fontsize=40)
+        ax.set_xlim(0, 0.6)
+        ax.set_ylim(-0.05, 1.05)
+        ax.legend(fontsize=12, loc='lower left')
+        ax.tick_params(axis="both", which="major", labelsize=20)
+        
+        # Add subplot label (c)
+        ax.text(0.97, 0.98, 'c', transform=ax.transAxes, fontsize=26, 
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # Bottom right: gamma vs p for different ell values
+        ax = axes[1, 1]
+        ell_list_gamma = [0, 1, 2, 3, 10, 20]
+        p_range_gamma = np.linspace(0.01, 1.0, 50)  # Avoid p=0 for numerical stability
+        r0_gamma = 1.0  # Initial condition for gamma calculation
+        
+        for i, ell in enumerate(ell_list_gamma):
+            gamma_values = []
+            for p_val in p_range_gamma:
+                gamma = self.calculate_gamma_first_drop(r0_gamma, p_val, ell)
+                gamma_values.append(gamma)
+            
+            gamma_values = np.array(gamma_values)
+            if ell == 0:
+                ax.plot(p_range_gamma, gamma_values,
+                   color=colors[i % len(colors)], linewidth=3,
+                   marker=_mk(i), markevery=5, markersize=8,
+                   label=rf'$\ell={ell}$', linestyle=':')
+            else:
+                ax.plot(p_range_gamma, gamma_values,
+                    color=colors[i % len(colors)], linewidth=3,
+                    marker=_mk(i), markevery=5, markersize=8,
+                    label=rf'$\ell={ell}$')
+        
+        # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
+        ax.set_xlabel('Physical Error Rate, p', fontsize=35)
+        ax.set_ylabel(r'Logical Error, $\gamma_L$', fontsize=35)
+        ax.set_title('First Iteration Drop vs Error Rate', fontsize=20)
+        ax.set_xlim(0.01, 1.0)
+        ax.set_ylim(-0.05, 0.6)
+        ax.legend(fontsize=10, loc='upper left', ncol=2)
+        ax.tick_params(axis="both", which="major", labelsize=20)
+        
+        # Add subplot label (d)
+        ax.text(0.97, 0.98, 'd', transform=ax.transAxes, fontsize=26, 
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        plt.tight_layout()
+        
+        filename = f"comprehensive_2x2_grid.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"Saved {filename}")
+        return str(filepath)
 
         
 
@@ -562,6 +776,9 @@ class AnalyticTheoryPlotter:
             n=500,
             save_format=save_format
         )
+        
+        print("\n13. Comprehensive 2x2 grid plot...")
+        out['comprehensive_2x2_grid'] = self.plot_comprehensive_2x2_grid(save_format=save_format)
 
         print("\n" + "="*70)
         print("COMPLETE")

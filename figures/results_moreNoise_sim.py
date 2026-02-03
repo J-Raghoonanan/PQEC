@@ -754,7 +754,8 @@ class IterativePurificationPlotter:
                     if col_idx == 0:
                         ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
                     if row_idx == 1:  # Bottom row
-                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                        # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                        ax.set_xlabel('Physical Error Rate, p', fontsize=35)
                 continue
 
             # Check for iterative columns
@@ -768,7 +769,8 @@ class IterativePurificationPlotter:
                     if col_idx == 0:
                         ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
                     if row_idx == 1:  # Bottom row
-                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                        # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                        ax.set_xlabel('Physical Error Rate, p', fontsize=35)
                 continue
 
             # Filter by twirling condition
@@ -789,7 +791,8 @@ class IterativePurificationPlotter:
                     if col_idx == 0:
                         ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
                     if row_idx == 1:  # Bottom row
-                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                        # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                        ax.set_xlabel('Physical Error Rate, p', fontsize=40)
                 continue
 
             # Plot each M value
@@ -864,12 +867,13 @@ class IterativePurificationPlotter:
                 
                 # X-axis label only on bottom row
                 if row_idx == 1:
-                    ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                    # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+                    ax.set_xlabel('Physical Error Rate, p', fontsize=35)
 
         # Add row labels
-        fig.text(0.02, 0.75, 'Depolarizing Noise', rotation=90, fontsize=30, 
+        fig.text(0.02, 0.75, 'Depolarizing Noise', rotation=90, fontsize=35, 
                 verticalalignment='center', weight='bold')
-        fig.text(0.02, 0.30, 'Dephasing Noise', rotation=90, fontsize=30, 
+        fig.text(0.02, 0.30, 'Dephasing Noise', rotation=90, fontsize=35, 
                 verticalalignment='center', weight='bold')
 
         plt.tight_layout()
@@ -1033,8 +1037,9 @@ class IterativePurificationPlotter:
                     label=rf'No QEC dephase: $M={M}$'
                 )
 
-        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
-        ax.set_ylabel(r'Logical Error Rate, $\gamma_L$', fontsize=40)
+        # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
+        ax.set_xlabel('Physical Error Rate, p', fontsize=40)
+        ax.set_ylabel(r'Logical Error, $\gamma_L$', fontsize=40)
         ax.set_title(r'$\gamma$ vs $p$ (solid=depol, dashed=twirled dephasing)', fontsize=22)
         ax.set_xlim(0.00, 1.0)
         # ax.set_ylim(bottom=0.0)
@@ -1130,12 +1135,13 @@ class IterativePurificationPlotter:
             
             # Subplot formatting
             ax.set_title(f'M = {M}', fontsize=30)
-            ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=24)
+            # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=24)
+            ax.set_xlabel('Physical Error Rate, p', fontsize=24)
             if ax_idx == 0:  # Only first subplot gets y-label
                 if method == "difference":
                     ax.set_ylabel(r'First Iteration Drop, $\gamma$', fontsize=24)
                 else:
-                    ax.set_ylabel(r'Logical Decay Rate, $\gamma$', fontsize=24)
+                    ax.set_ylabel(r'Logical Error, $\gamma$', fontsize=24)
             
             ax.set_xlim(0.0, 1.0)
             if method == "difference":
@@ -1236,12 +1242,13 @@ class IterativePurificationPlotter:
             
             # Subplot formatting
             ax.set_title(f'M = {M}', fontsize=30)
-            ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=24)
+            # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=24)
+            ax.set_xlabel('Physical Error Rate, p', fontsize=24)
             if ax_idx == 0:  # Only first subplot gets y-label
                 if method == "difference":
                     ax.set_ylabel(r'First Iteration Drop, $\gamma$', fontsize=24)
                 else:
-                    ax.set_ylabel(r'Logical Decay Rate, $\gamma$', fontsize=24)
+                    ax.set_ylabel(r'Logical Error, $\gamma$', fontsize=24)
             
             ax.set_xlim(0.0, 1.0)
             if method == "difference":
@@ -1360,12 +1367,15 @@ class IterativePurificationPlotter:
                 labels.append(rf"$M={M},\,\ell={l_val}$")
                 series_idx += 1
 
-        ax.set_xlabel(r"Physical Error Rate, $p$", fontsize=40)
-        ax.set_ylabel(r"Logical Error Rate, $\gamma_L$", fontsize=40)
+        # ax.set_xlabel(r"Physical Error Rate, $p$", fontsize=40)
+        ax.set_xlabel('Physical Error Rate, p', fontsize=40)
+        ax.set_ylabel(r"Logical Error, $\gamma_L$", fontsize=40)
         # ax.set_title(f"Gamma from First Iteration\n({title_str} Noise)", fontsize=36)
 
         ax.set_xlim(0.0, 1.0)
         ax.set_ylim(0.0, 1.05)
+        # ax.set_ylim(1e-4, 1.05)
+        # ax.set_yscale("log")
 
         # Legend uses our handle order (grouped by M)
         ax.legend(handles, labels, fontsize=16, loc="best", ncol=1)
@@ -1483,7 +1493,8 @@ class IterativePurificationPlotter:
                 labels.append(rf"$M={M},\,\ell={l_val}$")
                 series_idx += 1
 
-        ax.set_xlabel(r"Physical Error Rate, $p$", fontsize=40)
+        # ax.set_xlabel(r"Physical Error Rate, $p$", fontsize=40)
+        ax.set_xlabel('Physical Error Rate, p', fontsize=40)
         ax.set_ylabel(r"Fidelity, $F$", fontsize=40)
         # ax.set_title(f"Final Fidelity vs $p$\n({title_str} Noise)", fontsize=36)
 

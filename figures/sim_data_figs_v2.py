@@ -55,8 +55,8 @@ class SimulationPlotter:
         # Load data
         self.depol_finals = self._load_csv('finals_circuit_depolarizing.csv')
         self.depol_steps = self._load_csv('steps_circuit_depolarizing.csv')
-        self.dephase_finals = self._load_csv('finals_circuit_dephasing_v4.csv') #v3 is the one in the paper rn
-        self.dephase_steps = self._load_csv('steps_circuit_dephasing_v4.csv')
+        self.dephase_finals = self._load_csv('finals_circuit_dephasing_v5.csv') #v3 is the one in the paper rn
+        self.dephase_steps = self._load_csv('steps_circuit_dephasing_v5.csv')
         
         print(f"Loaded simulation data:")
         print(f"  Depolarizing finals: {len(self.depol_finals)} runs")
@@ -1076,7 +1076,7 @@ class SimulationPlotter:
         ]
 
         # Only plot these p values
-        target_p_values = [0.1, 0.3, 0.5, 0.7]
+        target_p_values = [0.1, 0.3, 0.7, 0.8]
         colors = plt.cm.viridis(np.linspace(0, 1, len(target_p_values)))
 
         # Store plot information for custom legend
@@ -1306,7 +1306,7 @@ class SimulationPlotter:
             df = self.dephase_steps
             twirling_filter = True
             param_symbol = r'p'
-            target_p_values = [0.1, 0.3, 0.5, 0.6]
+            target_p_values = [0.1, 0.3, 0.7, 0.8]
 
         if df.empty:
             print(f"No steps data for {noise_type}")
@@ -1372,7 +1372,7 @@ class SimulationPlotter:
                             label=f'M = {M}', alpha=0.8)
 
             # Subplot formatting
-            ax.set_title(f'${param_symbol} = {p:.1f}$', fontsize=30)
+            ax.set_title(f'${param_symbol} = {p:.2f}$', fontsize=30)
             # ax.set_xlabel('Rounds of Purification', fontsize=30)
             # ax.set_ylabel('Fidelity', fontsize=35)
             ax.set_ylim(0, 1.05)
