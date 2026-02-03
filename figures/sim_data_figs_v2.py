@@ -216,7 +216,7 @@ class SimulationPlotter:
                         color=colors[i], linewidth=3, markersize=6,
                         label=f'${param_symbol}={p:.2f}$', alpha=0.8)  # Changed from delta to p
     
-        ax.set_xlabel(r'Rounds of Purification, $n$', fontsize=30)
+        ax.set_xlabel(r'SWAP Rounds, $\ell$', fontsize=30)
         ax.set_ylabel(r'Error Rate, $\varepsilon^{(n)}$', fontsize=30)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
@@ -285,13 +285,13 @@ class SimulationPlotter:
         # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
         #         linewidth=2, label='Target 0.99')
     
-        ax.set_xlabel('Rounds of Purification', fontsize=30)
-        ax.set_ylabel('State Fidelity', fontsize=30)
+        ax.set_xlabel(r'SWAP Rounds, $\ell$', fontsize=40)
+        ax.set_ylabel('State Fidelity', fontsize=40)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
         ax.set_title(f'Fidelity Evolution\n({title_str}, M=1, N={max_N})', fontsize=40)
     
-        ax.legend(fontsize=14, loc='best')
+        ax.legend(fontsize=16, loc='best')
         ax.set_ylim(0, 1.05)
     
         plt.tight_layout()
@@ -433,8 +433,8 @@ class SimulationPlotter:
         # ax.axhline(y=0.99, color='black', linestyle=':', alpha=0.7,
         #         linewidth=2, label='Target 0.99')
     
-        ax.set_xlabel('System Size (M qubits)', fontsize=30)
-        ax.set_ylabel('Final Fidelity', fontsize=30)
+        ax.set_xlabel(r'System Size (M qubits)', fontsize=40)
+        ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
     
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
         # ax.set_title(f'Fidelity vs System Size\n({title_str}, N={max_N})', fontsize=30)
@@ -535,8 +535,8 @@ class SimulationPlotter:
 
             # Subplot formatting
             ax.set_title(f'${param_symbol} = {p:.2f}$', fontsize=20)
-            ax.set_xlabel('Rounds of Purification', fontsize=16)
-            ax.set_ylabel('Fidelity', fontsize=16)
+            ax.set_xlabel(r'SWAP Rounds, $\ell$', fontsize=40)
+            ax.set_ylabel('Fidelity', fontsize=40)
             ax.set_ylim(0, 1.05)
             # ax.grid(True, alpha=0.3)
             
@@ -846,7 +846,7 @@ class SimulationPlotter:
                         horizontalalignment='center', verticalalignment='center',
                         transform=ax.transAxes, fontsize=14, alpha=0.7)
                     if col_idx == 0:
-                        ax.set_ylabel('Final Fidelity', fontsize=20)
+                        ax.set_ylabel(r'Fidelity, $F$', fontsize=20)
                     if row_idx == 1:  # Bottom row
                         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=16)
                 continue
@@ -862,7 +862,7 @@ class SimulationPlotter:
                         horizontalalignment='center', verticalalignment='center',
                         transform=ax.transAxes, fontsize=14, alpha=0.7)
                     if col_idx == 0:
-                        ax.set_ylabel('Final Fidelity', fontsize=20)
+                        ax.set_ylabel(r'Fidelity, $F$', fontsize=20)
                     if row_idx == 1:  # Bottom row
                         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=16)
                 continue
@@ -918,7 +918,7 @@ class SimulationPlotter:
                 
                 # Y-axis label only on first column
                 if col_idx == 0:
-                    ax.set_ylabel('Final Fidelity', fontsize=20)
+                    ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
                 
                 # X-axis label only on bottom row
                 if row_idx == 1:
@@ -1026,7 +1026,7 @@ class SimulationPlotter:
 
         # Formatting
         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=30)
-        ax.set_ylabel('Final Fidelity', fontsize=30)
+        ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
         ax.set_title('Fidelity vs System Size', fontsize=40)
         
         ax.legend(fontsize=12, loc='lower left')
@@ -1153,9 +1153,9 @@ class SimulationPlotter:
             )
         
         # Formatting
-        ax.set_xlabel('System Size (M qubits)', fontsize=30)
-        ax.set_ylabel('Final Fidelity', fontsize=30)
-        ax.set_title('Fidelity vs System Size', fontsize=30)
+        ax.set_xlabel(r'System Size (M qubits)', fontsize=40)
+        ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
+        ax.set_title('Fidelity vs System Size', fontsize=40)
         
         # Force x-axis to show only integer values
         M_values = []
@@ -1269,11 +1269,11 @@ class SimulationPlotter:
                         label=label, alpha=0.85)
 
         # Formatting
-        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=30)
-        ax.set_ylabel(r'Final Fidelity', fontsize=30)
-        ax.set_title('Fidelity vs Error Rate', fontsize=30)
+        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
+        ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
+        ax.set_title('Fidelity vs Error Rate', fontsize=40)
         
-        ax.legend(fontsize=12, loc='lower left', handlelength=4)
+        ax.legend(fontsize=16, loc='lower left', handlelength=4)
         ax.set_xlim(0.09, 1.0)
         ax.set_ylim(0, 1.05)
         
@@ -1388,7 +1388,7 @@ class SimulationPlotter:
                 
             # X-axis label only on bottom row
             if plot_idx == 2 or plot_idx == 3:
-                ax.set_xlabel('Rounds of Purification', fontsize=35)
+                ax.set_xlabel(r'SWAP Rounds, $\ell$', fontsize=35)
 
         # Hide unused subplots (if less than 4 p values found)
         for plot_idx in range(len(ps), 4):
@@ -1454,7 +1454,7 @@ class SimulationPlotter:
                         horizontalalignment='center', verticalalignment='center',
                         transform=ax.transAxes, fontsize=14, alpha=0.7)
                     if col_idx == 0:
-                        ax.set_ylabel('Final Fidelity', fontsize=40)
+                        ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
                     if row_idx == 1:  # Bottom row
                         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
                 continue
@@ -1470,7 +1470,7 @@ class SimulationPlotter:
                         horizontalalignment='center', verticalalignment='center',
                         transform=ax.transAxes, fontsize=14, alpha=0.7)
                     if col_idx == 0:
-                        ax.set_ylabel('Final Fidelity', fontsize=40)
+                        ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
                     if row_idx == 1:  # Bottom row
                         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
                 continue
@@ -1522,7 +1522,7 @@ class SimulationPlotter:
                 
                 # Y-axis label only on first column
                 if col_idx == 0:
-                    ax.set_ylabel('Final Fidelity', fontsize=35)
+                    ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
                 
                 # X-axis label only on bottom row
                 if row_idx == 1:

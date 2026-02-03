@@ -122,21 +122,38 @@ def _bloch_vector_magnitude(rho: DensityMatrix) -> Optional[float]:
 
 
 # -----------------------------
-# Global Clifford cycling (Option B)
+# Local deterministic Clifford twirl (exact average over {I,H,HS}^⊗M)
 # -----------------------------
 
 def _U_single_qubit(gate: str) -> np.ndarray:
-    """Single-qubit unitary for gate in {'i','h','sh'} with sh := S H."""
+    """Single-qubit unitary for gate in {'i','h','hs'} with hs := HS."""
     if gate == "i":
         return np.eye(2, dtype=complex)
     if gate == "h":
         return np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
-    if gate == "sh":
+    if gate == "hs":
         H = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
         S = np.array([[1, 0], [0, 1j]], dtype=complex)
-        return S @ H  # SH
+        return H @ S  # HS
     raise ValueError(f"Unknown global Clifford gate '{gate}'")
 
+@lru_cache(maxsize=None)
+def _all_local_clifford_combos(M: int) -> Tuple[Tuple[str, ...], ...]:
+    """All tuples (g0,...,g_{M-1}) with gj in {'i','h','hs'}."""
+    gates = ("i", "h", "hs")
+    return tuple(itertools.product(gates, repeat=M))
+
+@lru_cache(maxsize=None)
+def _all_local_unitaries(M: int) -> Tuple[np.ndarray, ...]:
+    """Precompute U = ⊗_j U(gj) for all combos in {'i','h','hs'}^M."""
+    combos = _all_local_clifford_combos(M)
+    U_list: List[np.ndarray] = []
+    for combo in combos:
+        U = np.array([[1.0]], dtype=complex)
+        for g in combo:
+            U = np.kron(U, _U_single_qubit(g))
+        U_list.append(U)
+    return tuple(U_list)
 
 def _U_global(gate: str, M: int) -> np.ndarray:
     """Global Clifford = (U_gate)^{⊗ M}."""
@@ -148,58 +165,111 @@ def _U_global(gate: str, M: int) -> np.ndarray:
 
 
 def _cycle_gate_for_iteration(iter_idx: int) -> str:
-    """Deterministic cycle over {I, H, SH} by iteration index."""
-    cycle = ["i", "h", "sh"]
+    """Deterministic cycle over {I, H, HS} by iteration index."""
+    cycle = ["i", "h", "hs"]
     return cycle[iter_idx % len(cycle)]
 
 
-def _apply_global_frame_then_noise(
+# def _apply_global_frame_then_noise(
+#     rho: DensityMatrix,
+#     *,
+#     M: int,
+#     iter_idx: int,
+#     spec: RunSpec,
+#     twirling_active: bool,
+# ) -> DensityMatrix:
+#     """
+#     Apply noise ONCE to rho.
+
+#     For dephase_z with twirling enabled:
+#       gate = cycle(iter_idx) in {I,H,SH}
+#       rho -> U rho U†
+#       apply Z-dephasing channel (no internal twirling)
+#       rho -> U† rho U
+
+#     For other noises or twirling disabled:
+#       directly apply the channel once (no frame rotation).
+#     """
+#     # Only do global cycling for Z-dephasing (your stated scope).
+#     if twirling_active and spec.noise.noise_type == NoiseType.dephase_z:
+#         gate = _cycle_gate_for_iteration(iter_idx)
+#         U = _U_global(gate, M)
+#         Udag = U.conj().T
+
+#         rho_rot = DensityMatrix(U @ rho.data @ Udag)
+
+#         # Apply *raw* Z-dephasing once (no internal twirl)
+#         rho_noisy_rot = apply_noise_to_density_matrix(
+#             rho_rot,
+#             spec.noise,
+#             twirling=None,
+#             twirl_seed=None,
+#         )
+
+#         rho_back = DensityMatrix(Udag @ rho_noisy_rot.data @ U)
+#         logger.debug(f"Iter {iter_idx}: global frame gate={gate} applied to all qubits")
+#         return rho_back
+
+#     # Default: apply the noise channel once
+#     return apply_noise_to_density_matrix(
+#         rho,
+#         spec.noise,
+#         twirling=None,   # Important: iterative mode wants deterministic/controlled behavior
+#         twirl_seed=None,
+#     )
+
+def _apply_local_deterministic_twirled_noise(
     rho: DensityMatrix,
     *,
     M: int,
-    iter_idx: int,
     spec: RunSpec,
     twirling_active: bool,
 ) -> DensityMatrix:
     """
     Apply noise ONCE to rho.
 
-    For dephase_z with twirling enabled:
-      gate = cycle(iter_idx) in {I,H,SH}
-      rho -> U rho U†
-      apply Z-dephasing channel (no internal twirling)
-      rho -> U† rho U
+    If twirling_active and noise is dephase_z:
+      Implements the *exact local deterministic twirl* over {I,H,SH}^⊗M:
+        rho_out = (1/3^M) sum_C C† Z_p( C rho C† ) C
+      where Z_p is the raw Z-dephasing channel (no internal twirl).
 
-    For other noises or twirling disabled:
-      directly apply the channel once (no frame rotation).
+    Otherwise:
+      Applies the raw noise channel once.
     """
-    # Only do global cycling for Z-dephasing (your stated scope).
     if twirling_active and spec.noise.noise_type == NoiseType.dephase_z:
-        gate = _cycle_gate_for_iteration(iter_idx)
-        U = _U_global(gate, M)
-        Udag = U.conj().T
+        U_list = _all_local_unitaries(M)
+        acc = np.zeros_like(rho.data, dtype=complex)
 
-        rho_rot = DensityMatrix(U @ rho.data @ Udag)
+        for U in U_list:
+            Udag = U.conj().T
 
-        # Apply *raw* Z-dephasing once (no internal twirl)
-        rho_noisy_rot = apply_noise_to_density_matrix(
-            rho_rot,
-            spec.noise,
-            twirling=None,
-            twirl_seed=None,
-        )
+            # Rotate into Clifford frame: rho -> C rho C†
+            rho_rot = DensityMatrix(U @ rho.data @ Udag)
 
-        rho_back = DensityMatrix(Udag @ rho_noisy_rot.data @ U)
-        logger.debug(f"Iter {iter_idx}: global frame gate={gate} applied to all qubits")
-        return rho_back
+            # Apply raw Z-dephasing once (no internal twirl)
+            rho_noisy_rot = apply_noise_to_density_matrix(
+                rho_rot,
+                spec.noise,
+                twirling=None,
+                twirl_seed=None,
+            )
+
+            # Rotate back: C† (...) C
+            rho_back = DensityMatrix(Udag @ rho_noisy_rot.data @ U)
+
+            acc += rho_back.data
+
+        acc /= float(len(U_list))
+        return DensityMatrix(acc)
 
     # Default: apply the noise channel once
     return apply_noise_to_density_matrix(
         rho,
         spec.noise,
-        twirling=None,   # Important: iterative mode wants deterministic/controlled behavior
+        twirling=None,
         twirl_seed=None,
     )
+
 
 
 # -----------------------------
@@ -268,10 +338,16 @@ def run_iterative_purification(spec: RunSpec) -> Tuple[pd.DataFrame, pd.DataFram
     eps_perfect = _trace_distance_to_pure(current_state, psi)
     pur_perfect = _purity(current_state)
 
-    rho_init_noisy = _apply_global_frame_then_noise(
+    # rho_init_noisy = _apply_global_frame_then_noise(
+    #     current_state,
+    #     M=M,
+    #     iter_idx=0,
+    #     spec=spec,
+    #     twirling_active=twirling_active,
+    # )
+    rho_init_noisy = _apply_local_deterministic_twirled_noise(
         current_state,
         M=M,
-        iter_idx=0,
         spec=spec,
         twirling_active=twirling_active,
     )
@@ -298,13 +374,20 @@ def run_iterative_purification(spec: RunSpec) -> Tuple[pd.DataFrame, pd.DataFram
         logger.info(f"=== Iteration {iter_idx + 1}/{num_iterations} ===")
 
         # 1) Apply noise ONCE per iteration (Option B global cycling for dephase_z)
-        rho_noisy = _apply_global_frame_then_noise(
-            current_state,
-            M=M,
-            iter_idx=iter_idx,
-            spec=spec,
-            twirling_active=twirling_active,
-        )
+        # rho_noisy = _apply_global_frame_then_noise(
+        #     current_state,
+        #     M=M,
+        #     iter_idx=iter_idx,
+        #     spec=spec,
+        #     twirling_active=twirling_active,
+        # )
+        
+        rho_noisy = _apply_local_deterministic_twirled_noise(
+                    current_state,
+                    M=M,
+                    spec=spec,
+                    twirling_active=twirling_active,
+                )
 
         F_before = _fidelity_to_pure(current_state, psi)
         F_after_noise = _fidelity_to_pure(rho_noisy, psi)
