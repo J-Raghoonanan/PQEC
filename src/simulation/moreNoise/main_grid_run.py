@@ -93,8 +93,8 @@ logger = logging.getLogger(__name__)
 # -----------------------------
 M_LIST: List[int] = [1, 2, 3, 4, 5]  # keep ≤ 6 for density-matrix practicality
 N_LIST: List[int] = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
-# DELTA_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99] # No longer using delta; sticking to Kraus p directly
-P_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+# P_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+P_LIST: List[float] = [0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79]
 NOISES: List[NoiseType] = [NoiseType.depolarizing, NoiseType.dephase_z]
 TARGET_KIND: StateKind = StateKind.hadamard  # change to StateKind.haar for random pure states
 BACKEND_METHOD: str = "density_matrix"

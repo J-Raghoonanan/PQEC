@@ -1569,16 +1569,26 @@ class IterativePurificationPlotter:
         p_halfwidth: float = 0.05,
     ) -> Optional[str]:
         """
-        Plot gamma(p) = 1 - F(t=1) (with F(t=0)=1 baseline) in a 1x2 grid:
-        - left:  M = 1
-        - right: M = 5
+        Vertical 2x1 plot of gamma(p)=1-F(t=1):
+        - top:    M=1 (NO inset)
+        - bottom: M=5 (WITH inset)
 
-        For each subplot, include an inset that zooms around p≈0.75 (configurable)
-        and uses a log y-scale.
+        Inset behavior:
+        - Plot the full M=5 curves in the inset (no p-window filtering),
+            then apply xlim to zoom. This avoids "not enough points" when
+            tightening the zoom window.
+
+        Notes
+        -----
+        - Uses iteration==1 rows for F(t=1).
+        - Filters by twirling condition:
+            * depolarizing -> twirling=False
+            * dephasing    -> twirling=True (twirled Z)
+        - ℓ=0 dotted, ℓ>0 solid.
         """
-        
-        colors = ['red', 'green', 'blue', 'orange', 'purple', 'saddlebrown', 'deeppink', 'darkslategrey', 'fuchsia', 'gold']
-        
+        colors = ["red", "green", "blue", "orange", "purple", "saddlebrown",
+                "deeppink", "darkslategrey", "fuchsia", "gold"]
+
         # -------------------------
         # Select data and twirling condition
         # -------------------------
@@ -1603,7 +1613,7 @@ class IterativePurificationPlotter:
             return None
 
         # -------------------------
-        # Twirling filter (supports either column name)
+        # Twirling filter
         # -------------------------
         if "twirling_enabled" in df.columns:
             df_tw = df[df["twirling_enabled"] == twirling_filter].copy()
@@ -1637,48 +1647,56 @@ class IterativePurificationPlotter:
         # Plot config
         # -------------------------
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        import matplotlib.ticker as mticker
 
         target_Ms = [1, 5]
         l_values = sorted(df_gamma["purification_level"].unique())
-        # target inset y-lims 
-        inset_ylim_by_M = {
-            1: (0.4, 0.6),
-            5: (0.955, 0.98),
-        }
+        l_to_color_idx = {l_val: idx for idx, l_val in enumerate(l_values)}
 
-        # Zoom window for inset
+        # Zoom window for inset (x only; Option B plots full curve then zooms)
         p_min_zoom = max(0.0, p_center - p_halfwidth)
         p_max_zoom = min(1.0, p_center + p_halfwidth)
 
-        fig, axes = plt.subplots(1, 2, figsize=(18, 7), sharey=True)
+        # Keep your per-M y-lims to expose the crossover clearly
+        inset_ylim_by_M = {
+            5: (0.965, 0.972),
+        }
+
+        # Vertical layout: 2 rows x 1 col
+        fig, axes = plt.subplots(2, 1, figsize=(11, 14), sharex=False)
         # fig.suptitle(f"Gamma from First Iteration ({title_str} Noise)", fontsize=26)
 
-        # Keep consistent coloring across both panels by indexing by ℓ
-        l_to_color_idx = {l_val: idx for idx, l_val in enumerate(l_values)}
+        subplot_labels = {1: "a", 5: "b"}
 
         for ax, M in zip(axes, target_Ms):
             df_M = df_gamma[df_gamma["M"] == M].copy()
 
-            ax.set_title(rf"$M={M}$", fontsize=40)
+            ax.set_title(f"$M={M}$", fontsize=40)
             ax.set_xlabel("Physical Error Rate, p", fontsize=40)
-            if ax is axes[0]:
-                ax.set_ylabel(r"Logical Error, $\gamma_L$", fontsize=40)
+            ax.set_ylabel(r"Logical Error, $\gamma_L$", fontsize=40)
 
             ax.set_xlim(0.0, 1.0)
             ax.set_ylim(0.0, 1.05)
-            ax.tick_params(axis="both", labelsize=30)
-            
-            # Add subplot label
-            subplot_labels = ['a', 'b']
-            ax.text(0.08, 0.98, subplot_labels[list(axes).index(ax)], transform=ax.transAxes, fontsize=36, 
-                    fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+            ax.tick_params(axis="both", which="major", labelsize=30)
+            exclude = {0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79}
+            p_round = df_M["p"].round(2)
+            mask_keep = ~p_round.isin(exclude)
+            df_main = df_M[mask_keep].copy()
+
+            # subplot label in the corner
+            ax.text(
+                0.08, 0.98, subplot_labels[M],
+                transform=ax.transAxes,
+                fontsize=36, fontweight="bold", fontfamily="sans-serif",
+                va="top", ha="right",
+            )
 
             if df_M.empty:
                 ax.text(
                     0.5, 0.5, f"No data for M={M}",
                     transform=ax.transAxes,
                     ha="center", va="center",
-                    fontsize=18, alpha=0.8
+                    fontsize=18, alpha=0.8,
                 )
                 continue
 
@@ -1688,49 +1706,54 @@ class IterativePurificationPlotter:
                 df_ml = df_M[df_M["purification_level"] == l_val].sort_values("p")
                 if df_ml.empty:
                     continue
+                
+                p_round = df_ml["p"].round(2)
+                df_main = df_ml[~p_round.isin(exclude)].copy()
 
                 linestyle = ":" if int(l_val) == 0 else "-"
                 cidx = l_to_color_idx[l_val]
+                
 
                 (line,) = ax.plot(
-                    df_ml["p"], df_ml["gamma"],
+                    df_main["p"], df_main["gamma"],
                     linestyle=linestyle,
-                    marker=_mk(cidx),                    # <-- use your existing markers
+                    marker=_mk(cidx),
                     linewidth=2.5,
                     markersize=12,
                     alpha=0.85,
-                    color=colors[cidx % len(colors)],    # <-- use your existing colors
+                    color=colors[cidx % len(colors)],
                     label=rf"$\ell={l_val}$",
                 )
                 handles.append(line)
                 labels.append(rf"$\ell={l_val}$")
 
-            if ax is axes[0]:
+            # keep legend only on M=1 (top) to reduce clutter (same as your previous style)
+            if M == 1:
                 ax.legend(handles, labels, fontsize=18, loc="best", ncol=1, frameon=False)
-            
 
-            # ---------- inset location per panel ----------
-            inset_loc = "upper center" if int(M) == 1 else "lower right"
+            # -------------------------
+            # Inset ONLY for M=5
+            # -------------------------
+            if M != 5:
+                continue
 
-            # ---------- inset (zoom around p~0.75, log y) ----------
-            axins = inset_axes(ax, width="45%", height="45%", loc=inset_loc, borderpad=1.1)
+            axins = inset_axes(ax, width="48%", height="42%", loc="lower right", borderpad=1.1)
 
+            # Option B: plot full curves (no zoom filtering), then just zoom via xlim
             for l_val in l_values:
                 df_ml = df_M[df_M["purification_level"] == l_val].sort_values("p")
                 if df_ml.empty:
                     continue
 
-                df_zoom = df_ml[(df_ml["p"] >= p_min_zoom) & (df_ml["p"] <= p_max_zoom)].copy()
-                if df_zoom.empty:
-                    continue
-
                 linestyle = ":" if int(l_val) == 0 else "-"
                 cidx = l_to_color_idx[l_val]
 
-                y = df_zoom["gamma"].to_numpy(dtype=float)
-                x = df_zoom["p"].to_numpy(dtype=float)
+                x = df_ml["p"].to_numpy(dtype=float)
+                y = df_ml["gamma"].to_numpy(dtype=float)
+
+                # log scale can't show nonpositive values
                 mask = y > 0.0
-                if mask.sum() == 0:
+                if mask.sum() < 2:
                     continue
 
                 axins.plot(
@@ -1743,78 +1766,46 @@ class IterativePurificationPlotter:
                     color=colors[cidx % len(colors)],
                 )
 
-            import matplotlib.ticker as mticker
             axins.set_xlim(p_min_zoom, p_max_zoom)
             axins.set_yscale("log")
-            
-            # Force your desired y-ranges per M (must be >0 for log)
-            if int(M) in inset_ylim_by_M:
-                ymin, ymax = inset_ylim_by_M[int(M)]
-                ymin = max(float(ymin), 1e-12)  # guard for log
+
+            # Force your desired y-range for crossover visibility
+            if 5 in inset_ylim_by_M:
+                ymin, ymax = inset_ylim_by_M[5]
+                ymin = max(float(ymin), 1e-12)
                 ymax = max(float(ymax), ymin * 1.01)
                 axins.set_ylim(ymin, ymax)
-
-            if int(M) == 1:
-                yt = [0.4, 0.5, 0.6]
-            elif int(M) == 5:
-                yt = [0.955, 0.965, 0.975]  # pick values you like in-range
-            else:
-                yt = None
-
-            if yt is not None:
-                axins.yaxis.set_major_locator(mticker.FixedLocator(yt))
-                axins.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, pos: f"{v:.3g}"))
-                # Don’t kill minor ticks unless you want them gone:
-                axins.yaxis.set_minor_formatter(mticker.NullFormatter())
     
-            # (Optional but helpful) enforce the sci-notation log formatter consistently
-            axins.yaxis.set_major_formatter(mticker.LogFormatterSciNotation())
+
+            # vertical reference line at p_center
+            # axins.axvline(p_center, color="black", linewidth=1.6, alpha=0.9)
+
+            # Tick label sizes (override global rcParams)
+            axins.tick_params(axis="x", which="major", labelsize=10, length=4, width=1.0)
+            axins.tick_params(axis="y", which="major", labelsize=10, length=4, width=1.0)
+
+            # If you want only a few y ticks (optional, but can help readability)
+            # yt = [0.955, 0.965, 0.970, 0.975]
+            # axins.yaxis.set_major_locator(mticker.FixedLocator(yt))
+            # axins.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, pos: f"{v:.3f}"))
+            # axins.yaxis.set_minor_formatter(mticker.NullFormatter())
+            
+            axins.yaxis.set_major_locator(mticker.LogLocator(base=10.0, subs=(1.0, 2.0, 5.0)))
+            axins.yaxis.set_major_formatter(mticker.LogFormatterSciNotation(base=10.0))
+            axins.yaxis.set_minor_locator(mticker.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1))
             axins.yaxis.set_minor_formatter(mticker.NullFormatter())
-            
-            # Set tick locations if you want fewer labels (optional)
-            # axins.yaxis.set_major_locator(mticker.LogLocator(base=10.0, numticks=4))
 
-            # --- tick label font sizes (THIS is what controls "4 × 10^{-1}" etc.) ---
-            axins.tick_params(axis="x", labelsize=12)
-            axins.tick_params(axis="y", labelsize=16)  # <- make y ticks smaller
-            
-            # --- CRITICAL: force a draw so the tick Text objects are created with the final formatter ---
-            fig.canvas.draw_idle()
-            fig.canvas.draw()  # yes, do both; draw() is the one that matters
-            
-            # Now forcibly override the *actual* label objects (wins against global rcParams)
-            for t in axins.get_yticklabels(which="both"):
-                t.set_fontsize(8)
-            for t in axins.get_xticklabels(which="both"):
-                t.set_fontsize(8)
+        plt.tight_layout()
 
-            # If Matplotlib is using mathtext/scinotation, also force font size on the
-            # already-created ticklabel Text objects (belt-and-suspenders)
-            for t in axins.get_yticklabels():
-                t.set_fontsize(12)
-            for t in axins.get_xticklabels():
-                t.set_fontsize(12)
-
-            # Sometimes there's separate offset text; keep it small as well
-            axins.yaxis.get_offset_text().set_fontsize(6)
-
-            # --- vertical reference line at p=0.75 on inset ---
-            # axins.axvline(p_center, color="black", linewidth=1.5, alpha=0.9)
-
-            
-
-            # axins.set_title(rf"zoom near $p={p_center}$", fontsize=10)
-
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-        
-
-        filename = f"gamma_firststep_vs_p_{noise_type}_M1_M5_insets.{save_format}"
+        filename = f"gamma_firststep_vs_p_{noise_type}_M1_M5_vertical_insetM5.{save_format}"
         filepath = self.figures_dir / filename
         plt.savefig(filepath, dpi=300, bbox_inches="tight")
         plt.close()
 
         print(f"Saved {filename}")
         return str(filepath)
+
+
 
 
 

@@ -331,10 +331,12 @@ class SimulationPlotter:
                     ax.set_xscale('linear')
                     ax.set_yscale('linear')
                     ax.set_xticks([0.2, 0.4, 0.6, 0.8, 1.0])
+                    if col_idx == 1:
+                        ax.set_yscale('log')
                     
                     # Add legend to one subplot (bottom right)
                     if row_idx == 2 and col_idx == 1 and len(N_values) > 0:
-                        ax.legend(fontsize=16, loc='lower right', frameon=False)
+                        ax.legend(fontsize=16, loc='lower left', ncols=2, frameon=False)
 
                 # Subplot titles (M values) only on top row
                 if row_idx == 0:
@@ -367,6 +369,248 @@ class SimulationPlotter:
         print(f"Saved {filename}")
         return str(filepath)
     
+    def plot_fidelity_combined_M_mini_inset(self, save_format: str = 'pdf') -> Optional[str]:
+        """
+        Combined fidelity plots: 3x2 grid with depolarizing (top), untwirled dephasing (middle),
+        and twirled dephasing (bottom). Each column represents M=1 and M=5 only.
+        This version plots FIDELITY instead of error rate.
+
+        Added: an inset on the top-right subplot (row=0,col=1) = depolarizing, M=5.
+            Inset is bottom-left and centered at p=0.8.
+        """
+        import matplotlib.ticker as mticker
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+        # --- inset config (only used for depolarizing, M=5 panel) ---
+        inset_p_center = 0.80
+        inset_p_halfwidth = 0.1          # tweak if you want tighter/wider zoom
+        inset_loc = "lower left"
+        inset_size = ("45%", "45%")       # (width, height) of inset
+        inset_ticksize = 10
+        inset_linewidth = 1.8
+        inset_markersize = 7
+        # Optional fixed y-lims for inset; set to None to auto-pick from data in window.
+        inset_ylim = (8e-3, 5e-2)
+
+        # Check if we have data for all noise types
+        if (self.depol_finals.empty and self.dephase_untwirled_finals.empty and
+            self.dephase_twirled_finals.empty):
+            print("No data for fidelity plots")
+            return None
+
+        # Create 3x2 subplot grid
+        fig, axes = plt.subplots(3, 2, figsize=(12, 15))
+
+        # Noise type configurations
+        noise_configs = [
+            {
+                'type': 'depolarizing',
+                'df_finals': self.depol_finals,
+                'row_idx': 0,
+                'row_label': 'Depolarizing',
+                'subplot_label': ['a','b']
+            },
+            {
+                'type': 'dephasing_untwirled',
+                'df_finals': self.dephase_untwirled_finals,
+                'row_idx': 1,
+                'row_label': 'Dephasing (Untwirled)',
+                'subplot_label': ['c','d']
+            },
+            {
+                'type': 'dephasing_twirled',
+                'df_finals': self.dephase_twirled_finals,
+                'row_idx': 2,
+                'row_label': 'Dephasing (Twirled)',
+                'subplot_label': ['e','f']
+            }
+        ]
+
+        # M values to plot - only M=1 and M=5
+        M_values = [1, 5]
+
+        for noise_config in noise_configs:
+            df = noise_config['df_finals']
+            row_idx = noise_config['row_idx']
+            noise_type = noise_config['type']
+
+            if df.empty:
+                # If no data for this noise type, show empty row with message
+                for col_idx in range(2):
+                    ax = axes[row_idx, col_idx]
+                    ax.text(0.5, 0.5, f'No {noise_type}\ndata',
+                            horizontalalignment='center', verticalalignment='center',
+                            transform=ax.transAxes, fontsize=14, alpha=0.7)
+                    if col_idx == 0:
+                        ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
+                    if row_idx == 2:  # Bottom row
+                        ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
+                continue
+
+            # Plot each M value
+            for col_idx, M in enumerate(M_values):
+                ax = axes[row_idx, col_idx]
+
+                # Filter for this M value
+                df_M = df[df['M'] == M].copy()
+
+                # Add subplot label
+                ax.text(0.98, 0.98, noise_config['subplot_label'][col_idx], transform=ax.transAxes, fontsize=28,
+                        fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+
+                if df_M.empty:
+                    ax.text(0.5, 0.5, f'No data\nfor M={M}',
+                            horizontalalignment='center', verticalalignment='center',
+                            transform=ax.transAxes, fontsize=12, alpha=0.7)
+                else:
+                    # Get unique N values for this M
+                    N_values = sorted(df_M['N'].unique())
+                    colors = ['red', 'green', 'blue', 'orange', 'purple', 'saddlebrown',
+                            'deeppink', 'darkslategrey', 'fuchsia', 'gold']
+
+                    # Plot curves for different N values
+                    for i, N in enumerate(N_values):
+                        df_N = df_M[df_M['N'] == N].sort_values('p_channel')
+                        if len(df_N) == 0:
+                            continue
+
+                        fidelity = 1 - df_N['eps_L_final']
+                        ax.plot(
+                            df_N['p_channel'], fidelity,
+                            linestyle='-', marker=_mk(i),
+                            color=colors[i % len(colors)],
+                            linewidth=2, markersize=12,
+                            label=rf'$\ell$ = {int(np.log2(N))}', alpha=0.8
+                        )
+
+                    # Set axis limits/scales
+                    ax.set_xlim(0.09, 1.0)
+                    ax.set_ylim(1e-3, 1.0)
+                    ax.set_xscale('linear')
+                    ax.set_yscale('linear')
+                    ax.set_xticks([0.2, 0.4, 0.6, 0.8, 1.0])
+
+                    # Make M=5 column log-y, as before
+                    if col_idx == 1:
+                        ax.set_yscale('log')
+
+                    # --------- ADD INSET ONLY FOR: depolarizing (row 0) AND M=5 (col 1) ----------
+                    if (row_idx == 0) and (col_idx == 1) and (noise_type == "depolarizing"):
+                        pmin = max(0.0, inset_p_center - inset_p_halfwidth)
+                        pmax = min(1.0, inset_p_center + inset_p_halfwidth)
+
+                        axins = inset_axes(
+                            ax,
+                            width=inset_size[0],
+                            height=inset_size[1],
+                            loc=inset_loc,
+                            borderpad=1.0
+                        )
+
+                        # Plot the same series on inset, but only in [pmin,pmax]
+                        for i, N in enumerate(N_values):
+                            df_N = df_M[df_M['N'] == N].sort_values('p_channel')
+                            if len(df_N) == 0:
+                                continue
+
+                            # zoom filter (use isclose-safe comparisons if needed)
+                            dzz = df_N[(df_N["p_channel"] >= pmin) & (df_N["p_channel"] <= pmax)].copy()
+                            if dzz.empty:
+                                continue
+
+                            fidelity_z = 1 - dzz["eps_L_final"].to_numpy(dtype=float)
+
+                            axins.plot(
+                                dzz["p_channel"].to_numpy(dtype=float),
+                                fidelity_z,
+                                linestyle='-',
+                                marker=_mk(i),
+                                color=colors[i % len(colors)],
+                                linewidth=inset_linewidth,
+                                markersize=inset_markersize,
+                                alpha=0.9
+                            )
+
+                        # x/y limits and scales
+                        axins.set_xlim(pmin, pmax)
+
+                        # Match parent axis y-scale (log for this panel)
+                        axins.set_yscale(ax.get_yscale())
+
+                        # Optional: vertical reference line at p=0.8
+                        axins.axvline(inset_p_center, color="black", linewidth=1.2, alpha=0.9)
+
+                        # y-lims: either fixed or auto from data in window
+                        if inset_ylim is not None:
+                            axins.set_ylim(inset_ylim[0], inset_ylim[1])
+                        else:
+                            # auto y-lims from the zoomed data (positive only for log)
+                            y_all = []
+                            for N in N_values:
+                                df_N = df_M[df_M['N'] == N].sort_values('p_channel')
+                                dzz = df_N[(df_N["p_channel"] >= pmin) & (df_N["p_channel"] <= pmax)]
+                                if not dzz.empty:
+                                    y_all.append((1 - dzz["eps_L_final"]).to_numpy(dtype=float))
+                            if y_all:
+                                y_all = np.concatenate(y_all)
+                                if axins.get_yscale() == "log":
+                                    y_all = y_all[y_all > 0]
+                                if y_all.size > 0:
+                                    ymin = float(np.min(y_all)) * (0.8 if axins.get_yscale() == "log" else 0.95)
+                                    ymax = float(np.max(y_all)) * (1.2 if axins.get_yscale() == "log" else 1.05)
+                                    if axins.get_yscale() == "log":
+                                        ymin = max(ymin, 1e-6)
+                                        ymax = max(ymax, ymin * 1.01)
+                                    axins.set_ylim(ymin, ymax)
+
+                        # tick font sizes
+                        axins.tick_params(axis="both", which="major", labelsize=inset_ticksize)
+
+                        # if log scale + global rcParams are fighting you, enforce:
+                        for t in axins.get_xticklabels(which="both"):
+                            t.set_fontsize(inset_ticksize)
+                        for t in axins.get_yticklabels(which="both"):
+                            t.set_fontsize(inset_ticksize)
+
+                        # keep inset clean
+                        axins.grid(False)
+
+                    # Legend only once (bottom right), as before
+                    if row_idx == 2 and col_idx == 1 and len(N_values) > 0:
+                        ax.legend(fontsize=16, loc='lower left', ncols=2, frameon=False)
+
+                # Subplot titles (M values) only on top row
+                if row_idx == 0:
+                    ax.set_title(f'M = {M}', fontsize=40)
+
+                # Y-axis label only on first column
+                if col_idx == 0:
+                    ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
+
+                # X-axis label only on bottom row
+                if row_idx == 2:
+                    ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+
+        # Add row labels
+        fig.text(0.02, 0.83, 'Depolarizing Noise', rotation=90, fontsize=25,
+                verticalalignment='center', weight='bold')
+        fig.text(0.02, 0.52, 'Untwirled Dephasing', rotation=90, fontsize=25,
+                verticalalignment='center', weight='bold')
+        fig.text(0.02, 0.21, 'Twirled Dephasing', rotation=90, fontsize=25,
+                verticalalignment='center', weight='bold')
+
+        plt.tight_layout()
+        plt.subplots_adjust(left=0.18)  # Make room for row labels
+
+        filename = f"fidelity_combined_M_3rows.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+
+        print(f"Saved {filename}")
+        return str(filepath)
+
+    
     def generate_all_plots(self, save_format: str = 'pdf') -> Dict[str, Optional[str]]:
         """Generate all figures."""
         print("\n" + "="*70)
@@ -383,6 +627,7 @@ class SimulationPlotter:
         
         print("\n2. Combined fidelity plot (3x2 grid: all noise types vs M=1,5)...")
         plots['fidelity_combined_M_3rows'] = self.plot_fidelity_combined_M_mini(save_format)
+        # plots['fidelity_combined_M_3rows_inset'] = self.plot_fidelity_combined_M_mini_inset(save_format)
         
         # Summary
         successful = [name for name, path in plots.items() if path is not None]
