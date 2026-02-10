@@ -213,6 +213,11 @@ class IterativePurificationPlotter:
         self.dephase_untwirled_finals = self._load_csv('finals_circuit_dephase_z_untwirled.csv')
         self.dephase_untwirled_steps = self._load_csv('steps_circuit_dephase_z_untwirled.csv')
         
+        self.missing_M5_l3_data_depol_finals = self._load_csv('finals_circuit_depolarizing_vM5.csv')
+        self.missing_M5_l3_data_depol_steps = self._load_csv('steps_circuit_depolarizing_vM5.csv')
+        self.missing_M5_l3_data_dephase_finals = self._load_csv('finals_circuit_dephase_z_vM5.csv')
+        self.missing_M5_l3_data_dephase_steps = self._load_csv('steps_circuit_dephase_z_vM5.csv')
+        
         print(f"Loaded iterative purification data:")
         print(f"  Depolarizing finals: {len(self.depol_finals)} runs")
         print(f"  Depolarizing steps: {len(self.depol_steps)} iteration steps")
@@ -328,9 +333,152 @@ class IterativePurificationPlotter:
         return str(filepath)
 
 
+    # def plot_fidelity_vs_iterations_multiple_p(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+    #     """
+    #     Plot fidelity vs iterations for different ℓ values, with 2x2 subplots for different p values.
+    #     """
+    #     # Select data and set twirling filter
+    #     if noise_type == 'depolarizing':
+    #         df = self.depol_steps
+    #         color = COLORS['depolarizing']
+    #         twirling_filter = False
+    #     else:  # dephasing
+    #         df = self.dephase_steps
+    #         color = COLORS['dephasing']
+    #         twirling_filter = True
+    
+    #     if df.empty:
+    #         print(f"No steps data for {noise_type}")
+    #         return None
+    
+    #     # Check for iterative columns
+    #     if 'iteration' not in df.columns or 'purification_level' not in df.columns:
+    #         print(f"Missing iterative columns for {noise_type}")
+    #         return None
+    
+    #     # Filter M=1 AND twirling condition
+    #     df_filtered = df[(df['M'] == 5) & (df['twirling_enabled'] == twirling_filter)].copy()
+    
+    #     if df_filtered.empty:
+    #         print(f"No M=1 data for {noise_type} with twirling={twirling_filter}")
+    #         return None
+    
+    #     # Get unique values
+    #     l_values = sorted(df_filtered['purification_level'].unique())
+    #     p_values = sorted(df_filtered['p'].unique()) if 'p' in df_filtered.columns else []
+        
+    #     if len(p_values) == 0:
+    #         print(f"No p values found for {noise_type}")
+    #         return None
+        
+    #     # Select up to 4 p values for 2x2 grid
+    #     # if len(p_values) > 4:
+    #     #     # Take evenly spaced p values
+    #     #     indices = np.linspace(0, len(p_values)-1, 4).astype(int)
+    #     #     p_subset = [p_values[i] for i in indices]
+    #     # else:
+    #     #     p_subset = p_values
+    #     p_subset = [0.1, 0.5, 0.7, 0.8]
+    
+    #     # Create 2x2 subplot grid
+    #     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    #     axes = axes.flatten()
+    
+    #     colors = ['red', 'green', 'blue', 'orange', 'purple', 'saddlebrown', 'deeppink', 'darkslategrey', 'fuchsia', 'gold']
+    
+    #     # Plot each p value (up to 4)
+    #     for i, p_val in enumerate(p_subset[:4]):
+    #         ax = axes[i]
+    #         df_p = df_filtered[df_filtered['p'] == p_val].copy()
+            
+    #         if df_p.empty:
+    #             ax.text(0.5, 0.5, f'No data\nfor p = {p_val:.2f}',
+    #                    horizontalalignment='center', verticalalignment='center',
+    #                    transform=ax.transAxes, fontsize=14, alpha=0.7)
+    #             continue
+            
+    #         # Plot curves for different ℓ values
+    #         for j, l_val in enumerate(l_values):
+    #             df_l = df_p[df_p['purification_level'] == l_val].copy()
+                
+    #             if df_l.empty:
+    #                 continue
+                
+    #             # Sort by iteration
+    #             df_l = df_l.sort_values('iteration')
+                
+    #             # --- prepend perfect initial point (0, 1) ---
+    #             x = df_l['iteration'].to_numpy()
+    #             y = df_l['fidelity'].to_numpy()
+
+    #             if len(x) == 0:
+    #                 continue
+
+    #             # Only prepend if we don't already have iteration 0
+    #             if x[0] != 0:
+    #                 x = np.insert(x, 0, 0)
+    #                 y = np.insert(y, 0, 1.0)
+    #             # -------------------------------------------
+                
+    #             # Plot trajectory
+    #             if l_val==0:
+    #                 ax.plot(x, y,
+    #                     linestyle='dotted', marker=_mk(j), color=colors[j % len(colors)],
+    #                     linewidth=2, markersize=12, alpha=0.8,
+    #                     label=rf'No Correction')
+    #             else:
+    #                 ax.plot(x, y,
+    #                     linestyle='-', marker=_mk(j), color=colors[j % len(colors)],
+    #                     linewidth=2, markersize=12, alpha=0.8,
+    #                     label=rf'$\ell$ = {l_val}')
+            
+    #         # Formatting for this subplot
+    #         ax.set_title(f'p = {p_val:.2f}', fontsize=30)
+    #         ax.set_ylim(0.005, 1.05)
+            
+    #         if not df_p.empty:
+    #             max_iter = df_p['iteration'].max()
+    #             ax.set_xlim(0.0, max_iter + 0.5)
+    #             ax.set_xticks(range(0, int(max_iter) + 1, 2))
+            
+    #         # Labels
+    #         if i >= 2:  # Bottom row
+    #             ax.set_xlabel(r'PQEC Cycles, $t$', fontsize=40)
+    #         if i % 2 == 0:  # Left column
+    #             ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
+            
+    #         ax.set_yscale('log')
+            
+    #         # Add legend to first subplot
+    #         if i == 1 and len(l_values) > 0:
+    #             ax.legend(fontsize=18, loc='best', frameon=False)
+                
+    #         # Add subplot label 
+    #         subplot_labels = ['a', 'b', 'c', 'd']
+    #         ax.text(0.98, 0.14, subplot_labels[i], transform=ax.transAxes, fontsize=28, 
+    #                 fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+    #     # Hide unused subplots
+    #     for i in range(len(p_subset), 4):
+    #         axes[i].axis('off')
+        
+    #     # Main title
+    #     title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
+    #     # fig.suptitle(f'Iterative Purification - {title_str} Noise (M=1)', fontsize=32, y=0.96)
+        
+    #     plt.tight_layout(rect=[0, 0.03, 1, 0.93])
+        
+    #     filename = f"fidelity_vs_iterations_{noise_type}_multi_p_M5.{save_format}"
+    #     filepath = self.figures_dir / filename
+    #     plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    #     plt.close()
+        
+    #     print(f"Saved {filename}")
+    #     return str(filepath)
+
     def plot_fidelity_vs_iterations_multiple_p(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
         """
-        Plot fidelity vs iterations for different ℓ values, with 2x2 subplots for different p values.
+        Plot fidelity vs iterations for different ℓ values, with 1x2 subplots for p = 0.1 and p = 0.3.
         """
         # Select data and set twirling filter
         if noise_type == 'depolarizing':
@@ -351,11 +499,11 @@ class IterativePurificationPlotter:
             print(f"Missing iterative columns for {noise_type}")
             return None
     
-        # Filter M=1 AND twirling condition
+        # Filter M=5 AND twirling condition
         df_filtered = df[(df['M'] == 5) & (df['twirling_enabled'] == twirling_filter)].copy()
     
         if df_filtered.empty:
-            print(f"No M=1 data for {noise_type} with twirling={twirling_filter}")
+            print(f"No M=5 data for {noise_type} with twirling={twirling_filter}")
             return None
     
         # Get unique values
@@ -366,28 +514,21 @@ class IterativePurificationPlotter:
             print(f"No p values found for {noise_type}")
             return None
         
-        # Select up to 4 p values for 2x2 grid
-        # if len(p_values) > 4:
-        #     # Take evenly spaced p values
-        #     indices = np.linspace(0, len(p_values)-1, 4).astype(int)
-        #     p_subset = [p_values[i] for i in indices]
-        # else:
-        #     p_subset = p_values
-        p_subset = [0.1, 0.5, 0.7, 0.8]
+        # Use only p = 0.1 and p = 0.3 for 1x2 grid
+        p_subset = [0.1, 0.3]
     
-        # Create 2x2 subplot grid
-        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-        axes = axes.flatten()
+        # Create 1x2 subplot grid
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     
         colors = ['red', 'green', 'blue', 'orange', 'purple', 'saddlebrown', 'deeppink', 'darkslategrey', 'fuchsia', 'gold']
     
-        # Plot each p value (up to 4)
-        for i, p_val in enumerate(p_subset[:4]):
+        # Plot each p value
+        for i, p_val in enumerate(p_subset):
             ax = axes[i]
             df_p = df_filtered[df_filtered['p'] == p_val].copy()
             
             if df_p.empty:
-                ax.text(0.5, 0.5, f'No data\nfor p = {p_val:.2f}',
+                ax.text(0.5, 0.5, f'No data\nfor p = {p_val:.1f}',
                        horizontalalignment='center', verticalalignment='center',
                        transform=ax.transAxes, fontsize=14, alpha=0.7)
                 continue
@@ -395,6 +536,58 @@ class IterativePurificationPlotter:
             # Plot curves for different ℓ values
             for j, l_val in enumerate(l_values):
                 df_l = df_p[df_p['purification_level'] == l_val].copy()
+                
+                # # === HOT FIX: ADD MISSING ℓ=3 DATA ===
+                # if l_val == 3 and len(df_l) > 0 and df_l['iteration'].max() <= 5:
+                #     print(f"Hot fix: Adding missing ℓ=3 data for p={p_val:.2f}")
+                    
+                #     missing_points = {}
+                #     if abs(p_val - 0.1) <= 0.01:  # p ≈ 0.1
+                #         missing_points = {6: 0.876659901, 7: 0.876659901, 
+                #                         8: 0.876659901, 9: 0.876659901, 
+                #                         10: 0.876659901}
+                #     elif abs(p_val - 0.3) <= 0.01:  # p ≈ 0.3
+                #         missing_points = {6: 0.05054126978, 7: 0.05054126978,
+                #                         8: 0.05054126978, 9: 0.05054126978,
+                #                         10: 0.05054126978}
+                    
+                #     if missing_points:
+                #         new_rows = []
+                #         for iteration, fidelity in missing_points.items():
+                #             new_row = df_l.iloc[0].copy()
+                #             new_row['iteration'] = iteration
+                #             new_row['fidelity'] = fidelity
+                #             new_rows.append(new_row)
+                #         df_missing = pd.DataFrame(new_rows)
+                #         df_l = pd.concat([df_l, df_missing], ignore_index=True)
+                #         print(f"  Added iterations: {list(missing_points.keys())}")
+                # # === END HOT FIX ===
+                
+                
+                # === CSV HOT FIX: ADD MISSING ℓ=3 DATA ===
+                if l_val == 3 and (len(df_l) == 0 or df_l['iteration'].max() <= 5):
+                    # Select appropriate missing data CSV
+                    if noise_type == 'depolarizing':
+                        missing_data = self.missing_M5_l3_data_depol_steps
+                        twirling_target = False
+                    else:
+                        missing_data = self.missing_M5_l3_data_dephase_steps
+                        twirling_target = True
+                    
+                    if not missing_data.empty:
+                        # Filter for our conditions
+                        missing_filtered = missing_data[
+                            (missing_data['M'] == 5) &
+                            (missing_data['purification_level'] == 3) &
+                            (abs(missing_data['p'] - p_val) <= 0.001) &
+                            (missing_data['twirling_enabled'] == twirling_target)
+                        ]
+                        
+                        if not missing_filtered.empty:
+                            # Add missing data
+                            df_l = pd.concat([df_l, missing_filtered], ignore_index=True)
+                            print(f"CSV Hot fix: Added {len(missing_filtered)} ℓ=3 points for p={p_val:.2f}")
+                # === END CSV HOT FIX ===
                 
                 if df_l.empty:
                     continue
@@ -428,7 +621,7 @@ class IterativePurificationPlotter:
                         label=rf'$\ell$ = {l_val}')
             
             # Formatting for this subplot
-            ax.set_title(f'p = {p_val:.2f}', fontsize=30)
+            ax.set_title(f'p = {p_val:.1f}', fontsize=30)
             ax.set_ylim(0.005, 1.05)
             
             if not df_p.empty:
@@ -436,32 +629,27 @@ class IterativePurificationPlotter:
                 ax.set_xlim(0.0, max_iter + 0.5)
                 ax.set_xticks(range(0, int(max_iter) + 1, 2))
             
-            # Labels
-            if i >= 2:  # Bottom row
-                ax.set_xlabel(r'PQEC Cycles, $t$', fontsize=40)
-            if i % 2 == 0:  # Left column
+            # Labels - both plots get x-label, only left gets y-label
+            ax.set_xlabel(r'PQEC Cycles, $t$', fontsize=40)
+            if i == 0:  # Left subplot only
                 ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
             
             ax.set_yscale('log')
             
-            # Add legend to first subplot
+            # Add legend to right subplot
             if i == 1 and len(l_values) > 0:
                 ax.legend(fontsize=18, loc='best', frameon=False)
                 
             # Add subplot label 
-            subplot_labels = ['a', 'b', 'c', 'd']
+            subplot_labels = ['a', 'b']
             ax.text(0.98, 0.14, subplot_labels[i], transform=ax.transAxes, fontsize=28, 
                     fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
         
-        # Hide unused subplots
-        for i in range(len(p_subset), 4):
-            axes[i].axis('off')
-        
-        # Main title
+        # Main title (commented out)
         title_str = 'Depolarizing' if noise_type == 'depolarizing' else 'Dephasing'
-        # fig.suptitle(f'Iterative Purification - {title_str} Noise (M=1)', fontsize=32, y=0.96)
+        # fig.suptitle(f'Iterative Purification - {title_str} Noise (M=5)', fontsize=32, y=0.96)
         
-        plt.tight_layout(rect=[0, 0.03, 1, 0.93])
+        plt.tight_layout()
         
         filename = f"fidelity_vs_iterations_{noise_type}_multi_p_M5.{save_format}"
         filepath = self.figures_dir / filename
@@ -470,6 +658,324 @@ class IterativePurificationPlotter:
         
         print(f"Saved {filename}")
         return str(filepath)
+
+
+
+    def add_missing_ell3_data_extended(self, df_l, l_val, p_val, noise_type):
+        """
+        Hot fix to add missing ℓ=3 data from your extended vM5 files.
+        Now includes p=0.1 and p=0.3 data for iterations 6-10.
+        """
+        import pandas as pd
+        import numpy as np
+        
+        # Only apply fix for ℓ=3
+        if l_val != 3:
+            return df_l
+        
+        # Check if we need the fix (missing high iterations)
+        if len(df_l) > 0:
+            max_iteration = df_l['iteration'].max()
+            if max_iteration >= 6:
+                # Already has high iteration data
+                return df_l
+        else:
+            # No data at all for this ℓ, definitely need missing data
+            max_iteration = 0
+        
+        print(f"Hot fix: ℓ=3 data stops at t={max_iteration}, adding missing data for p={p_val:.2f}")
+        
+        # Select the appropriate missing data CSV
+        if noise_type == 'depolarizing':
+            missing_data_df = self.missing_M5_l3_data_depol_steps
+            twirling_filter = False
+            missing_finals = self.missing_M5_l3_data_depol_finals
+        else:  # dephasing
+            missing_data_df = self.missing_M5_l3_data_dephase_steps  
+            twirling_filter = True
+            missing_finals = self.missing_M5_l3_data_dephase_finals
+        
+        if missing_data_df.empty:
+            print(f"  ❌ No missing {noise_type} steps data loaded")
+            return df_l
+        
+        print(f"  📊 Missing data file has {len(missing_data_df)} rows")
+        
+        # Handle column name variations
+        twirling_col = None
+        if 'twirling_applied' in missing_data_df.columns:
+            twirling_col = 'twirling_applied'
+        elif 'twirling_enabled' in missing_data_df.columns:
+            twirling_col = 'twirling_enabled'
+        
+        # Build filter conditions
+        conditions = [
+            missing_data_df['M'] == 5,
+            missing_data_df['purification_level'] == l_val,
+            abs(missing_data_df['p'] - p_val) <= 0.02  # Slightly relaxed tolerance
+        ]
+        
+        if twirling_col:
+            conditions.append(missing_data_df[twirling_col] == twirling_filter)
+            print(f"  🔧 Using {twirling_col}={twirling_filter} filter")
+        
+        # Apply all filters
+        mask = conditions[0]
+        for condition in conditions[1:]:
+            mask = mask & condition
+        
+        missing_filtered = missing_data_df[mask].copy()
+        
+        if missing_filtered.empty:
+            # Try broader p-value search
+            broader_p_filter = abs(missing_data_df['p'] - p_val) <= 0.05
+            broader_conditions = [missing_data_df['M'] == 5, 
+                                missing_data_df['purification_level'] == l_val, 
+                                broader_p_filter]
+            if twirling_col:
+                broader_conditions.append(missing_data_df[twirling_col] == twirling_filter)
+            
+            broader_mask = broader_conditions[0]
+            for condition in broader_conditions[1:]:
+                broader_mask = broader_mask & condition
+            missing_filtered = missing_data_df[broader_mask].copy()
+            
+            print(f"  🔍 Expanded p-value search (±0.05): {len(missing_filtered)} rows")
+        
+        if missing_filtered.empty:
+            print(f"  ❌ No matching missing data found for:")
+            print(f"      M=5, ℓ={l_val}, p={p_val:.2f}, {noise_type}")
+            if 'p' in missing_data_df.columns:
+                available_p = sorted(missing_data_df['p'].unique())
+                print(f"      Available p values in missing data: {available_p}")
+            return df_l
+        
+        print(f"  ✅ Found {len(missing_filtered)} matching missing data rows")
+        
+        # Check iterations in missing data
+        if 'iteration' in missing_filtered.columns:
+            missing_iterations = sorted(missing_filtered['iteration'].unique())
+            print(f"  📅 Missing data iterations: {missing_iterations}")
+        
+        # Get only the high iterations we don't already have
+        existing_iterations = set(df_l['iteration'].values) if len(df_l) > 0 else set()
+        missing_high_iters = missing_filtered[
+            (missing_filtered['iteration'] > max_iteration) &
+            (~missing_filtered['iteration'].isin(existing_iterations))
+        ].copy()
+        
+        if len(missing_high_iters) == 0:
+            print(f"  ⚠️  No new high iterations to add")
+            return df_l
+        
+        # Handle column name alignment before concatenation
+        if len(df_l) > 0:
+            # Make sure both dataframes have compatible columns
+            common_columns = set(df_l.columns) & set(missing_high_iters.columns)
+            if len(common_columns) < 10:  # Sanity check
+                print(f"  ⚠️  Column mismatch detected")
+                print(f"      Original columns: {list(df_l.columns)}")
+                print(f"      Missing columns: {list(missing_high_iters.columns)}")
+            
+            # Align missing data columns to match original data
+            missing_high_iters = missing_high_iters[list(df_l.columns)]
+        
+        # Combine existing and missing data
+        df_combined = pd.concat([df_l, missing_high_iters], ignore_index=True)
+        
+        added_iterations = sorted(missing_high_iters['iteration'].unique())
+        print(f"  ✅ Added {len(missing_high_iters)} missing ℓ=3 points")
+        print(f"      New iterations: {added_iterations}")
+        print(f"      Total iterations now: {sorted(df_combined['iteration'].unique())}")
+        
+        return df_combined.sort_values('iteration')
+
+
+    def plot_fidelity_vs_iterations_with_extended_hotfix(self, noise_type: str, save_format: str = 'pdf'):
+        """
+        Plotting function with extended hot fix for p=0.1, 0.3 missing data.
+        """
+        # Select data and set twirling filter
+        if noise_type == 'depolarizing':
+            df = self.depol_steps
+            twirling_filter = False
+        else:  # dephasing
+            df = self.dephase_steps
+            twirling_filter = True
+
+        if df.empty:
+            print(f"No steps data for {noise_type}")
+            return None
+
+        # Check for iterative columns
+        if 'iteration' not in df.columns or 'purification_level' not in df.columns:
+            print(f"Missing iterative columns for {noise_type}")
+            return None
+
+        # Use correct twirling column name (from our earlier analysis)
+        twirling_col = 'twirling_applied' if 'twirling_applied' in df.columns else 'twirling_enabled'
+        
+        if twirling_col not in df.columns:
+            print(f"No twirling column found in {noise_type} data")
+            return None
+        
+        # Filter M=5 AND twirling condition
+        df_filtered = df[(df['M'] == 5) & (df[twirling_col] == twirling_filter)].copy()
+        
+        print(f"After M=5 and {twirling_col}={twirling_filter}: {len(df_filtered)} rows")
+
+        if df_filtered.empty:
+            print(f"No M=5 data for {noise_type} with {twirling_col}={twirling_filter}")
+            return None
+
+        # Get unique values
+        l_values = sorted(df_filtered['purification_level'].unique())
+        p_values = sorted(df_filtered['p'].unique()) if 'p' in df_filtered.columns else []
+        
+        print(f"Available ℓ values: {l_values}")
+        print(f"Available p values sample: {p_values[:10]}...")
+        
+        if len(p_values) == 0:
+            print(f"No p values found for {noise_type}")
+            return None
+        
+        # Use p = 0.1 and p = 0.3 for 1x2 grid (now supported by extended missing data)
+        p_subset = [0.1, 0.3]
+
+        # Create 1x2 subplot grid
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        colors = ['red', 'green', 'blue', 'orange', 'purple', 'saddlebrown', 'deeppink', 'darkslategrey', 'fuchsia', 'gold']
+
+        # Plot each p value
+        for i, p_val in enumerate(p_subset):
+            ax = axes[i]
+            
+            # Find closest p-value in data (with tolerance)
+            available_p = df_filtered['p'].unique()
+            closest_p = min(available_p, key=lambda x: abs(x - p_val))
+            
+            if abs(closest_p - p_val) > 0.02:
+                print(f"Warning: No close p-value to {p_val}, closest is {closest_p}")
+                
+            df_p = df_filtered[abs(df_filtered['p'] - closest_p) <= 0.02].copy()
+            print(f"p={closest_p}: {len(df_p)} rows after p-filter")
+            
+            if df_p.empty:
+                ax.text(0.5, 0.5, f'No data\\nfor p = {p_val:.1f}',
+                    horizontalalignment='center', verticalalignment='center',
+                    transform=ax.transAxes, fontsize=14, alpha=0.7)
+                continue
+            
+            # Plot curves for different ℓ values
+            for j, l_val in enumerate(l_values):
+                df_l = df_p[df_p['purification_level'] == l_val].copy()
+                
+                # **EXTENDED HOT FIX: Add missing ℓ=3 data from extended vM5 files**
+                df_l = self.add_missing_ell3_data_extended(df_l, l_val, closest_p, noise_type)
+                
+                if df_l.empty:
+                    continue
+                
+                # Sort by iteration
+                df_l = df_l.sort_values('iteration')
+                
+                # Get arrays
+                x = df_l['iteration'].to_numpy()
+                y = df_l['fidelity'].to_numpy()
+
+                if len(x) == 0:
+                    continue
+
+                # Only prepend if we don't already have iteration 0
+                if x[0] != 0:
+                    x = np.insert(x, 0, 0)
+                    y = np.insert(y, 0, 1.0)
+                
+                print(f"  Plotting ℓ={l_val}: {len(x)} points, t=0 to {x.max()}")
+                
+                # Plot trajectory
+                if l_val==0:
+                    ax.plot(x, y,
+                        linestyle='dotted', marker=_mk(j), color=colors[j % len(colors)],
+                        linewidth=2, markersize=12, alpha=0.8,
+                        label=rf'No Correction')
+                else:
+                    ax.plot(x, y,
+                        linestyle='-', marker=_mk(j), color=colors[j % len(colors)],
+                        linewidth=2, markersize=12, alpha=0.8,
+                        label=rf'$\ell$ = {l_val}')
+            
+            # Formatting for this subplot
+            ax.set_title(f'p = {closest_p:.1f}', fontsize=30)
+            ax.set_ylim(0.005, 1.05)
+            
+            # Set x-axis to go to at least 10
+            max_iter_plot = max(10, df_p['iteration'].max()) if 'iteration' in df_p.columns else 10
+            ax.set_xlim(0.0, max_iter_plot + 0.5)
+            ax.set_xticks(range(0, int(max_iter_plot) + 1, 2))
+            
+            # Labels
+            ax.set_xlabel(r'PQEC Cycles, $t$', fontsize=40)
+            if i == 0:  # Left subplot only
+                ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
+            
+            ax.set_yscale('log')
+            
+            # Add legend to right subplot
+            if i == 1 and len(l_values) > 0:
+                ax.legend(fontsize=18, loc='best', frameon=False)
+                
+            # Add subplot label 
+            subplot_labels = ['a', 'b']
+            ax.text(0.98, 0.14, subplot_labels[i], transform=ax.transAxes, fontsize=28, 
+                    fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        plt.tight_layout()
+        
+        filename = f"fidelity_vs_iterations_{noise_type}_multi_p_M5_EXTENDED_HOTFIX.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved {filename}")
+        return str(filepath)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     def plot_fidelity_vs_iterations_selected_p(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
@@ -1806,6 +2312,325 @@ class IterativePurificationPlotter:
 
         print(f"Saved {filename}")
         return str(filepath)
+    
+    
+    def plot_combined_fidelity_and_gamma_2x2_grid(self, noise_type: str, save_format: str = 'pdf', 
+                                              *, p_center: float = 0.75, p_halfwidth: float = 0.05):
+        """
+        Combined 2x2 grid plot:
+        - Top row (a,b): Fidelity vs iterations for p=0.1, 0.3 (M=5)
+        - Bottom row (c,d): Gamma vs p for M=1, M=5 (with inset on M=5)
+        
+        Args:
+            noise_type: 'depolarizing' or 'dephasing'
+            save_format: 'pdf', 'png', etc.
+            p_center: Center p-value for inset zoom
+            p_halfwidth: Half-width for inset zoom window
+        """
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        import matplotlib.ticker as mticker
+        import numpy as np
+        
+        # Select data and set twirling filter
+        if noise_type == 'depolarizing':
+            df_steps = self.depol_steps
+            twirling_filter = False
+            title_str = "Depolarizing"
+        else:  # dephasing
+            df_steps = self.dephase_steps
+            twirling_filter = True
+            title_str = "Dephasing (twirled Z)"
+
+        if df_steps.empty:
+            print(f"No steps data for {noise_type}")
+            return None
+
+        # Check for required columns
+        required_cols = ['iteration', 'purification_level', 'M', 'p', 'fidelity']
+        missing_cols = [col for col in required_cols if col not in df_steps.columns]
+        if missing_cols:
+            print(f"Missing columns: {missing_cols}")
+            return None
+
+        # Handle twirling column name
+        twirling_col = 'twirling_applied' if 'twirling_applied' in df_steps.columns else 'twirling_enabled'
+        if twirling_col not in df_steps.columns:
+            print(f"No twirling column found in {noise_type} data")
+            return None
+
+        # Create 2x2 subplot grid
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        colors = ['red', 'green', 'blue', 'orange', 'purple', 'saddlebrown', 
+                'deeppink', 'darkslategrey', 'fuchsia', 'gold']
+        
+        # Subplot labels
+        subplot_labels = [['a', 'b'], ['c', 'd']]
+        
+        # ================================================================
+        # TOP ROW: FIDELITY VS ITERATIONS (M=5, p=0.1 and p=0.3)
+        # ================================================================
+        
+        print("Plotting top row: Fidelity vs Iterations")
+        
+        # Filter for M=5 and correct twirling
+        df_fid_filtered = df_steps[(df_steps['M'] == 5) & (df_steps[twirling_col] == twirling_filter)].copy()
+        print(f"Fidelity plots: {len(df_fid_filtered)} rows after M=5, twirling filter")
+        
+        if not df_fid_filtered.empty:
+            l_values = sorted(df_fid_filtered['purification_level'].unique())
+            p_subset_fid = [0.1, 0.3]  # For top row
+            
+            for i, p_val in enumerate(p_subset_fid):
+                ax = axes[0, i]  # Top row
+                
+                # Find closest p-value
+                available_p = df_fid_filtered['p'].unique()
+                closest_p = min(available_p, key=lambda x: abs(x - p_val))
+                
+                df_p = df_fid_filtered[abs(df_fid_filtered['p'] - closest_p) <= 0.02].copy()
+                
+                if df_p.empty:
+                    ax.text(0.5, 0.5, f'No data\\nfor p = {p_val:.1f}',
+                        ha='center', va='center', transform=ax.transAxes, fontsize=14)
+                    continue
+                
+                # Plot curves for different ℓ values
+                for j, l_val in enumerate(l_values):
+                    df_l = df_p[df_p['purification_level'] == l_val].copy()
+                    
+                    # Apply extended hotfix for ℓ=3
+                    df_l = self.add_missing_ell3_data_extended(df_l, l_val, closest_p, noise_type)
+                    
+                    if df_l.empty:
+                        continue
+                    
+                    # Sort and get arrays
+                    df_l = df_l.sort_values('iteration')
+                    x = df_l['iteration'].to_numpy()
+                    y = df_l['fidelity'].to_numpy()
+                    
+                    if len(x) == 0:
+                        continue
+                    
+                    # Prepend (0,1) if needed
+                    if x[0] != 0:
+                        x = np.insert(x, 0, 0)
+                        y = np.insert(y, 0, 1.0)
+                    
+                    # Plot
+                    if l_val == 0:
+                        ax.plot(x, y, linestyle='dotted', marker=_mk(j), 
+                            color=colors[j % len(colors)], linewidth=2, markersize=12, 
+                            alpha=0.8, label=rf'No Correction')
+                    else:
+                        ax.plot(x, y, linestyle='-', marker=_mk(j), 
+                            color=colors[j % len(colors)], linewidth=2, markersize=12, 
+                            alpha=0.8, label=rf'$\ell$ = {l_val}')
+                
+                # Formatting for fidelity plots
+                ax.set_title(f'p = {closest_p:.1f}', fontsize=45)
+                ax.set_ylim(0.005, 1.05)
+                ax.set_yscale('log')
+                
+                # X-axis
+                max_iter = max(10, df_p['iteration'].max()) if len(df_p) > 0 else 10
+                ax.set_xlim(0.0, max_iter + 0.5)
+                ax.set_xticks(range(0, int(max_iter) + 1, 2))
+                ax.set_xlabel(r'PQEC Cycles, $t$', fontsize=40)
+                
+                # Y-axis label only on left
+                if i == 0:
+                    ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
+                
+                # Legend on right plot
+                if i == 1:
+                    ax.legend(fontsize=18, loc='best', frameon=False)
+                
+                # Subplot label
+                ax.text(0.08, 0.14, subplot_labels[0][i], transform=ax.transAxes, 
+                    fontsize=45, fontweight='bold', va='top', ha='right')
+        
+        # ================================================================
+        # BOTTOM ROW: GAMMA VS P (M=1 and M=5)
+        # ================================================================
+        
+        print("Plotting bottom row: Gamma vs p")
+        
+        # Prepare gamma data (same logic as original function)
+        df_tw = df_steps[df_steps[twirling_col] == twirling_filter].copy()
+        df_t1 = df_tw[df_tw['iteration'] == 1].copy()
+        
+        if not df_t1.empty:
+            # Calculate gamma = 1 - F(t=1)
+            grp_cols = ['M', 'purification_level', 'p']
+            df_gamma = (df_t1.groupby(grp_cols, as_index=False)['fidelity']
+                        .mean().rename(columns={'fidelity': 'F_t1'}))
+            df_gamma['gamma'] = 1.0 - df_gamma['F_t1']
+            
+            l_values_gamma = sorted(df_gamma['purification_level'].unique())
+            l_to_color_idx = {l_val: idx for idx, l_val in enumerate(l_values_gamma)}
+            
+            # Exclusion set for main plots
+            exclude = {0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79}
+            
+            # Inset zoom parameters
+            p_min_zoom = max(0.0, p_center - p_halfwidth)
+            p_max_zoom = min(1.0, p_center + p_halfwidth)
+            inset_ylim = (0.95, 0.98)  # For M=5 inset
+            
+            target_Ms = [1, 5]
+            
+            for j, M in enumerate(target_Ms):
+                ax = axes[1, j]  # Bottom row
+                
+                df_M = df_gamma[df_gamma['M'] == M].copy()
+                
+                # Formatting
+                ax.set_title(f'M={M}', fontsize=40)
+                ax.set_xlabel('Physical Error Rate, p', fontsize=40)
+                if j == 0:  # Left plot only
+                    ax.set_ylabel(r'Logical Error, $\gamma_L$', fontsize=40)
+                
+                ax.set_xlim(0.0, 1.0)
+                ax.set_ylim(0.0, 1.05)
+                
+                if df_M.empty:
+                    ax.text(0.5, 0.5, f'No data for M={M}', ha='center', va='center',
+                        transform=ax.transAxes, fontsize=14)
+                    continue
+                
+                # Plot main gamma curves
+                handles, labels = [], []
+                for l_val in l_values_gamma:
+                    df_ml = df_M[df_M['purification_level'] == l_val].copy()
+                    if df_ml.empty:
+                        continue
+                    
+                    # Apply exclusion filter
+                    p_round = df_ml['p'].round(2)
+                    df_main = df_ml[~p_round.isin(exclude)].copy()
+                    
+                    if df_main.empty:
+                        continue
+                    
+                    # Sort and plot
+                    df_main = df_main.sort_values('p')
+                    linestyle = ':' if int(l_val) == 0 else '-'
+                    cidx = l_to_color_idx[l_val]
+                    
+                    line, = ax.plot(df_main['p'], df_main['gamma'],
+                                linestyle=linestyle, marker=_mk(cidx),
+                                linewidth=2.5, markersize=12, alpha=0.85,
+                                color=colors[cidx % len(colors)],
+                                label=rf'$\ell={l_val}$')
+                    handles.append(line)
+                    labels.append(rf'$\ell={l_val}$')
+                
+                # Legend only on M=1 (left plot)
+                if M == 1:
+                    ax.legend(handles, labels, fontsize=18, loc='best', frameon=False)
+                
+                # Subplot label
+                ax.text(0.08, 0.98, subplot_labels[1][j], transform=ax.transAxes,
+                    fontsize=45, fontweight='bold', va='top', ha='right')
+                
+                # ========================
+                # INSET ONLY FOR M=5
+                # ========================
+                if M == 5:
+                    axins = inset_axes(ax, width='48%', height='42%', 
+                                    loc='lower right', borderpad=1.1)
+                    
+                    # Plot full curves in inset
+                    for l_val in l_values_gamma:
+                        df_ml = df_M[df_M['purification_level'] == l_val].copy()
+                        if df_ml.empty:
+                            continue
+                        
+                        df_ml = df_ml.sort_values('p')
+                        linestyle = ':' if int(l_val) == 0 else '-'
+                        cidx = l_to_color_idx[l_val]
+                        
+                        x = df_ml['p'].to_numpy(dtype=float)
+                        y = df_ml['gamma'].to_numpy(dtype=float)
+                        
+                        # Filter positive values for log scale
+                        mask = y > 0.0
+                        if mask.sum() < 2:
+                            continue
+                        
+                        axins.plot(x[mask], y[mask], linestyle=linestyle, marker=_mk(cidx),
+                                linewidth=2.0, markersize=6, alpha=0.9,
+                                color=colors[cidx % len(colors)])
+                    
+                    # Inset formatting
+                    axins.set_xlim(p_min_zoom, p_max_zoom)
+                    axins.set_yscale('log')
+                    
+                    # Set y-limits for crossover visibility
+                    ymin, ymax = inset_ylim
+                    ymin = max(float(ymin), 1e-12)
+                    ymax = max(float(ymax), ymin * 1.01)
+                    axins.set_ylim(ymin, ymax)
+                    
+                    # Inset tick formatting
+                    axins.tick_params(axis='both', which='major', labelsize=10)
+                    axins.yaxis.set_major_locator(mticker.LogLocator(base=10.0, subs=(1.0, 2.0, 5.0)))
+                    axins.yaxis.set_major_formatter(mticker.LogFormatterSciNotation(base=10.0))
+                    axins.yaxis.set_minor_locator(mticker.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1))
+                    axins.yaxis.set_minor_formatter(mticker.NullFormatter())
+        
+        # Overall formatting
+        plt.tight_layout()
+        
+        # Save
+        filename = f"combined_fidelity_gamma_2x2_{noise_type}.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved {filename}")
+        return str(filepath)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 
 
@@ -1831,6 +2656,8 @@ class IterativePurificationPlotter:
         print("\n2. Fidelity vs iterations (2x2 grid of p values)...")
         plots['fidelity_vs_iter_multi_depol'] = self.plot_fidelity_vs_iterations_multiple_p('depolarizing', save_format)
         plots['fidelity_vs_iter_multi_dephase'] = self.plot_fidelity_vs_iterations_multiple_p('dephasing', save_format)
+        plots['fidelity_vs_iter_multi_depol_hotfix'] = self.plot_fidelity_vs_iterations_with_extended_hotfix('depolarizing', save_format)
+        plots['fidelity_vs_iter_multi_dephase_hotfix'] = self.plot_fidelity_vs_iterations_with_extended_hotfix('dephasing', save_format)
         
         # Fidelity vs iterations (selected p values: 0.1, 0.5, 0.7)
         print("\n3. Fidelity vs iterations (selected p values: 0.1, 0.5, 0.7)...")
@@ -1861,6 +2688,11 @@ class IterativePurificationPlotter:
         print("\n8. Final fidelity vs p for all purification levels ℓ...")
         plots["final_fidelity_vs_p_all_l_depol"] = self.plot_final_fidelity_vs_p_all_l("depolarizing", save_format)
         plots["final_fidelity_vs_p_all_l_dephase"] = self.plot_final_fidelity_vs_p_all_l("dephasing", save_format)
+        
+        # Combined fidelity and gamma plot (2x2 grid)
+        print("\n9. Combined fidelity and gamma plot (2x2 grid)...")
+        plots["combined_fidelity_gamma_2x2_depol"] = self.plot_combined_fidelity_and_gamma_2x2_grid("depolarizing", save_format)
+        plots["combined_fidelity_gamma_2x2_dephase"] = self.plot_combined_fidelity_and_gamma_2x2_grid("dephasing", save_format)
 
         
         
