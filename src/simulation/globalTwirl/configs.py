@@ -1,10 +1,8 @@
 """
 Configuration and typed specs for the SWAP-based purification circuit simulator.
 
-This module centralizes all public configuration knobs so the other modules can
-remain focused on logic. It also exposes a few small helpers to map between the
-manuscript's physical error rate δ and the Kraus/channel probabilities p used
-in common circuit noise models.
+(GlobalTwirl variant)
+- Default output directory is data/globalTwirl_simulations to keep runs separate.
 """
 from __future__ import annotations
 
@@ -102,30 +100,21 @@ class NoiseSpec:
 
     noise_type: NoiseType = NoiseType.depolarizing
     mode: NoiseMode = NoiseMode.iid_p
-    # Physical error rate δ (primary knob for manuscripts/figures)
+    # Channel probability p (primary knob)
     p: float = 0.1
     # exact-k mode controls
     exact_k: int = 0  # number of single-qubit errors to inject deterministically
-    
+
     def kraus_p(self) -> float:
         """Return the channel probability p directly."""
         return float(self.p)
-    
+
     def manuscript_delta(self) -> float:
         """Convert to manuscript's δ parameter if needed for comparison."""
         if self.noise_type == NoiseType.depolarizing:
             return (4.0 / 3.0) * self.p  # δ = (4/3)p
         else:
             return self.p  # For dephasing, δ = p
-    
-    # Remove the old conversion functions since we work with p directly  
-    # # Optional explicit p override; if None we derive it from δ
-    # p_override: Optional[float] = None
-
-    # def kraus_p(self) -> float:
-    #     if self.p_override is not None:
-    #         return float(self.p_override)
-    #     return delta_to_kraus_p(self.noise_type, self.delta)
 
 
 @dataclass
@@ -140,10 +129,10 @@ class AASpec:
 @dataclass
 class TwirlingSpec:
     """Clifford twirling configuration for dephasing noise mitigation."""
-    
-    enabled: bool = True  # Auto-enable for dephasing noise types
-    mode: Literal["random", "cyclic"] = "cyclic"  # random or deterministic cycle
-    seed: Optional[int] = None  # for reproducibility in random mode
+
+    enabled: bool = True
+    mode: Literal["random", "cyclic"] = "cyclic"
+    seed: Optional[int] = None
 
 
 @dataclass
@@ -154,31 +143,28 @@ class RunSpec:
     noise: NoiseSpec
     aa: AASpec
     twirling: TwirlingSpec = field(default_factory=lambda: TwirlingSpec())
-    # Total number of noisy copies to stream
     N: int = 16
-    # Backend configuration
+
     backend_method: Literal[
         "density_matrix",
         "statevector",
         "matrix_product_state",
         "automatic",
     ] = "density_matrix"
-    # Output directory for CSVs
-    out_dir: Path = field(default_factory=lambda: Path("data/simulations"))
-    # Optional run identifier; if empty we will synthesize a descriptive one
+
+    # GlobalTwirl default output directory (separate from moreNoise)
+    out_dir: Path = field(default_factory=lambda: Path("data/globalTwirl_simulations"))
+
     run_id: Optional[str] = None
-    # Verbosity for logging
     verbose: bool = False
-    
-    # Iterative noise mode: apply fresh noise before each SWAP round
+
     iterative_noise: bool = False
-    # Purification level (ℓ): number of SWAP rounds per iteration in iterative mode
     purification_level: int = 1
-    
-    # For IBMQ only
+
+    # For IBMQ only (kept for compatibility)
     manual_noise: bool = False
     manual_noise_mode: str = "identical"  # one of {"identical", "twirled"}
-        
+
     def validate(self) -> None:
         if self.target.M <= 0:
             raise ValueError("M must be positive")
@@ -206,13 +192,14 @@ class RunSpec:
             parts.append(f"k{self.noise.exact_k}")
         if self._should_apply_twirling():
             parts.append("twirl")
+        if self.iterative_noise:
+            parts.append(f"ell{int(self.purification_level)}")
         return "_".join(parts)
-    
+
     def _should_apply_twirling(self) -> bool:
         """Determine if Clifford twirling should be applied for this run."""
         if not self.twirling.enabled:
             return False
-        # Auto-enable for dephasing noise types
         return self.noise.noise_type in [NoiseType.dephase_z, NoiseType.dephase_x]
 
 
