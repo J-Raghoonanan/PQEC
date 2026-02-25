@@ -62,6 +62,21 @@ def _build_hadamard(M: int) -> Tuple[QuantumCircuit, Statevector]:
     logger.info(f"Built Hadamard product state: M={M}")
     return qc, psi
 
+def _build_single_qubit_product(M: int, theta: float, phi: float) -> Tuple[QuantumCircuit, Statevector]:
+    """
+    Product state ⊗_{j=1}^M ( cos(theta/2)|0> + e^{i phi} sin(theta/2)|1> ).
+
+    Implemented via Ry(theta) then Rz(phi) on each qubit:
+      Rz(phi) Ry(theta) |0> = cos(theta/2)|0> + e^{i phi} sin(theta/2)|1>
+    """
+    qc = QuantumCircuit(M, name="prep_product_state")
+    for q in range(M):
+        qc.ry(float(theta), q)
+        qc.rz(float(phi), q)
+    psi = Statevector.from_instruction(qc)
+    logger.info(f"Built product state: M={M}, theta={theta}, phi={phi}")
+    return qc, psi
+
 
 def _build_ghz(M: int) -> Tuple[QuantumCircuit, Statevector]:
     """GHZ state: (|0...0⟩ + |1...1⟩)/√2"""
@@ -152,6 +167,8 @@ def build_target(spec: TargetSpec) -> Tuple[QuantumCircuit, Statevector]:
         return _build_haar(spec.M, spec.seed)
     if spec.kind == StateKind.random_circuit:
         return _build_random_circuit(spec.M, spec.random_layers, spec.seed)
+    if spec.kind == StateKind.single_qubit_product:
+        return _build_single_qubit_product(spec.M, spec.product_theta, spec.product_phi)
 
     raise ValueError(f"Unsupported StateKind: {spec.kind}")
 

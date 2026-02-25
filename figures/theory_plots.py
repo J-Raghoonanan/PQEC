@@ -119,7 +119,7 @@ class AnalyticTheoryPlotter:
                                  D_list: Optional[List[int]] = None,
                                  save_format: str = "pdf") -> str:
         if D_list is None:
-            D_list = [2, 4, 8, 16, 32]
+            D_list = [2, 4, 32]
         F = np.linspace(0.0, 1.0, 500)
 
         fig, ax = plt.subplots(figsize=(10, 8))
@@ -133,10 +133,10 @@ class AnalyticTheoryPlotter:
         ax.plot(F, F, '--', color='gray', linewidth=2, alpha=0.7, label='Identity')
 
         ax.set_xlabel(r'Input Fidelity, $F$', fontsize=40)
-        ax.set_ylabel(r'Output Fidelity, $F_{\mathrm{out}}$', fontsize=40)
+        ax.set_ylabel(r"Output Fidelity, $F'$", fontsize=40)
         # ax.set_title(r'Fidelity Evolution (Isotropic Family)', fontsize=40)
         ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-        ax.legend(loc='lower right', fontsize=18, frameon=False)
+        ax.legend(loc='lower right', fontsize=22, frameon=False)
         plt.tight_layout()
 
         filename = f"fout_vs_f_isotropic.{save_format}"
@@ -563,6 +563,59 @@ class AnalyticTheoryPlotter:
         plt.close()
         print(f"Saved {out}")
         return str(out)
+    
+    
+    
+    def F0_analytical(self, p: np.ndarray, D: int = 2) -> np.ndarray:
+        """
+        Calculate F₀ using the analytical formula:
+        F₀ = (1/2)(1 + sqrt((D-2)² p² - 2pD(3D-2) + D²) / (D(1-p)))
+        
+        For D=2, this simplifies to:
+        F₀ = (1/2)(1 + sqrt(1 - 4p) / (1-p))
+        
+        Valid only when 1-4p >= 0, i.e., p <= 0.25
+        """
+        p = np.asarray(p, dtype=float)
+        
+        if D == 2:
+            # Simplified formula for D=2
+            valid_mask = (p <= 0.25) & (p < 1.0) & (p >= 0.0)
+            F0 = np.zeros_like(p)
+            
+            p_valid = p[valid_mask]
+            if len(p_valid) > 0:
+                sqrt_term = np.sqrt(1 - 4*p_valid)
+                F0[valid_mask] = 0.5 * (1 + sqrt_term / (1 - p_valid))
+            
+            # For p > 0.25 or p >= 1, F₀ = 0.5 (completely mixed)
+            invalid_mask = ~valid_mask & (p < 1.0)
+            F0[invalid_mask] = 0.5
+            
+            return F0
+        else:
+            # General formula for arbitrary D
+            valid_mask = p < 1.0
+            F0 = np.full_like(p, 0.5)  # Default to completely mixed state
+            
+            p_valid = p[valid_mask]
+            if len(p_valid) > 0:
+                D_term = (D-2)**2 * p_valid**2
+                cross_term = -2 * p_valid * D * (3*D - 2)
+                constant_term = D**2
+                
+                discriminant = D_term + cross_term + constant_term
+                valid_discriminant = discriminant >= 0
+                
+                if np.any(valid_discriminant):
+                    sqrt_term = np.sqrt(discriminant[valid_discriminant])
+                    denom = D * (1 - p_valid[valid_discriminant])
+                    
+                    mask_idx = np.where(valid_mask)[0][valid_discriminant]
+                    F0[mask_idx] = 0.5 * (1 + sqrt_term / denom)
+            
+            return F0
+
 
     def plot_comprehensive_2x2_grid(self, save_format: str = "pdf") -> str:
         """
@@ -590,7 +643,7 @@ class AnalyticTheoryPlotter:
                 ax.plot(
                 iterations, traj_F,
                 marker=_mk(i), color=colors[i % len(colors)], linestyle=':',
-                label=rf'$\ell={ell}$',
+                label=f'No QEC',
                 markevery=max(1, len(iterations) // 8),
                 markersize=12, linewidth=2
             )
@@ -649,31 +702,65 @@ class AnalyticTheoryPlotter:
         ax.text(0.97, 0.98, 'b', transform=ax.transAxes, fontsize=36, 
                 fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
         
-        # Bottom left: r_fix vs p for different ell values
+        # # Bottom left: r_fix vs p for different ell values
+        # ax = axes[1, 0]
+        # p_range = np.linspace(0.0, 0.6, 300)
+        # ell_list_fix = [0, 1, 2, 3]
+        
+        # for i, ell in enumerate(ell_list_fix):
+        #     r_fix = self.rfix_general(p_range, ell)
+        #     if ell == 0:
+        #         ax.plot(p_range, r_fix, 
+        #            color=colors[i % len(colors)], linewidth=3,
+        #            marker=_mk(i), markevery=30, markersize=12,
+        #            label=f'No QEC', linestyle=':')
+        #     else:   
+        #         ax.plot(p_range, r_fix, 
+        #             color=colors[i % len(colors)], linewidth=3, 
+        #             marker=_mk(i), markevery=30, markersize=12,
+        #             label=rf'$\ell={ell}$')
+        
+        # # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
+        # ax.set_xlabel('Physical Error Rate, p', fontsize=50)
+        # ax.set_ylabel(r'$F_{0}$', fontsize=50)
+        # # ax.set_title('Fixed Point vs Error Rate', fontsize=40)
+        # ax.set_xlim(0, 0.6)
+        # ax.set_ylim(-0.05, 1.05)
+        # ax.legend(fontsize=22, loc='lower left', frameon=False)
+        # ax.tick_params(axis="both", which="major", labelsize=36)
+        
+        # # Add subplot label (c)
+        # ax.text(0.97, 0.98, 'c', transform=ax.transAxes, fontsize=36, 
+        #         fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        
+        # Bottom left: F₀ vs p using analytical formula for different ell values
         ax = axes[1, 0]
         p_range = np.linspace(0.0, 0.6, 300)
         ell_list_fix = [0, 1, 2, 3]
         
         for i, ell in enumerate(ell_list_fix):
-            r_fix = self.rfix_general(p_range, ell)
             if ell == 0:
-                ax.plot(p_range, r_fix, 
-                   color=colors[i % len(colors)], linewidth=3,
-                   marker=_mk(i), markevery=30, markersize=12,
-                   label=rf'$\ell={ell}$', linestyle=':')
-            else:   
-                ax.plot(p_range, r_fix, 
-                    color=colors[i % len(colors)], linewidth=3, 
+                F0_vals = np.full_like(p_range, 0.5)
+                F0_vals[p_range == 0.0] = 1.0  # Perfect fidelity when p=0
+                ax.plot(p_range, F0_vals, 
+                    color=colors[i % len(colors)], linewidth=3,
                     marker=_mk(i), markevery=30, markersize=12,
-                    label=rf'$\ell={ell}$')
+                    label='No QEC', linestyle='dotted')
+            else:
+                # For ℓ > 0, convert r_fix to F_fix = (1 + r_fix)/2
+                r_fix = self.rfix_general(p_range, ell)
+                F_fix = (1 + r_fix) / 2
+                ax.plot(p_range, F_fix, 
+                        color=colors[i % len(colors)], linewidth=3, 
+                        marker=_mk(i), markevery=30, markersize=12,
+                        label=rf'$\ell={ell}$')
         
-        # ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=40)
         ax.set_xlabel('Physical Error Rate, p', fontsize=50)
         ax.set_ylabel(r'$F_{0}$', fontsize=50)
-        # ax.set_title('Fixed Point vs Error Rate', fontsize=40)
         ax.set_xlim(0, 0.6)
-        ax.set_ylim(-0.05, 1.05)
-        ax.legend(fontsize=22, loc='lower left', frameon=False)
+        ax.set_ylim(0.4, 1.05)
+        ax.legend(fontsize=22, loc='center left', frameon=False)
         ax.tick_params(axis="both", which="major", labelsize=36)
         
         # Add subplot label (c)
@@ -697,7 +784,7 @@ class AnalyticTheoryPlotter:
                 ax.plot(p_range_gamma, gamma_values,
                    color=colors[i % len(colors)], linewidth=3,
                    marker=_mk(i), markevery=5, markersize=12,
-                   label=rf'$\ell={ell}$', linestyle=':')
+                   label=rf'No QEC', linestyle=':')
             else:
                 ax.plot(p_range_gamma, gamma_values,
                     color=colors[i % len(colors)], linewidth=3,
@@ -725,6 +812,286 @@ class AnalyticTheoryPlotter:
         plt.close()
         print(f"Saved {filename}")
         return str(filepath)
+    
+    
+    
+    
+    def plot_gamma_vs_purification_level(self, save_format: str = "pdf") -> str:
+        """
+        Plot logical error γ vs purification level ℓ for different physical error rates.
+        
+        Shows how increasing purification rounds reduces logical error across 
+        different noise strengths. Complements the 2x2 grid by showing scaling behavior.
+        
+        X-axis: Purification level ℓ
+        Y-axis: Logical error γ_L  
+        Curves: Different p values (0.1, 0.3, 0.5, 0.7)
+        """
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        # Parameters
+        p_list = [0.1, 0.3, 0.5, 0.7]
+        ell_range = np.arange(0, 21)  # ℓ = 0 to 20
+        colors = ["red", "green", "blue", "orange"]  # Green to red for increasing p
+        r0_initial = 1.0  # Initial Bloch radius
+        
+        for i, p in enumerate(p_list):
+            gamma_values = []
+            
+            for ell in ell_range:
+                gamma = self.calculate_gamma_first_drop(r0_initial, p, ell)
+                gamma_values.append(gamma)
+            
+            gamma_values = np.array(gamma_values)
+            
+            # Plot with distinctive styling
+            ax.plot(ell_range, gamma_values,
+                    marker=_mk(i), color=colors[i], linewidth=3,
+                    markersize=12, markevery=2,
+                    label=rf'$p={p}$')
+        
+        # Formatting
+        ax.set_xlabel(r'Purification Level, $\ell$', fontsize=40)
+        ax.set_ylabel(r'Logical Error, $\gamma_L$', fontsize=40)
+        ax.set_xlim(0, 20)
+        ax.set_ylim(1e-7, 1.0)
+        
+        # Styling consistent with your other plots
+        ax.legend(fontsize=24, loc='lower left', frameon=False)
+        ax.tick_params(axis="both", which="major", labelsize=32)
+        # ax.grid(True, alpha=0.3)
+        ax.set_yscale('log')  # Log scale to show wide range of gamma values more clearly
+        
+        ax.text(0.97, 0.98, 'e', transform=ax.transAxes, fontsize=36, 
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        plt.tight_layout()
+        
+        filename = f"gamma_vs_purification_level.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"Saved {filename}")
+        return str(filepath)
+
+
+    def plot_comprehensive_grid_centered_gridspec(self, save_format: str = "pdf") -> str:
+        """
+        Complete GridSpec implementation for 5 equal-sized plots with perfect centering.
+        
+        Layout using 3 rows × 6 columns for precise control:
+        ┌───┬───┬───┬───┬───┬───┐
+        │   │ Plot a │   │ Plot b │   │ Row 1
+        ├───┼───┼───┼───┼───┼───┤
+        │   │ Plot c │   │ Plot d │   │ Row 2  
+        ├───┼───┼───┼───┼───┼───┤
+        │   │   │ Plot e │   │   │ Row 3 (centered)
+        └───┴───┴───┴───┴───┴───┘
+        
+        All plots have identical dimensions and plot e is perfectly centered.
+        """
+        import matplotlib.gridspec as gridspec
+        
+        fig = plt.figure(figsize=(20, 18))
+        
+        # Create 3×6 grid for precise positioning control
+        gs = gridspec.GridSpec(3, 6, figure=fig, hspace=0.3, wspace=0.9)
+        
+        # Position plots for equal sizes and visual balance
+        ax1 = fig.add_subplot(gs[0, 1:3])   # Row 1, columns 1-2 (Plot a)
+        ax2 = fig.add_subplot(gs[0, 3:5])   # Row 1, columns 3-4 (Plot b)  
+        ax3 = fig.add_subplot(gs[1, 1:3])   # Row 2, columns 1-2 (Plot c)
+        ax4 = fig.add_subplot(gs[1, 3:5])   # Row 2, columns 3-4 (Plot d)
+        ax5 = fig.add_subplot(gs[2, 2:4])   # Row 3, columns 2-3 (Plot e - centered)
+        
+        colors = ["red", "green", "blue", "orange", "purple", "brown", "pink", "gray", "olive", "cyan"]
+        
+        # ===== PLOT 1: Top left - Fidelity vs iteration (p=0.1, different ℓ) =====
+        ax = ax1
+        p_fixed = 0.1
+        ell_list = [0, 1, 2, 3]
+        r0 = 1.0
+        n_iter = 20
+        
+        for i, ell in enumerate(ell_list):
+            traj_r = self.iterate_r(r0=r0, p=p_fixed, ell=ell, n_iter=n_iter)
+            traj_F = (1 + traj_r) / 2
+            iterations = np.arange(len(traj_F))
+            if ell == 0:
+                ax.plot(iterations, traj_F,
+                    marker=_mk(i), color=colors[i % len(colors)], linestyle=':',
+                    label='No QEC', markevery=max(1, len(iterations) // 8),
+                    markersize=10, linewidth=2)
+            else:
+                ax.plot(iterations, traj_F,
+                    marker=_mk(i), color=colors[i % len(colors)],
+                    label=rf'$\ell={ell}$', markevery=max(1, len(iterations) // 8),
+                    markersize=12, linewidth=2)
+        
+        ax.set_xlabel(r'PQEC Cycles, $t$', fontsize=40)
+        ax.set_ylabel('Fidelity, F', fontsize=40)
+        ax.set_xlim(0, n_iter)
+        ax.set_ylim(0.5, 1.05)
+        ax.legend(fontsize=20, loc='lower left', frameon=False)
+        ax.tick_params(axis="both", which="major", labelsize=28)
+        ax.text(0.97, 0.97, 'a', transform=ax.transAxes, fontsize=32, 
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # ===== PLOT 2: Top right - Fidelity vs iteration (ℓ=1, different p) =====
+        ax = ax2
+        ell_fixed = 1
+        p_list = [0.1, 0.2, 0.3]
+        
+        for i, p in enumerate(p_list):
+            traj_r = self.iterate_r(r0=r0, p=p, ell=ell_fixed, n_iter=n_iter)
+            traj_F = (1 + traj_r) / 2
+            iterations = np.arange(len(traj_F))
+            ax.plot(iterations, traj_F,
+                marker=_mk(i), color=colors[i % len(colors)],
+                label=rf'$p={p}$', markevery=max(1, len(iterations) // 8),
+                markersize=12, linewidth=2)
+        
+        ax.set_xlabel(r'PQEC Cycles, $t$', fontsize=40)
+        ax.set_ylabel(r'Fidelity, $F$', fontsize=40)
+        ax.set_xlim(0, n_iter)
+        ax.set_ylim(0.5, 1.05)
+        ax.legend(fontsize=20, loc='lower left', frameon=False)
+        ax.tick_params(axis="both", which="major", labelsize=28)
+        ax.text(0.97, 0.97, 'b', transform=ax.transAxes, fontsize=32,
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # ===== PLOT 3: Middle left - F₀ vs p (different ℓ) =====
+        ax = ax3
+        p_range = np.linspace(0.0, 0.6, 300)
+        ell_list_fix = [0, 1, 2, 3]
+        
+        for i, ell in enumerate(ell_list_fix):
+            if ell == 0:
+                F0_vals = np.full_like(p_range, 0.5)
+                F0_vals[p_range == 0.0] = 1.0
+                ax.plot(p_range, F0_vals, 
+                    color=colors[i % len(colors)], linewidth=3,
+                    marker=_mk(i), markevery=30, markersize=10,
+                    label='No QEC', linestyle=':')
+            else:
+                r_fix = self.rfix_general(p_range, ell)
+                F_fix = (1 + r_fix) / 2
+                ax.plot(p_range, F_fix, 
+                    color=colors[i % len(colors)], linewidth=3, 
+                    marker=_mk(i), markevery=30, markersize=12,
+                    label=rf'$\ell={ell}$')
+        
+        ax.set_xlabel('Physical Error Rate, p', fontsize=40)
+        ax.set_ylabel(r'$F_{0}$', fontsize=40)
+        ax.set_xlim(0, 0.6)
+        ax.set_ylim(0.4, 1.05)
+        ax.legend(fontsize=20, loc='center left', frameon=False)
+        ax.tick_params(axis="both", which="major", labelsize=28)
+        ax.text(0.97, 0.97, 'c', transform=ax.transAxes, fontsize=32,
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # ===== PLOT 4: Middle right - gamma vs p (different ℓ) =====
+        ax = ax4
+        ell_list_gamma = [0, 1, 2, 3, 10, 20]
+        p_range_gamma = np.linspace(0.01, 1.0, 50)
+        r0_gamma = 1.0
+        
+        for i, ell in enumerate(ell_list_gamma):
+            gamma_values = []
+            for p_val in p_range_gamma:
+                gamma = self.calculate_gamma_first_drop(r0_gamma, p_val, ell)
+                gamma_values.append(gamma)
+            
+            gamma_values = np.array(gamma_values)
+            if ell == 0:
+                ax.plot(p_range_gamma, gamma_values,
+                    color=colors[i % len(colors)], linewidth=3,
+                    marker=_mk(i), markevery=5, markersize=12,
+                    label='No QEC', linestyle=':')
+            else:
+                ax.plot(p_range_gamma, gamma_values,
+                    color=colors[i % len(colors)], linewidth=3,
+                    marker=_mk(i), markevery=5, markersize=12,
+                    label=rf'$\ell={ell}$')
+        
+        ax.set_xlabel('Physical Error Rate, p', fontsize=40)
+        ax.set_ylabel(r'Logical Error, $\gamma_L$', fontsize=40)
+        ax.set_xlim(0.01, 1.0)
+        ax.set_ylim(-0.05, 0.6)
+        ax.legend(fontsize=20, loc='upper left', ncol=1, frameon=False)
+        ax.tick_params(axis="both", which="major", labelsize=28)
+        ax.text(0.97, 0.97, 'd', transform=ax.transAxes, fontsize=32,
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # ===== PLOT 5: Bottom center - gamma vs ℓ (different p) =====
+        ax = ax5
+        p_list_gamma = [0.1, 0.3, 0.5, 0.7]
+        ell_range = np.arange(0, 21)
+        gamma_colors = ["green", "blue", "orange", "red"]  # Green to red for increasing p
+        
+        for i, p in enumerate(p_list_gamma):
+            gamma_values = []
+            for ell in ell_range:
+                gamma = self.calculate_gamma_first_drop(r0_gamma, p, ell)
+                gamma_values.append(gamma)
+            
+            gamma_values = np.array(gamma_values)
+            ax.plot(ell_range, gamma_values,
+                marker=_mk(i), color=gamma_colors[i], linewidth=3,
+                markersize=12, markevery=2,
+                label=rf'$p={p}$')
+        
+        ax.set_xlabel(r'Purification Level, $\ell$', fontsize=40)
+        ax.set_ylabel(r'Logical Error, $\gamma_L$', fontsize=40)
+        ax.set_xlim(0, 20)
+        ax.set_ylim(1e-7, 1.0)
+        ax.set_yscale('log')
+        ax.legend(fontsize=20, loc='lower left', frameon=False)
+        ax.tick_params(axis="both", which="major", labelsize=28)
+        ax.text(0.97, 0.97, 'e', transform=ax.transAxes, fontsize=32,
+                fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+        
+        # Save the figure
+        filename = f"comprehensive_grid_centered_gridspec.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"Saved {filename}")
+        return str(filepath)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         
 
@@ -783,6 +1150,10 @@ class AnalyticTheoryPlotter:
         
         print("\n13. Comprehensive 2x2 grid plot...")
         out['comprehensive_2x2_grid'] = self.plot_comprehensive_2x2_grid(save_format=save_format)
+        out['comprehensive 5 plot grid'] = self.plot_comprehensive_grid_centered_gridspec(save_format=save_format)
+        
+        print("\n14. Gamma vs purification level...")
+        out['gamma_vs_ell'] = self.plot_gamma_vs_purification_level(save_format=save_format)
 
         print("\n" + "="*70)
         print("COMPLETE")

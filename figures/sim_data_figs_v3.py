@@ -80,6 +80,10 @@ class SimulationPlotter:
         self.global_dir = Path("data/globalTwirl_simulations")
         self.global_dephase_steps = self._load_csv_from(self.global_dir, "steps_globalTwirl_dephase_z.csv")
         self.global_dephase_finals = self._load_csv_from(self.global_dir, "finals_globalTwirl_dephase_z.csv")
+        
+        self.subsetTwirl_dir = Path("data/subsetTwirling_simulations")
+        self.subsetTwirl_dephase_steps = self._load_csv_from(self.subsetTwirl_dir, "steps_circuit_dephase_z__subset0.30.csv")
+        self.subsetTwirl_dephase_finals = self._load_csv_from(self.subsetTwirl_dir, "finals_circuit_dephase_z__subset0.30.csv")
 
     
     def _load_csv(self, filename: str) -> pd.DataFrame:
@@ -258,7 +262,7 @@ class SimulationPlotter:
             
             # Add legend to top-left subplot
             if plot_idx == 0:
-                ax.legend(fontsize=20, loc='lower right')
+                ax.legend(fontsize=20, loc='lower right', frameon=False)
                 
             # Y-axis label only on first column
             if plot_idx == 0 or plot_idx == 2:
@@ -780,7 +784,7 @@ class SimulationPlotter:
 
             # Legend only on top-left subplot
             if plot_idx == 0:
-                ax.legend(fontsize=20, loc='lower right')
+                ax.legend(fontsize=20, loc='lower right', frameon=False)
 
             # Y-axis label only on first column
             if plot_idx == 0 or plot_idx == 2:
@@ -816,12 +820,179 @@ class SimulationPlotter:
         print(f"Saved {filename}")
         return str(filepath)
 
+    # def plot_fidelity_combined_M_mini_4x2(self, save_format: str = 'pdf') -> Optional[str]:
+    #     """
+    #     Combined fidelity plots: 4x2 grid with:
+    #     Row 1: depolarizing
+    #     Row 2: dephasing (untwirled)
+    #     Row 3: dephasing (GLOBAL twirl)
+    #     Row 4: dephasing (FULL twirl)
+
+    #     Each column represents M=1 and M=5 only.
+    #     This version plots FIDELITY instead of error rate.
+    #     """
+    #     # Check if we have *any* data
+    #     if (self.depol_finals.empty and self.dephase_untwirled_finals.empty and
+    #         self.global_dephase_finals.empty and self.dephase_twirled_finals.empty):
+    #         print("No data for fidelity plots")
+    #         return None
+
+    #     # Create 4x2 subplot grid
+    #     fig, axes = plt.subplots(4, 2, figsize=(12, 20))
+
+    #     # Noise type configurations (row order matters)
+    #     noise_configs = [
+    #         {
+    #             'type': 'depolarizing',
+    #             'df_finals': self.depol_finals,
+    #             'row_idx': 0,
+    #             'row_label': 'Depolarizing',
+    #             'subplot_label': ['a', 'b']
+    #         },
+    #         {
+    #             'type': 'dephasing_untwirled',
+    #             'df_finals': self.dephase_untwirled_finals,
+    #             'row_idx': 1,
+    #             'row_label': 'Dephasing (Untwirled)',
+    #             'subplot_label': ['c', 'd']
+    #         },
+    #         {
+    #             'type': 'dephasing_globalTwirl',
+    #             'df_finals': self.global_dephase_finals,
+    #             'row_idx': 2,
+    #             'row_label': 'Dephasing (Global Twirl)',
+    #             'subplot_label': ['e', 'f']
+    #         },
+    #         {
+    #             'type': 'dephasing_fullTwirl',
+    #             'df_finals': self.dephase_twirled_finals,
+    #             'row_idx': 3,
+    #             'row_label': 'Dephasing (Full Twirl)',
+    #             'subplot_label': ['g', 'h']
+    #         },
+    #     ]
+
+    #     # M values to plot - only M=1 and M=5
+    #     M_values = [1, 5]
+
+    #     for noise_config in noise_configs:
+    #         df = noise_config['df_finals']
+    #         row_idx = noise_config['row_idx']
+    #         noise_type = noise_config['type']
+
+    #         if df.empty:
+    #             # If no data for this noise type, show empty row with message
+    #             for col_idx in range(2):
+    #                 ax = axes[row_idx, col_idx]
+    #                 ax.text(
+    #                     0.5, 0.5, f'No {noise_type}\ndata',
+    #                     horizontalalignment='center', verticalalignment='center',
+    #                     transform=ax.transAxes, fontsize=14, alpha=0.7
+    #                 )
+    #                 if col_idx == 0:
+    #                     ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
+    #                 if row_idx == 3:  # Bottom row
+    #                     ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+    #             continue
+
+    #         # Plot each M value
+    #         for col_idx, M in enumerate(M_values):
+    #             ax = axes[row_idx, col_idx]
+
+    #             # Filter for this M value
+    #             df_M = df[df['M'] == M].copy()
+
+    #             # Add subplot label
+    #             ax.text(
+    #                 0.98, 0.98, noise_config['subplot_label'][col_idx],
+    #                 transform=ax.transAxes, fontsize=28,
+    #                 fontweight='bold', fontfamily='sans-serif', va='top', ha='right'
+    #             )
+
+    #             if df_M.empty:
+    #                 ax.text(
+    #                     0.5, 0.5, f'No data\nfor M={M}',
+    #                     horizontalalignment='center', verticalalignment='center',
+    #                     transform=ax.transAxes, fontsize=12, alpha=0.7
+    #                 )
+    #             else:
+    #                 # Get unique N values for this M
+    #                 N_values = sorted(df_M['N'].unique())
+    #                 colors = [
+    #                     'red', 'green', 'blue', 'orange', 'purple', 'saddlebrown',
+    #                     'deeppink', 'darkslategrey', 'fuchsia', 'gold'
+    #                 ]
+
+    #                 # Plot curves for different N values
+    #                 for i, N in enumerate(N_values):
+    #                     df_N = df_M[df_M['N'] == N].sort_values('p_channel')
+    #                     if len(df_N) == 0:
+    #                         continue
+
+    #                     fidelity = 1 - df_N['eps_L_final']
+    #                     ax.plot(
+    #                         df_N['p_channel'], fidelity,
+    #                         linestyle='-', marker=_mk(i),
+    #                         color=colors[i % len(colors)], linewidth=2, markersize=12,
+    #                         label=rf'$\ell$ = {int(np.log2(N))}', alpha=0.8
+    #                     )
+
+    #                 # Axis limits/scales (keep identical to your previous behavior)
+    #                 ax.set_xlim(0.09, 1.0)
+    #                 ax.set_ylim(1e-3, 1.0)
+    #                 ax.set_xscale('linear')
+    #                 ax.set_yscale('linear')
+    #                 ax.set_xticks([0.2, 0.4, 0.6, 0.8, 1.0])
+
+    #                 # Make M=5 column log-y, as before
+    #                 if col_idx == 1:
+    #                     ax.set_yscale('log')
+
+    #                 # Legend only once (bottom right), as before logic but now bottom row is row_idx==3
+    #                 if row_idx == 3 and col_idx == 1 and len(N_values) > 0:
+    #                     ax.legend(fontsize=16, loc='lower left', ncols=2, frameon=False)
+
+    #             # Subplot titles (M values) only on top row
+    #             if row_idx == 0:
+    #                 ax.set_title(f'M = {M}', fontsize=40)
+
+    #             # Y-axis label only on first column
+    #             if col_idx == 0:
+    #                 ax.set_ylabel(r'Fidelity, $F$', fontsize=35)
+
+    #             # X-axis label only on bottom row
+    #             if row_idx == 3:
+    #                 ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
+
+    #     # Add row labels (left margin)
+    #     fig.text(0.02, 0.87, 'Depolarizing Noise', rotation=90, fontsize=25,
+    #             verticalalignment='center', weight='bold')
+    #     fig.text(0.02, 0.64, 'Untwirled Dephasing', rotation=90, fontsize=25,
+    #             verticalalignment='center', weight='bold')
+    #     fig.text(0.02, 0.41, 'Global-Twirled Dephasing', rotation=90, fontsize=25,
+    #             verticalalignment='center', weight='bold')
+    #     fig.text(0.02, 0.18, 'Full-Twirled Dephasing', rotation=90, fontsize=25,
+    #             verticalalignment='center', weight='bold')
+
+    #     plt.tight_layout()
+    #     plt.subplots_adjust(left=0.18)  # Make room for row labels
+
+    #     filename = f"fidelity_combined_M_4rows_globalTwirl.{save_format}"
+    #     filepath = self.figures_dir / filename
+    #     plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    #     plt.close()
+
+    #     print(f"Saved {filename}")
+    #     return str(filepath)
+    
+    
+    
     def plot_fidelity_combined_M_mini_4x2(self, save_format: str = 'pdf') -> Optional[str]:
         """
         Combined fidelity plots: 4x2 grid with:
         Row 1: depolarizing
-        Row 2: dephasing (untwirled)
-        Row 3: dephasing (GLOBAL twirl)
+        Row 2: dephasing (untwirled)  
+        Row 3: dephasing (GLOBAL twirl) - FIXED to use iteration==1 data
         Row 4: dephasing (FULL twirl)
 
         Each column represents M=1 and M=5 only.
@@ -829,7 +1000,7 @@ class SimulationPlotter:
         """
         # Check if we have *any* data
         if (self.depol_finals.empty and self.dephase_untwirled_finals.empty and
-            self.global_dephase_finals.empty and self.dephase_twirled_finals.empty):
+            self.global_dephase_steps.empty and self.dephase_twirled_finals.empty):
             print("No data for fidelity plots")
             return None
 
@@ -840,31 +1011,43 @@ class SimulationPlotter:
         noise_configs = [
             {
                 'type': 'depolarizing',
-                'df_finals': self.depol_finals,
+                'df_data': self.depol_finals,
                 'row_idx': 0,
                 'row_label': 'Depolarizing',
-                'subplot_label': ['a', 'b']
+                'subplot_label': ['a', 'b'],
+                'use_finals': True  # Use final iteration data
             },
             {
                 'type': 'dephasing_untwirled',
-                'df_finals': self.dephase_untwirled_finals,
+                'df_data': self.dephase_untwirled_finals,
                 'row_idx': 1,
                 'row_label': 'Dephasing (Untwirled)',
-                'subplot_label': ['c', 'd']
+                'subplot_label': ['c', 'd'],
+                'use_finals': True  # Use final iteration data
             },
+            # {
+            #     'type': 'dephasing_globalTwirl',
+            #     'df_data': self.global_dephase_steps,  # FIXED: Use steps data
+            #     'row_idx': 2,
+            #     'row_label': 'Dephasing (Global Twirl)',
+            #     'subplot_label': ['e', 'f'],
+            #     'use_finals': False  # FIXED: Use iteration==1 data
+            # },
             {
-                'type': 'dephasing_globalTwirl',
-                'df_finals': self.global_dephase_finals,
+                'type': 'dephasing_subsetTwirl',
+                'df_data': self.subsetTwirl_dephase_steps,  # FIXED: Use steps data
                 'row_idx': 2,
-                'row_label': 'Dephasing (Global Twirl)',
-                'subplot_label': ['e', 'f']
+                'row_label': 'Dephasing (Subset Twirl)', 
+                'subplot_label': ['e', 'f'],
+                'use_finals': False  # FIXED: Use iteration==1 data
             },
             {
                 'type': 'dephasing_fullTwirl',
-                'df_finals': self.dephase_twirled_finals,
+                'df_data': self.dephase_twirled_finals,
                 'row_idx': 3,
                 'row_label': 'Dephasing (Full Twirl)',
-                'subplot_label': ['g', 'h']
+                'subplot_label': ['g', 'h'],
+                'use_finals': True  # Use final iteration data
             },
         ]
 
@@ -872,9 +1055,10 @@ class SimulationPlotter:
         M_values = [1, 5]
 
         for noise_config in noise_configs:
-            df = noise_config['df_finals']
+            df = noise_config['df_data']
             row_idx = noise_config['row_idx']
             noise_type = noise_config['type']
+            use_finals = noise_config['use_finals']
 
             if df.empty:
                 # If no data for this noise type, show empty row with message
@@ -890,6 +1074,11 @@ class SimulationPlotter:
                     if row_idx == 3:  # Bottom row
                         ax.set_xlabel(r'Physical Error Rate, $p$', fontsize=35)
                 continue
+
+            # FIXED: Different data processing for row 3 (global twirl)
+            if not use_finals:
+                # For row 3: Filter for iteration==1 from steps data
+                df = df[df['iteration'] == 1].copy()
 
             # Plot each M value
             for col_idx, M in enumerate(M_values):
@@ -912,25 +1101,65 @@ class SimulationPlotter:
                         transform=ax.transAxes, fontsize=12, alpha=0.7
                     )
                 else:
-                    # Get unique N values for this M
-                    N_values = sorted(df_M['N'].unique())
+                    # FIXED: Different column names for steps vs finals data
+                    if use_finals:
+                        # For finals data (rows 1, 2, 4)
+                        N_values = sorted(df_M['N'].unique())
+                        p_col = 'p_channel'
+                        fidelity_col = 'eps_L_final'  # Will convert: 1 - eps_L_final
+                    else:
+                        # For steps data (row 3) - adjust column names as needed
+                        N_values = sorted(df_M['purification_level'].unique()) if 'purification_level' in df_M.columns else sorted(df_M['N'].unique())
+                        p_col = 'p' if 'p' in df_M.columns else 'p_channel'
+                        # Use fidelity directly if available, otherwise convert from error
+                        if 'fidelity' in df_M.columns:
+                            fidelity_col = 'fidelity'
+                            convert_from_error = False
+                        else:
+                            # Assume there's an error column to convert from
+                            possible_error_cols = ['eps_L', 'eps_L_final', 'error']
+                            fidelity_col = None
+                            for col in possible_error_cols:
+                                if col in df_M.columns:
+                                    fidelity_col = col
+                                    break
+                            if fidelity_col is None:
+                                fidelity_col = 'fidelity'  # Fallback
+                            convert_from_error = True
+
                     colors = [
                         'red', 'green', 'blue', 'orange', 'purple', 'saddlebrown',
                         'deeppink', 'darkslategrey', 'fuchsia', 'gold'
                     ]
 
-                    # Plot curves for different N values
+                    # Plot curves for different N/purification_level values
                     for i, N in enumerate(N_values):
-                        df_N = df_M[df_M['N'] == N].sort_values('p_channel')
+                        if use_finals:
+                            df_N = df_M[df_M['N'] == N].sort_values(p_col)
+                            ell_label = int(np.log2(N))
+                        else:
+                            # For steps data, use purification_level directly
+                            if 'purification_level' in df_M.columns:
+                                df_N = df_M[df_M['purification_level'] == N].sort_values(p_col)
+                                ell_label = N
+                            else:
+                                df_N = df_M[df_M['N'] == N].sort_values(p_col)
+                                ell_label = int(np.log2(N)) if N > 0 else N
+
                         if len(df_N) == 0:
                             continue
 
-                        fidelity = 1 - df_N['eps_L_final']
+                        # Calculate fidelity
+                        if use_finals or (not use_finals and 'convert_from_error' in locals() and convert_from_error):
+                            fidelity = 1 - df_N[fidelity_col]
+                        else:
+                            fidelity = df_N[fidelity_col]
+
                         ax.plot(
-                            df_N['p_channel'], fidelity,
+                            df_N[p_col], fidelity,
                             linestyle='-', marker=_mk(i),
                             color=colors[i % len(colors)], linewidth=2, markersize=12,
-                            label=rf'$\ell$ = {int(np.log2(N))}', alpha=0.8
+                            label=rf'$\ell$ = {ell_label}', alpha=0.8
                         )
 
                     # Axis limits/scales (keep identical to your previous behavior)
@@ -944,7 +1173,7 @@ class SimulationPlotter:
                     if col_idx == 1:
                         ax.set_yscale('log')
 
-                    # Legend only once (bottom right), as before logic but now bottom row is row_idx==3
+                    # Legend only once (bottom right)
                     if row_idx == 3 and col_idx == 1 and len(N_values) > 0:
                         ax.legend(fontsize=16, loc='lower left', ncols=2, frameon=False)
 
@@ -965,7 +1194,7 @@ class SimulationPlotter:
                 verticalalignment='center', weight='bold')
         fig.text(0.02, 0.64, 'Untwirled Dephasing', rotation=90, fontsize=25,
                 verticalalignment='center', weight='bold')
-        fig.text(0.02, 0.41, 'Global-Twirled Dephasing', rotation=90, fontsize=25,
+        fig.text(0.02, 0.41, 'Approx. Twirled Dephasing', rotation=90, fontsize=25,
                 verticalalignment='center', weight='bold')
         fig.text(0.02, 0.18, 'Full-Twirled Dephasing', rotation=90, fontsize=25,
                 verticalalignment='center', weight='bold')
@@ -973,7 +1202,7 @@ class SimulationPlotter:
         plt.tight_layout()
         plt.subplots_adjust(left=0.18)  # Make room for row labels
 
-        filename = f"fidelity_combined_M_4rows_globalTwirl.{save_format}"
+        filename = f"fidelity_combined_M_4rows_subsetTwirl.{save_format}"
         filepath = self.figures_dir / filename
         plt.savefig(filepath, dpi=300, bbox_inches='tight')
         plt.close()
