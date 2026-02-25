@@ -243,7 +243,7 @@ class SubsetTwirlingPlotter:
                         ax.plot(x, y, linestyle='dotted', marker=_mk(j), 
                             color=colors[j % len(colors)], linewidth=2, markersize=12, 
                             alpha=0.8, label=rf'No QEC')
-                    else:
+                    elif l_val <= 3:
                         ax.plot(x, y, linestyle='-', marker=_mk(j), 
                             color=colors[j % len(colors)], linewidth=2, markersize=12, 
                             alpha=0.8, label=rf'$\ell$ = {l_val}')
@@ -345,13 +345,14 @@ class SubsetTwirlingPlotter:
                     else:
                         label = rf'$\ell={l_val}$'
                     
-                    line, = ax.plot(df_main['p'], df_main['gamma'],
-                                linestyle=linestyle, marker=_mk(cidx),
-                                linewidth=2.5, markersize=12, alpha=0.85,
-                                color=colors[cidx % len(colors)],
-                                label=label)
-                    handles.append(line)
-                    labels.append(label)
+                    if l_val <= 3:
+                        line, = ax.plot(df_main['p'], df_main['gamma'],
+                                    linestyle=linestyle, marker=_mk(cidx),
+                                    linewidth=2.5, markersize=12, alpha=0.85,
+                                    color=colors[cidx % len(colors)],
+                                    label=label)
+                        handles.append(line)
+                        labels.append(label)
                 
                 # Legend only on M=1 (left plot)
                 if M == 1:
@@ -386,9 +387,10 @@ class SubsetTwirlingPlotter:
                         if mask.sum() < 2:
                             continue
                         
-                        axins.plot(x[mask], y[mask], linestyle=linestyle, marker=_mk(cidx),
-                                linewidth=2.0, markersize=6, alpha=0.9,
-                                color=colors[cidx % len(colors)])
+                        if l_val <= 3:
+                            axins.plot(x[mask], y[mask], linestyle=linestyle, marker=_mk(cidx),
+                                    linewidth=2.0, markersize=6, alpha=0.9,
+                                    color=colors[cidx % len(colors)])
                     
                     # Inset formatting
                     axins.set_xlim(p_min_zoom, p_max_zoom)
@@ -401,7 +403,7 @@ class SubsetTwirlingPlotter:
                     axins.set_ylim(ymin, ymax)
                     
                     # Inset tick formatting
-                    axins.tick_params(axis='both', which='major', labelsize=10)
+                    axins.tick_params(axis='both', which='major', labelsize=15)
                     axins.yaxis.set_major_locator(mticker.LogLocator(base=10.0, subs=(1.0, 2.0, 5.0)))
                     axins.yaxis.set_major_formatter(mticker.LogFormatterSciNotation(base=10.0))
                     axins.yaxis.set_minor_locator(mticker.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1))

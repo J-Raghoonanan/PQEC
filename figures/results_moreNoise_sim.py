@@ -2582,7 +2582,7 @@ class IterativePurificationPlotter:
                     axins.set_ylim(ymin, ymax)
                     
                     # Inset tick formatting
-                    axins.tick_params(axis='both', which='major', labelsize=10)
+                    axins.tick_params(axis='both', which='major', labelsize=15)
                     axins.yaxis.set_major_locator(mticker.LogLocator(base=10.0, subs=(1.0, 2.0, 5.0)))
                     axins.yaxis.set_major_formatter(mticker.LogFormatterSciNotation(base=10.0))
                     axins.yaxis.set_minor_locator(mticker.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1))

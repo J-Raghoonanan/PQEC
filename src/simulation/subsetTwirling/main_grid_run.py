@@ -90,7 +90,7 @@ TARGET_KIND: StateKind = StateKind.hadamard  # change to StateKind.haar for rand
 # TARGET_KIND: StateKind = StateKind.single_qubit_product
 BACKEND_METHOD: str = "density_matrix"
 # L_LIST: List[int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-L_LIST: List[int] = [0, 1, 2, 3]
+L_LIST: List[int] = [4, 5, 6, 7, 8, 9, 10]
 
 # AA configuration (emulated)
 AA = AASpec(target_success=0.99, max_iters=32, use_postselection_only=False)

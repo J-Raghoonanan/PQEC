@@ -1155,12 +1155,23 @@ class SimulationPlotter:
                         else:
                             fidelity = df_N[fidelity_col]
 
-                        ax.plot(
-                            df_N[p_col], fidelity,
-                            linestyle='-', marker=_mk(i),
-                            color=colors[i % len(colors)], linewidth=2, markersize=12,
-                            label=rf'$\ell$ = {ell_label}', alpha=0.8
-                        )
+                        if noise_config['type'] == 'dephasing_subsetTwirl' and ell_label == 0:
+                            # Skip plotting the N=1 curve for subset twirl dephasing (as per your original logic)
+                            continue
+                        elif noise_config['type'] == 'dephasing_subsetTwirl' and ell_label > 0:
+                            ax.plot(
+                                df_N[p_col], fidelity,
+                                linestyle='-', marker=_mk(i-1),  # Shift marker index for subset twirl to keep colors consistent
+                                color=colors[i-1 % len(colors)], linewidth=2, markersize=12,
+                                label=rf'$\ell$ = {ell_label}', alpha=0.8
+                            )
+                        else:
+                            ax.plot(
+                                df_N[p_col], fidelity,
+                                linestyle='-', marker=_mk(i),
+                                color=colors[i % len(colors)], linewidth=2, markersize=12,
+                                label=rf'$\ell$ = {ell_label}', alpha=0.8
+                            )
 
                     # Axis limits/scales (keep identical to your previous behavior)
                     ax.set_xlim(0.09, 1.0)
@@ -1209,6 +1220,141 @@ class SimulationPlotter:
 
         print(f"Saved {filename}")
         return str(filepath)
+    
+    
+    def plot_psuccess_grid_vs_depth_mini(self, noise_type: str, save_format: str = 'pdf') -> Optional[str]:
+        """
+        2x2 grid showing success probability vs purification level for specific p values.
+        Each subplot shows curves for different M values at fixed p.
+        Now supports three types: 'depolarizing', 'dephasing_untwirled', 'dephasing_twirled'
+        """
+        # Select data based on noise type
+        if noise_type == 'depolarizing':
+            df = self.depol_steps
+            target_p_values = [0.1, 0.3, 0.7, 0.8]
+            title_suffix = "Depolarizing"
+            filename_suffix = "depolarizing"
+        elif noise_type == 'dephasing_untwirled':
+            df = self.dephase_untwirled_steps
+            target_p_values = [0.1, 0.3, 0.5, 0.6]
+            title_suffix = "Dephasing (Untwirled)"
+            filename_suffix = "dephasing_untwirled"
+        elif noise_type == 'dephasing_twirled':
+            df = self.dephase_twirled_steps
+            target_p_values = [0.1, 0.3, 0.7, 0.8]
+            title_suffix = "Dephasing (Twirled)"
+            filename_suffix = "dephasing_twirled"
+        else:
+            print(f"Unknown noise type: {noise_type}")
+            return None
+
+        if df.empty:
+            print(f"No steps data for {noise_type}")
+            return None
+
+        # Use max N
+        max_N = df['N'].max()
+        df_N = df[df['N'] == max_N].copy()
+
+        # Find closest p values in data for each target p
+        available_ps = df_N['p_channel'].unique()
+        ps = []
+        for target_p in target_p_values:
+            closest_p = min(available_ps, key=lambda x: abs(x - target_p))
+            # Only use if within reasonable tolerance (0.05)
+            if abs(closest_p - target_p) <= 0.05:
+                ps.append(closest_p)
+            else:
+                print(f"Warning: No data found close to p={target_p:.1f} for {noise_type}")
+        
+        if len(ps) == 0:
+            print(f"No valid p values found for {noise_type}")
+            return None
+
+        # Get unique M values
+        M_values = sorted(df_N['M'].unique())
+        colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'cyan']
+        subplot_labels = ['a', 'b', 'c', 'd']
+
+        # Create 2x2 subplot grid
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+        # Flatten axes for easier iteration
+        axes_flat = axes.flatten()
+
+        for plot_idx, p in enumerate(ps):
+            if plot_idx >= 4:  # Safety check for 2x2 grid
+                break
+                
+            ax = axes_flat[plot_idx]
+            df_p = df_N[df_N['p_channel'] == p].copy()
+
+            # Plot curves for each M value
+            for i, M in enumerate(M_values):
+                df_M = df_p[df_p['M'] == M].copy()
+                
+                if len(df_M) > 0:
+                    # Group by depth and take mean P_success
+                    evolution = df_M.groupby('depth')['P_success'].mean().reset_index()
+                    
+                    if len(evolution) > 0:
+                        ax.plot(evolution['depth'], evolution['P_success'],
+                            linestyle='-', marker=_mk(i),
+                            color=colors[i], linewidth=2, markevery=1, markersize=12,
+                            label=f'M = {M}', alpha=0.8)
+
+            # Subplot formatting
+            ax.set_title(f'$p = {p:.2f}$', fontsize=30)
+            ax.set_ylim(6e-1, 1.0)
+            ax.set_yscale('log')
+            ax.set_xticks([2, 4, 6, 8, 10])
+            
+            # Add legend to top-left subplot
+            if plot_idx == 0:
+                ax.legend(fontsize=20, loc='lower right', frameon=False)
+                
+            # Y-axis label only on first column
+            if plot_idx == 0 or plot_idx == 2:
+                ax.set_ylabel(r'$P_{\mathrm{success}}$', fontsize=40)
+                
+            # X-axis label only on bottom row
+            if plot_idx == 2 or plot_idx == 3:
+                ax.set_xlabel(r'Purification Rounds, $\ell$', fontsize=40)
+                
+            # Add subplot label 
+            if plot_idx == 0:
+                ax.text(0.08, 0.04, subplot_labels[plot_idx], transform=ax.transAxes, fontsize=28, 
+                    fontweight='bold', fontfamily='sans-serif', va='bottom', ha='right')
+            else:
+                ax.text(0.08, 0.98, subplot_labels[plot_idx], transform=ax.transAxes, fontsize=28, 
+                        fontweight='bold', fontfamily='sans-serif', va='top', ha='right')
+
+        # Hide unused subplots (if less than 4 p values found)
+        for plot_idx in range(len(ps), 4):
+            axes_flat[plot_idx].set_visible(False)
+
+        plt.tight_layout()
+
+        filename = f"psuccess_grid_vs_depth_{filename_suffix}.{save_format}"
+        filepath = self.figures_dir / filename
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+
+        print(f"Saved {filename}")
+        return str(filepath)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 
 
@@ -1275,6 +1421,11 @@ class SimulationPlotter:
         print("\n1b. Fidelity grid vs purification level (GlobalTwirl datasets)...")
         plots['fidelity_grid_globalTwirl_dephase_z'] = self.plot_fidelity_grid_vs_depth_globalTwirl("dephase_z", save_format)
         plots['fidelity_grid_globalTwirl_depolarizing'] = self.plot_fidelity_grid_vs_depth_globalTwirl("depolarizing", save_format)
+        
+        print("\n3. Success probability grid vs purification level...")
+        plots['psuccess_grid_depol'] = self.plot_psuccess_grid_vs_depth_mini('depolarizing', save_format)
+        plots['psuccess_grid_dephase_untwirled'] = self.plot_psuccess_grid_vs_depth_mini('dephasing_untwirled', save_format)
+        plots['psuccess_grid_dephase_twirled'] = self.plot_psuccess_grid_vs_depth_mini('dephasing_twirled', save_format)
         
         # Summary
         successful = [name for name, path in plots.items() if path is not None]
