@@ -1,7 +1,11 @@
-# requirements.txt
-numpy>=1.20.0
-pandas>=1.3.0
-matplotlib>=3.5.0
-seaborn>=0.11.0
-scipy>=1.7.0
-dataclasses>=0.6; python_version<"3.7"
+# Core numerics and data
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Quantum simulation
+qiskit>=1.0.0          # DensityMatrix, Statevector, Kraus, partial_trace, state preparation
+                       # qiskit-aer is NOT required — simulations run at the density-matrix level
+
+# Figures
+matplotlib>=3.7.0
+seaborn>=0.12.0
