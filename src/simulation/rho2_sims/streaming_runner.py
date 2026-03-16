@@ -430,7 +430,7 @@ def run_and_save(spec: RunSpec) -> Tuple[Path, Path]:
     if spec.noise.noise_type.value == NoiseType.dephase_z and spec.target.kind.value == "product":
         suffix += f"_theta_phi"
     if spec.noise.noise_type.value == NoiseType.dephase_z and spec._should_apply_twirling():
-        suffix += f"_twirl"
+        suffix += f"_twirled"
     elif spec.noise.noise_type.value == NoiseType.dephase_z and not spec._should_apply_twirling():
         suffix += f"_no_twirl"
         

@@ -75,8 +75,6 @@ class Rho2Plotter:
         
         self.dephase_approx_steps = self._load_csv('steps_rho2_dephase_z_subset0.20.csv')
         self.dephase_approx_finals = self._load_csv('finals_rho2_dephase_z_subset0.20.csv')
-        # self.dephase_approx_steps = self._load_csv('steps_rho2_dephase_z_twirl.csv')
-        # self.dephase_approx_finals = self._load_csv('finals_rho2_dephase_z_twirl.csv')
         
         print(f"Loaded rho2 data:")
         print(f"  Depolarizing steps: {len(self.depol_steps)} rows")
@@ -785,7 +783,6 @@ class Rho2Plotter:
         print("\n1. Fidelity vs purification rounds (iteration==1)...")
         plots['fidelity_vs_ell_iter1_depol'] = self.plot_fidelity_vs_purification_rounds_iteration1('depolarizing', save_format)
         plots['fidelity_vs_ell_iter1_dephase'] = self.plot_fidelity_vs_purification_rounds_iteration1('untwirled_dephasing', save_format)
-        plots['fidelity_vs_ell_iter1_dephase_approx'] = self.plot_fidelity_vs_purification_rounds_iteration1('approx_twirled_dephasing', save_format)
         plots['fidelity_vs_ell_iter1_dephase_twirled'] = self.plot_fidelity_vs_purification_rounds_iteration1('theta_phi_dephasing', save_format)
         
         # Plot 2: Combined fidelity (4x2 grid: all noise types vs M=1,5)
