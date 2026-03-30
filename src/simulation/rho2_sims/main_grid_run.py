@@ -52,7 +52,7 @@ Usage examples:
     python -m src.simulation.rho2_sims.main_grid_run \
         --out data/rho2_sim \
         --noise z \
-        --m-values 1 2 3 45 \
+        --m-values 1 2 3 4 5 \
         --iterative \
         --no-twirl \
         --target single_qubit_product
