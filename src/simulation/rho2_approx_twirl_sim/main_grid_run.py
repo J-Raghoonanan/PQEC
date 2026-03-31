@@ -1,15 +1,23 @@
 """
-Main entry point for rho2 grid sweep simulations.
+Main entry point for rho2 approximate-twirl grid sweep simulations.
 
 This script uses density-matrix simulations and implements rho2 purification
-(ρ → ρ²/Tr(ρ²)) with optional approximate Clifford twirling for resource
-efficiency when dealing with dephasing noise.
+(ρ → ρ²/Tr(ρ²)) with approximate Clifford twirling for resource efficiency
+when dealing with dephasing noise.
 
 rho2 FEATURES:
 - Deterministic purification: ρ → ρ²/Tr(ρ²)
 - No amplitude amplification needed (deterministic operation)
 - Approximate Clifford twirling for dephasing noise mitigation
   (subset_fraction = 1.0 → exact full twirl; < 1.0 → approximate)
+
+SWEEP STRUCTURE  (mirrors rho2_sims):
+  M ∈ {2, 3, 4}  →  N_LIST = [2]          (1 cycle only)
+                     L_LIST = [0..10]       (full purification-level range)
+
+  M ∈ {1, 5}     →  N_LIST = [2..1024]     (full cycle range)
+                     N = 2  : L_LIST = [0..10]   (full)
+                     N > 2  : L_LIST = [0..5]    (reduced)
 
 CHOICES (documented):
 - We cap M at 6 by default (memory grows quickly with density matrices)
@@ -35,7 +43,7 @@ import argparse
 import logging
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import numpy as np
 
 from .configs import (
@@ -57,33 +65,85 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# -----------------------------
-# Defaults for the sweep
-# -----------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Sweep parameter constants
+# ─────────────────────────────────────────────────────────────────────────────
+
 M_LIST: List[int] = [1, 2, 3, 4, 5]
-# N_LIST: List[int] = [4, 8, 16, 32, 64, 128, 256, 512, 1024]
-N_LIST: List[int] = [2]
-# P_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-P_LIST: List[float] = [0.75]
+
+# M values that receive the full N sweep (many cycles)
+M_FULL_SWEEP   = {1, 5}
+# M values restricted to a single cycle (N=2 only)
+M_SINGLE_CYCLE = {2, 3, 4}
+
+# N lists
+N_LIST_FULL:   List[int] = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+N_LIST_SINGLE: List[int] = [2]
+
+# L (purification-level) lists
+L_LIST_FULL:  List[int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+L_LIST_SHORT: List[int] = [0, 1, 2, 3, 4, 5]   # used for M∈{1,5} when N > 2
+
+P_LIST: List[float] = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 NOISES: List[NoiseType] = [NoiseType.depolarizing, NoiseType.dephase_z]
-TARGET_KIND: StateKind = StateKind.hadamard
-BACKEND_METHOD: str = "density_matrix"
-L_LIST: List[int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # ℓ parameter
+TARGET_KIND: StateKind  = StateKind.hadamard
+BACKEND_METHOD: str     = "density_matrix"
 
 # AA configuration (not used for rho2, but kept for API compatibility)
 AA = AASpec(target_success=0.99, max_iters=32, use_postselection_only=False)
 
 
-# -----------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Sweep-schedule helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _n_list_for(M: int) -> List[int]:
+    """Return the N sweep list appropriate for qubit count M."""
+    return N_LIST_FULL if M in M_FULL_SWEEP else N_LIST_SINGLE
+
+
+def _l_list_for(M: int, N: int) -> List[int]:
+    """Return the L sweep list appropriate for (M, N).
+
+    M ∈ {2,3,4}             →  L_LIST_FULL   [0..10]
+    M ∈ {1,5},  N = 2       →  L_LIST_FULL   [0..10]
+    M ∈ {1,5},  N > 2       →  L_LIST_SHORT  [0..5]
+    """
+    if M in M_FULL_SWEEP and N > 2:
+        return L_LIST_SHORT
+    return L_LIST_FULL
+
+
+def _count_total_runs(
+    noises: List[NoiseType],
+    Ms: List[int],
+    ps: List[float],
+) -> int:
+    """Compute total run count given M-dependent N and L schedules."""
+    count = 0
+    for _noise in noises:
+        for M in Ms:
+            for N in _n_list_for(M):
+                count += len(ps) * len(_l_list_for(M, N))
+    return count
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CLI
-# -----------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 
 def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Grid sweep for rho2 simulation with subset twirling")
-    p.add_argument("--out", type=Path, default=Path("data/rho2_sim"), help="Output directory for CSVs")
-    p.add_argument("--max-m", type=int, default=5, help="Maximum M to include (≤ 6 recommended)")
-    p.add_argument("--m-values", type=int, nargs='+', help="Specific M values (e.g., --m-values 1 5)")
-    p.add_argument("--seed", type=int, default=1, help="Seed for target-state generation")
+    p = argparse.ArgumentParser(
+        description="Grid sweep for rho2 simulation with approximate Clifford twirling"
+    )
+    p.add_argument("--out", type=Path, default=Path("data/rho2_sim"),
+                   help="Output directory for CSVs")
+    p.add_argument("--max-m", type=int, default=5,
+                   help="Maximum M to include (≤ 6 recommended)")
+    p.add_argument("--m-values", type=int, nargs='+',
+                   help="Specific M values (e.g., --m-values 1 5)")
+    p.add_argument("--seed", type=int, default=1,
+                   help="Seed for target-state generation")
     p.add_argument(
         "--noise",
         choices=["all", "depol", "z", "x"],
@@ -123,7 +183,7 @@ def _parse_args() -> argparse.Namespace:
         "--subset-seed",
         type=int,
         default=None,
-        help="Seed for subset selection (for reproducibility; None → use --seed)",
+        help="Seed for subset selection (for reproducibility; None → falls back to --seed)",
     )
     p.add_argument(
         "--verbose",
@@ -133,18 +193,19 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--quick",
         action="store_true",
-        help="Run a quick test with reduced parameter space",
+        help="Quick smoke-test: reduced M, N, p, L parameter space",
     )
     p.add_argument(
         "--iterative",
         action="store_true",
-        help="Enable iterative noise mode: apply fresh noise before each rho2 round",
+        help="Apply fresh noise before each rho2 round (recommended)",
     )
     p.add_argument(
         "--purification-level",
         type=int,
-        default=1,
-        help="Number of rho2 purification rounds per iteration (ℓ parameter)",
+        default=None,
+        help="Pin ℓ to a single value rather than sweeping L_LIST "
+             "(overrides the M/N-dependent L schedule)",
     )
     p.add_argument(
         "--theta",
@@ -162,20 +223,16 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _pick_noises(flag: str) -> List[NoiseType]:
-    if flag == "all":
-        return NOISES
-    if flag == "depol":
-        return [NoiseType.depolarizing]
-    if flag == "z":
-        return [NoiseType.dephase_z]
-    if flag == "x":
-        return [NoiseType.dephase_x]
+    if flag == "all":    return NOISES
+    if flag == "depol":  return [NoiseType.depolarizing]
+    if flag == "z":      return [NoiseType.dephase_z]
+    if flag == "x":      return [NoiseType.dephase_x]
     raise ValueError(flag)
 
 
-# -----------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Main sweep
-# -----------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     args = _parse_args()
@@ -198,19 +255,19 @@ def main() -> None:
         Ms = [m for m in M_LIST if m <= args.max_m]
         logger.info(f"Using M range: 1 to {args.max_m}")
 
-    if args.quick:
-        logger.info("QUICK TEST MODE: reduced parameter space")
-        Ms = Ms[:2] if args.m_values else [1, 5]
-        Ns = [4, 16, 64]
-        ps = [0.1, 0.5, 0.9]
-        Ls = [0, 1]
-    else:
-        Ns = N_LIST
-        ps = P_LIST
-        Ls = L_LIST
+    # --purification-level pins ℓ to a single value, bypassing the schedule
+    fixed_ell: Optional[int] = args.purification_level
 
-    # Use args.subset_seed from the CLI (may be None, meaning fall back to args.seed
-    # inside noise_engine via twirl_seed=spec.target.seed).
+    # Quick mode uses small fixed lists regardless of M/N schedule
+    QUICK_N = [2, 4]
+    QUICK_L = [0, 1]
+    QUICK_P = [0.1, 0.5, 0.9]
+
+    ps = QUICK_P if args.quick else P_LIST
+    if args.quick:
+        Ms = [m for m in [1, 5] if m in Ms] or Ms[:2]
+        logger.info("QUICK TEST MODE: reduced parameter space")
+
     twirling = TwirlingSpec(
         enabled=not args.no_twirl,
         mode="cyclic",
@@ -220,28 +277,35 @@ def main() -> None:
         subset_seed=args.subset_seed,   # None → noise_engine falls back to target.seed
     )
 
-    logger.info(
-        "=" * 70 + "\n"
-        "Running rho2 grid sweep with APPROXIMATE TWIRLING:\n"
-        f"  Ms                = {Ms}\n"
-        f"  Ns                = {Ns}\n"
-        f"  ps                = {ps}\n"
-        f"  Ls (ℓ parameter)  = {Ls}\n"
-        f"  noises            = {[n.value for n in noises]}\n"
-        f"  mode              = {mode.value}\n"
-        f"  target_kind       = {target_kind.value}\n"
-        f"  backend           = {BACKEND_METHOD}\n"
-        f"  twirling          = {'enabled' if twirling.enabled else 'disabled'}\n"
-        f"  subset_fraction   = {twirling.subset_fraction:.2f}\n"
-        f"  subset_mode       = {twirling.subset_mode}\n"
-        f"  subset_seed       = {twirling.subset_seed}\n"
-        f"  iterative_mode    = {args.iterative}\n"
-        f"  out_dir           = {out_dir}\n" +
-        "=" * 70
-    )
+    # ── Summary log ──────────────────────────────────────────────────────────
+    logger.info("=" * 70)
+    logger.info("rho2 approximate-twirl grid sweep — N and L schedules:")
+    logger.info(f"  M ∈ {{1,5}}, N=2   → L = {L_LIST_FULL}")
+    logger.info(f"  M ∈ {{1,5}}, N>2   → L = {L_LIST_SHORT}")
+    logger.info(f"  M ∈ {{2,3,4}}      → N = {N_LIST_SINGLE},  L = {L_LIST_FULL}")
+    if fixed_ell is not None:
+        logger.info(f"  ℓ override        = {fixed_ell}  (--purification-level)")
+    logger.info(f"  Ms              = {Ms}")
+    logger.info(f"  ps              = {ps}")
+    logger.info(f"  noises          = {[n.value for n in noises]}")
+    logger.info(f"  target          = {target_kind.value}")
+    logger.info(f"  twirling        = {'enabled' if twirling.enabled else 'disabled'}")
+    logger.info(f"  subset_fraction = {twirling.subset_fraction:.2f}")
+    logger.info(f"  subset_mode     = {twirling.subset_mode}")
+    logger.info(f"  subset_seed     = {twirling.subset_seed}")
+    logger.info(f"  iterative       = {args.iterative}")
+    logger.info(f"  out_dir         = {out_dir}")
+    logger.info("=" * 70)
 
-    started   = time.time()
-    total_runs  = len(noises) * len(Ms) * len(Ns) * len(ps) * len(Ls)
+    # Compute total runs accurately given the variable schedule
+    if args.quick:
+        total_runs = len(noises) * len(Ms) * len(QUICK_N) * len(ps) * len(QUICK_L)
+    elif fixed_ell is not None:
+        total_runs = len(noises) * len(ps) * sum(len(_n_list_for(M)) for M in Ms)
+    else:
+        total_runs = _count_total_runs(noises, Ms, ps)
+
+    started     = time.time()
     current_run = 0
 
     for noise in noises:
@@ -253,9 +317,19 @@ def main() -> None:
                 product_theta=args.theta,
                 product_phi=args.phi,
             )
-            for N in Ns:
+
+            Ns_for_M = QUICK_N if args.quick else _n_list_for(M)
+
+            for N in Ns_for_M:
+                if fixed_ell is not None:
+                    Ls_for_N = [fixed_ell]
+                elif args.quick:
+                    Ls_for_N = QUICK_L
+                else:
+                    Ls_for_N = _l_list_for(M, N)
+
                 for p in ps:
-                    for ell in Ls:
+                    for ell in Ls_for_N:
                         current_run += 1
 
                         spec = RunSpec(
@@ -274,7 +348,10 @@ def main() -> None:
                         tag = spec.synthesize_run_id()
 
                         logger.info(f"\n{'=' * 70}")
-                        logger.info(f"Run {current_run}/{total_runs}: {tag}  (ℓ={ell})")
+                        logger.info(
+                            f"Run {current_run}/{total_runs}: {tag}  "
+                            f"(M={M}, N={N}, ℓ={ell})"
+                        )
                         logger.info(f"{'=' * 70}")
 
                         t0 = time.time()
@@ -282,11 +359,13 @@ def main() -> None:
                             run_and_save(spec)
                             logger.info(f"✓ Completed in {time.time() - t0:.1f}s\n")
                         except Exception as e:
-                            logger.error(f"✗ ERROR during {tag}: {e}\n", exc_info=True)
+                            logger.error(
+                                f"✗ ERROR during {tag}: {e}\n", exc_info=True
+                            )
 
     total = time.time() - started
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"rho2 grid sweep complete!")
+    logger.info(f"rho2 approximate-twirl grid sweep complete!")
     logger.info(f"  Total time : {total / 60:.1f} min")
     logger.info(f"  Runs       : {current_run}/{total_runs}")
     logger.info(f"  Data saved : {out_dir}")
