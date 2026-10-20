@@ -1,0 +1,47 @@
+{
+  "model": "branch-resolved noisy SWAP PQES",
+  "circuit_kind": "brickwork",
+  "M_values": [
+    1,
+    2,
+    3
+  ],
+  "p_1q_values": [
+    0.0,
+    0.001,
+    0.003,
+    0.01,
+    0.03,
+    0.1
+  ],
+  "purification_levels_per_cycle": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "cycles": 5,
+  "noise_families": [
+    "depolarizing",
+    "dephasing"
+  ],
+  "schedules": [
+    "none",
+    "interleaved",
+    "end_only"
+  ],
+  "seed": 7,
+  "rate_multipliers": {
+    "p_2q": 1.0,
+    "p_cswap": 1.0,
+    "p_memory": 1.0,
+    "p_measure": 1.0,
+    "p_reset": 1.0
+  },
+  "all_swap_branches_retained": true,
+  "signed_estimator": true,
+  "elapsed_seconds": 61.65721011161804,
+  "completed_runs": 252,
+  "failed_runs": 0,
+  "matched_schedule_pairs": 108
+}

@@ -1,0 +1,31 @@
+{
+  "simulator": "pqes_new_numerics_v1",
+  "profile": "full",
+  "seed": 31,
+  "rmse_target": 0.12,
+  "width_cap": 7,
+  "selected_tasks": [
+    "validation",
+    "readout",
+    "gate_noise",
+    "phase",
+    "placement",
+    "shots",
+    "twirling",
+    "cycles",
+    "channel_proxy",
+    "channel_physical"
+  ],
+  "implementation": "actual noisy measured instrument and coherent-control VD; VCP ideal proxy only",
+  "specifications": {
+    "data_noise": "local stochastic Pauli channel",
+    "fredkin_noise": "native 3-qubit depolarizing AFTER each elementary Fredkin",
+    "control_noise": "stochastic control Z, optional extra idle for coherent ancilla",
+    "readout": "independent classical outcome flips",
+    "memory": "Markovian Z dephasing per idle step",
+    "reset": "mix fresh state with zero-state projector on reused registers",
+    "measurement": "ideal projective O, with finite-shot parity sampling for selected cases",
+    "unit_cost": "one register-level SWAP step; M native 3-qubit Fredkins",
+    "vcp": "physical order-2 Pauli superinstrument separately benchmarked; ideal Pauli power proxy retained"
+  }
+}
