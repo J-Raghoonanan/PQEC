@@ -150,18 +150,37 @@ METRICS=(('shots','Shots at RMSE 0.03'),('total_cnot','Two-qubit gates'),('total
          ('total_spacetime','Space-time volume'))
 
 
-def _winner_map(sub,metric,capped):
+WIDTH_BUDGETS=(5,7,9,None)   # None = unconstrained (the primary result)
+
+
+def _winner_map(sub,metric,width_budget=None):
     qs=np.sort(sub.readout_q.unique());rs=np.sort(sub.idle_rate.unique())
     win=np.full((len(rs),len(qs)),np.nan);txt=np.full(win.shape,'',dtype=object)
     for yi,r in enumerate(rs):
         for xi,q in enumerate(qs):
             rr=sub[np.isclose(sub.readout_q,q)&np.isclose(sub.idle_rate,r)&_feasible(sub.feasible)]
-            if capped:rr=rr[rr.within_cap.astype(str).str.lower()=='true']
+            if width_budget is not None:rr=rr[rr.width<=width_budget]
             if rr.empty:continue
             rr=rr.sort_values([metric,'width','clock_duration'])
             best=rr.iloc[0];win[yi,xi]=ARCH.index(best.architecture);txt[yi,xi]=SHORT[best.architecture]
             if len(rr)>1 and rr.iloc[1][metric]<=1.05*best[metric]:txt[yi,xi]+='*'
     return qs,rs,win,txt
+
+
+def _heat(ax,sub,metric,budget,title,cmap):
+    qs,rs,win,txt=_winner_map(sub,metric,budget)
+    ax.imshow(win,origin='lower',aspect='auto',vmin=-.5,vmax=len(ARCH)-.5,cmap=cmap)
+    for yi in range(len(rs)):
+        for xi in range(len(qs)):ax.text(xi,yi,txt[yi,xi],ha='center',va='center',fontsize=7,color='white')
+    ax.set_xticks(range(len(qs)),[f'{q:.2f}' for q in qs],fontsize=7)
+    ax.set_yticks(range(len(rs)),[f'{r*1e3:g}' for r in rs],fontsize=7)
+    ax.set_title(title,fontsize=10,loc='left')
+    ax.set_xlabel('Readout error $q$');ax.set_ylabel(r'Idle rate ($10^{-3}$/unit)')
+
+
+def _arch_handles():
+    return [plt.Line2D([0],[0],marker='s',linestyle='',color=COLORS[a],markersize=8,
+                       label=f'{SHORT[a]}: {LABEL[a]}') for a in ARCH]
 
 
 def fig_phase(data,dest):
@@ -170,30 +189,35 @@ def fig_phase(data,dest):
     e2=.005 if np.isclose(d.eps2,.005).any() else float(d.eps2.iloc[0])
     profiles=[p for p in ('fast','slow') if (d.latency_profile==p).any()]
     cmap=ListedColormap([COLORS[a] for a in ARCH]);cmap.set_bad('#eeeeee')
-    for capped in (True,False):
-        fig,axes=plt.subplots(len(profiles),len(METRICS),figsize=(3.6*len(METRICS),3.4*len(profiles)),squeeze=False)
-        for i,lp in enumerate(profiles):
-            sub=d[np.isclose(d.eps2,e2)&(d.latency_profile==lp)]
-            for j,(metric,title) in enumerate(METRICS):
-                ax=axes[i,j];qs,rs,win,txt=_winner_map(sub,metric,capped)
-                ax.imshow(win,origin='lower',aspect='auto',vmin=-.5,vmax=len(ARCH)-.5,cmap=cmap)
-                for yi in range(len(rs)):
-                    for xi in range(len(qs)):ax.text(xi,yi,txt[yi,xi],ha='center',va='center',fontsize=7,color='white')
-                ax.set_xticks(range(len(qs)),[f'{q:.2f}' for q in qs],fontsize=7)
-                ax.set_yticks(range(len(rs)),[f'{r*1e3:g}' for r in rs],fontsize=7)
-                ax.set_title(f'({chr(97+i*len(METRICS)+j)}) {title}\n{lp} measurement',fontsize=10,loc='left')
-                ax.set_xlabel('Readout error $q$');ax.set_ylabel(r'Idle rate ($10^{-3}$/unit)')
-        handles=[plt.Line2D([0],[0],marker='s',linestyle='',color=COLORS[a],label=f'{SHORT[a]}: {LABEL[a]}',markersize=8) for a in ARCH]
-        fig.legend(handles=handles,loc='upper center',ncol=6,frameon=False,bbox_to_anchor=(.5,1.05),fontsize=8)
-        cap=f'width <= {int(d.width_cap.iloc[0])} qubits' if capped else 'no width cap'
-        fig.suptitle(f'Lowest-cost arm at RMSE 0.03 for each cost metric; M=2, N=4, eps2={e2:g}, eps1=eps2/10, {cap}. '
-                     '* = runner-up within 5%',y=1.1,fontsize=11)
-        fig.tight_layout();_save(fig,dest,'PQES_FigB_architecture_cost_map'+('' if capped else '_uncapped'))
+    widths=d.groupby('architecture').width.first().to_dict()
+    wtxt=', '.join(f'{SHORT[a]}={int(widths[a])}' for a in ARCH if a in widths)
+    # primary result: no width constraint
+    fig,axes=plt.subplots(len(profiles),len(METRICS),figsize=(3.6*len(METRICS),3.4*len(profiles)),squeeze=False)
+    for i,lp in enumerate(profiles):
+        sub=d[np.isclose(d.eps2,e2)&(d.latency_profile==lp)]
+        for j,(metric,title) in enumerate(METRICS):
+            _heat(axes[i,j],sub,metric,None,f'({chr(97+i*len(METRICS)+j)}) {title}\n{lp} measurement',cmap)
+    fig.legend(handles=_arch_handles(),loc='upper center',ncol=6,frameon=False,bbox_to_anchor=(.5,1.05),fontsize=8)
+    fig.suptitle(f'Lowest-cost arm at RMSE 0.03 for each cost metric, no width constraint; M=2, N=4, eps2={e2:g}, '
+                 f'eps1=eps2/10. Widths: {wtxt}. * = runner-up within 5%',y=1.1,fontsize=10)
+    fig.tight_layout();_save(fig,dest,'PQES_FigB_architecture_cost_map')
+    # width as an explicit budget axis (Pareto reporting)
+    slices=[(e,lp) for e in (.005,.01) for lp in profiles if (np.isclose(d.eps2,e)&(d.latency_profile==lp)).any()]
+    fig,axes=plt.subplots(len(slices),len(WIDTH_BUDGETS),figsize=(3.6*len(WIDTH_BUDGETS),3.3*len(slices)),squeeze=False)
+    for i,(e,lp) in enumerate(slices):
+        sub=d[np.isclose(d.eps2,e)&(d.latency_profile==lp)]
+        for j,wb in enumerate(WIDTH_BUDGETS):
+            lab='unconstrained' if wb is None else f'width <= {wb}'
+            _heat(axes[i,j],sub,'shots',wb,f'({chr(97+i*len(WIDTH_BUDGETS)+j)}) {lab}\neps2={e:g}, {lp} measurement',cmap)
+    fig.legend(handles=_arch_handles(),loc='upper center',ncol=6,frameon=False,bbox_to_anchor=(.5,1.03),fontsize=8)
+    fig.suptitle(f'Fewest shots at RMSE 0.03 under a width budget (blank: no arm fits and is feasible). Widths: {wtxt}',y=1.06,fontsize=10)
+    fig.tight_layout();_save(fig,dest,'PQES_FigB3_width_budgets')
     f=d[_feasible(d.feasible)&d.rmse.notna()]
-    fig,ax=plt.subplots(1,2,figsize=(11,4))
+    fig,ax=plt.subplots(1,2,figsize=(11,4));off=0
     for arch in ARCH:
         g=f[f.architecture==arch]
-        ax[0].errorbar(np.arange(len(g))+ARCH.index(arch)*len(g),g.rmse,yerr=[g.rmse-g.rmse_lo,g.rmse_hi-g.rmse],fmt='.',
+        x=off+np.arange(len(g));off+=len(g)
+        ax[0].errorbar(x,g.rmse,yerr=[g.rmse-g.rmse_lo,g.rmse_hi-g.rmse],fmt='.',
                        color=COLORS[arch],label=LABEL[arch],ms=3,elinewidth=.5)
     ax[0].axhline(float(d.rmse_target.iloc[0]),color='k',lw=1)
     _panel(ax[0],'a','Achieved RMSE at the planned shots (95% CI), all cells');ax[0].set_xlabel('cell index (grouped by arm)')
@@ -213,25 +237,25 @@ def fig_placement(data,dest):
     for i,fam in enumerate(fams):
         sub=d[(d.family==fam)&np.isclose(d.eps2,e2)&(d.latency_profile=='fast')]
         for prot in list(ARCH)+['vcp2_layerwise']:
-            cur=sub[(sub.protocol==prot)&((sub.N==4)|(sub.protocol=='vcp2_layerwise'))].sort_values('f')
-            if prot=='derangement' and cur.empty:cur=sub[(sub.protocol==prot)&(sub.N==2)].sort_values('f')
+            cur=sub[(sub.protocol==prot)&((sub.N==4)|(sub.protocol=='vcp2_layerwise'))].sort_values('f_realized')
+            if prot=='derangement' and cur.empty:cur=sub[(sub.protocol==prot)&(sub.N==2)].sort_values('f_realized')
             if cur.empty:continue
-            kw=_arch_kw(prot)
-            axes[i,0].plot(cur.f,cur.bias.abs(),**kw)
-            axes[i,1].plot(cur.f,cur.variance_coeff,**kw)
+            kw=_arch_kw(prot);x=cur.f_realized
+            axes[i,0].plot(x,cur.bias.abs(),**kw)
+            axes[i,1].plot(x,cur.variance_coeff,**kw)
             ok=cur[_feasible(cur.feasible)]
-            axes[i,2].plot(ok.f,ok.total_cnot,**kw)
-            axes[i,3].plot(cur.f,cur['rmse_lead_C10000'],**kw)
-            for col,ls in (('rmse_lead_C1000',(0,(4,2))),('rmse_lead_C100000',(0,(1,2)))):
-                axes[i,3].plot(cur.f,cur[col],color=COLORS[prot],marker=MARKER[prot],ms=3,lw=.9,ls=ls)
+            axes[i,2].plot(ok.f_realized,ok.total_cnot,**kw)
+            # budget panel: line style encodes the budget only (arm = colour + marker)
+            for col,ls,lw in (('rmse_lead_C1000','--',.9),('rmse_lead_C10000','-',1.8),('rmse_lead_C100000',':',.9)):
+                axes[i,3].plot(x,cur[col],color=COLORS[prot],marker=MARKER[prot],ms=3 if lw<1 else 6,lw=lw,ls=ls)
         axes[i,0].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
         axes[i,3].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
         L=int(sub.L.iloc[0])
         _panel(axes[i,0],chr(97+4*i),f'{fam}: |bias| (L={L} layers)',logy=True);axes[i,0].set_ylabel(r'$|\mu_A-\mu_0|$')
         _panel(axes[i,1],chr(98+4*i),f'{fam}: variance coefficient',logy=True);axes[i,1].set_ylabel('$v_A$')
         _panel(axes[i,2],chr(99+4*i),f'{fam}: two-qubit gates to RMSE 0.03',logy=True);axes[i,2].set_ylabel('total two-qubit gates')
-        _panel(axes[i,3],chr(100+4*i),f'{fam}: RMSE at C=$10^3$ (dashed), $10^4$, $10^5$ (dotted)',logy=True);axes[i,3].set_ylabel('leading RMSE')
-        for ax in axes[i]:ax.set_xlabel('compression point $L_A/L$')
+        _panel(axes[i,3],chr(100+4*i),f'{fam}: RMSE at C=$10^3$ (dashed), $10^4$ (solid), $10^5$ (dotted)',logy=True);axes[i,3].set_ylabel('leading RMSE')
+        for ax in axes[i]:ax.set_xlabel('realized compression point cut$/L$')
     h,l=axes[0,0].get_legend_handles_labels();fig.legend(h,l,loc='upper center',ncol=7,frameon=False,bbox_to_anchor=(.5,1.03))
     fig.suptitle(f'Placement at fixed total depth: M=2, N=4 (derangement N=4), eps2={e2:g}, fast measurement. '
                  'Missing points in (c,g): infeasible (|bias|>=0.03). VCP2: purify layers before the cut.',y=1.06)
@@ -304,7 +328,8 @@ def fig_cycles(data,dest):
     _panel(e,'d','SWAP tests for RMSE 0.03: $(N^t-1)S$');e.set_ylabel(r'$\log_{10}[(N^t-1)S]$')
     for ax in axes.ravel():ax.set_xlabel('nested cycles $t$')
     a.legend(fontsize=7)
-    fig.suptitle('Repeated ideal virtual cycles: formal fidelity versus the nested signed-ensemble cost')
+    fig.suptitle('Repeated ideal virtual cycles: formal fidelity vs nested signed-ensemble cost (missing: |bias|>=0.03, RMSE unreachable)\n'
+                 'local: Pauli-form p, (1-p)rho+p/3 sum P rho P;  global: replacement-form p, (1-p)rho+p I/D (not the same channel at equal p)',fontsize=11)
     fig.tight_layout();_save(fig,dest,'PQES_FigE_repeated_cycle_cost')
 
 
@@ -371,7 +396,7 @@ def fig_global(data,dest):
     for ax in axes.ravel():ax.set_xlabel('global depolarizing $p$')
     a.legend(fontsize=7,ncol=2);b.legend(fontsize=6,ncol=2);e.legend(fontsize=7)
     txt='; '.join(f'D={r.D} N={r.N}: p_c={r.p_c:.3f}, p_SN={r.p_SN_numeric:.3f}' for r in bnd.itertuples() if r.N in (2,8))
-    fig.suptitle('Global depolarizing: exact one-shot and repeated results\n'+txt,fontsize=10)
+    fig.suptitle('Global depolarizing, replacement form (1-p)rho+p I/D: exact one-shot and repeated results\n'+txt,fontsize=10)
     fig.tight_layout();_save(fig,dest,'PQES_FigG_global_depolarizing')
 
 
@@ -407,7 +432,7 @@ def fig_local(data,dest):
     _panel(e,'d','Entangled target cos(pi/8)|00>+sin(pi/8)|11> (dotted: mismatch floor)');e.set_ylabel('$F_N$')
     for ax in axes.ravel():ax.set_xlabel('power $N$')
     a.legend(fontsize=7,ncol=2);c.legend(fontsize=7,ncol=2);e.legend(fontsize=7)
-    fig.suptitle('Local depolarization: exact fidelity, normalization and fixed-copy-budget error (sampled vs leading)')
+    fig.suptitle('Local depolarization, Pauli form (1-p)rho+p/3 sum P rho P: exact fidelity, normalization and fixed-copy-budget error')
     fig.tight_layout();_save(fig,dest,'PQES_FigH_local_resource_tradeoff')
 
 

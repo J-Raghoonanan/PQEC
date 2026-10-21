@@ -16,7 +16,9 @@ SIX ARCHITECTURES, ONE HARDWARE MODEL, ONE CLOCK
   coherent_request  one coherent control, streaming: B is reset and reprepared
   wide_cyclic       one coherent control, all N registers present, no resets
   derangement       wide_cyclic circuit; O measured on ALL N registers and
-                    averaged (cyclic-derangement estimator, Koczor 2021)
+                    averaged (cyclic-derangement estimator, Koczor 2021). Each
+                    spent register is read out mid-circuit right after its
+                    CSWAP (t_meas, outcome flip readout_q), like a tree ancilla
 
 Every register-level controlled SWAP is COMPILED: CSWAP(c;a,b) =
 CNOT(b->a) CCX(c,a->b) CNOT(b->a). For a register of M pairs the CNOTs of
@@ -40,10 +42,6 @@ THE CLOCK (one rule set for all arms; see Schedule below)
   * PQES needs no feed-forward: a surviving register never waits for its own
     ancilla's measurement. Only ancilla REUSE (measure + reset) blocks the next
     gadget that needs that ancilla.
-
-gate_model='native_fredkin' keeps the earlier native three-qubit Fredkin model
-(eps3 depolarizing after each of M Fredkins) as an ablation only; with its
-noise acting on the control it is a pure visibility factor (tests pin this).
 
 No external code from the user's earlier repository is imported.
 """
@@ -271,7 +269,6 @@ class Hardware:
     t_prep:int=3              # duration of one abstract source preparation
     t_meas:int=1              # mid-circuit measurement duration
     t_reset:int=1             # mid-circuit reset duration
-    gate_model:str='compiled' # 'compiled' or ablation 'native_fredkin'
 
     def __post_init__(self):
         for key in ('eps1','eps2','readout_q','ancilla_reset_p','data_reset_p','idle_gamma','idle_phi'):
@@ -280,7 +277,6 @@ class Hardware:
         if self.eps3 is not None and not 0<=self.eps3<=.5:raise ValueError('eps3')
         for key in ('t_prep','t_meas','t_reset'):
             if int(getattr(self,key))!=getattr(self,key) or getattr(self,key)<0:raise ValueError(key)
-        if self.gate_model not in ('compiled','native_fredkin'):raise ValueError(self.gate_model)
 
     @property
     def e3(self):return self.eps2 if self.eps3 is None else self.eps3
@@ -298,7 +294,7 @@ class Ledger:
     preparations:int=0      # fresh source-state preparations (copies)
     data_resets:int=0       # mid-circuit data-register reuses
     ancilla_resets:int=0    # mid-circuit ancilla reuses
-    measurements:int=0      # recorded ancilla outcomes
+    measurements:int=0      # recorded mid-circuit outcomes (ancillas; spent derangement registers)
     cnot:int=0
     ccx:int=0
     gates1:int=0
@@ -325,18 +321,9 @@ def cswap_gadget(state,n,control,A,B,hw:Hardware,ledger:Ledger|None=None):
 
     CNOT layer (b_j -> a_j for all j), M Toffolis CCX(c,a_j->b_j) in sequence,
     CNOT layer. Waiting qubits inside the gadget get the idle channel each unit.
-    Returns (state, duration). With gate_model='native_fredkin', M native
-    Fredkins with eps3 depolarizing on (c,a_j,b_j) (ablation).
+    Returns (state, duration).
     """
     M=len(A);pairs=list(zip(A,B));data=list(A)+list(B)
-    if hw.gate_model=='native_fredkin':
-        F=np.eye(8,dtype=complex);F[5,5]=F[6,6]=0;F[5,6]=F[6,5]=1
-        for j,(a,b) in enumerate(pairs):
-            state=conj_local(state,F,(control,a,b),n)
-            state=gate_noise(state,(control,a,b),n,hw,hw.e3)
-            state=apply_idle(state,[q for q in data if q not in (a,b)],n,1,hw)
-        if ledger is not None:gadget_counts(M,hw,ledger)
-        return state,M
     def cnot_layer(st):
         for a,b in pairs:
             st=conj_local(st,CNOT_M,(b,a),n)
@@ -353,15 +340,12 @@ def cswap_gadget(state,n,control,A,B,hw:Hardware,ledger:Ledger|None=None):
 
 
 def cswap_duration(M,hw:Hardware):
-    return M if hw.gate_model=='native_fredkin' else M+2
+    return M+2
 
 
 def gadget_counts(M,hw:Hardware,ledger:Ledger):
     """Add one register-CSWAP gadget's gates and in-gadget idle units to `ledger`."""
-    if hw.gate_model=='native_fredkin':
-        ledger.ccx+=M;ledger.data_idle+=2*M*(M-1)
-    else:
-        ledger.cnot+=2*M;ledger.ccx+=M;ledger.control_idle+=2;ledger.data_idle+=2*M*(M-1)
+    ledger.cnot+=2*M;ledger.ccx+=M;ledger.control_idle+=2;ledger.data_idle+=2*M*(M-1)
 
 
 def ancilla_plus(hw:Hardware,reused:bool):
@@ -543,11 +527,67 @@ def run_coherent(rho,N:int,model:Hardware,t_prep=None,ledger=None,wide=False):
     return _herm(p+m),_herm(p-m)
 
 
+def _is_projector(O):
+    ev=np.linalg.eigvalsh(_herm(np.asarray(O,complex)))
+    return bool(np.all(np.isclose(ev,0,atol=1e-9)|np.isclose(ev,1,atol=1e-9)))
+
+
+def derangement_moments(Rf,Wf,O,M,N,q_spent=0.):
+    """Register-averaged estimator moments of the cyclic-derangement arm.
+
+    Register 0 (A) is read at the end like every other arm's output register.
+    Registers 1..N-1 are read mid-circuit right after their CSWAP, so their
+    binary O outcome is flipped with probability q_spent (O must then be a
+    projector): the reported outcome has mean Tr(O_eff R) with
+    O_eff=(1-2q)O+qI, and independent flips factorize across registers.
+    """
+    n=M*N;regs=[tuple(range(M*i,M*(i+1))) for i in range(N)]
+    binary=_is_projector(O)
+    if q_spent and not binary:raise ValueError('mid-circuit readout flips need a projector observable')
+    Oe=[O]+[(1-2*q_spent)*O+q_spent*np.eye(1<<M)]*(N-1)
+    R1=[partial_trace(Rf,r,n) for r in regs]
+    num=np.mean([np.trace(Oe[i]@partial_trace(Wf,r,n)).real for i,r in enumerate(regs)])
+    m1=np.mean([np.trace(Oe[i]@R1[i]).real for i in range(N)])
+    pair=0.
+    for i in range(N):
+        for j in range(N):
+            if i==j:pair+=np.trace((Oe[i] if binary else O@O)@R1[i]).real   # binary: o^2=o
+            else:pair+=np.trace(np.kron(Oe[i],Oe[j])@partial_trace(Rf,regs[i]+regs[j],n)).real
+    return dict(t=float(np.trace(Wf).real),num=float(num),m1=float(m1),m2=float(pair/N**2),trR=float(np.trace(Rf).real))
+
+
+def derangement_table(Rf,Wf,O,M,N,q_spent=0.):
+    """Joint (reported parity, register-averaged reported outcome) distribution."""
+    ev,U=np.linalg.eigh(_herm(np.asarray(O,complex)));d=1<<M
+    UU=U
+    for _ in range(N-1):UU=np.kron(UU,U)
+    binary=_is_projector(O)
+    if q_spent and not binary:raise ValueError('mid-circuit readout flips need a projector observable')
+    sg=[];vals=[];probs=[]
+    for s in (1,-1):
+        diag=np.clip(np.real(np.diag(UU.conj().T@((Rf+s*Wf)/2)@UU)),0,None).reshape((d,)*N)
+        if binary:
+            bit=np.isclose(ev,1).astype(int)
+            pb=np.zeros((2,)*N)
+            for idx in np.ndindex(*(d,)*N):pb[tuple(bit[list(idx)])]+=diag[idx]
+            for i in range(1,N):        # independent flips of the spent registers' outcomes
+                pb=(1-q_spent)*pb+q_spent*np.flip(pb,axis=i)
+            for bits in np.ndindex(*(2,)*N):
+                sg.append(s);vals.append(float(np.mean(bits)));probs.append(pb[bits])
+        else:
+            for idx in np.ndindex(*(d,)*N):
+                sg.append(s);vals.append(float(np.mean([ev[k] for k in idx])));probs.append(diag[idx])
+    probs=np.array(probs);probs/=probs.sum()
+    return np.array(sg,float),np.array(vals,float),probs
+
+
 def run_derangement(rho,N:int,model:Hardware,O,t_prep=None,ledger=None):
     """Cyclic-derangement estimator: wide_cyclic circuit, then O on ALL N registers.
 
-    The per-shot numerator is Omega*(1/N)sum_i o_i. Spent registers wait (idle)
-    until the final measurement. Dense joint simulation: 1+MN<=11 qubits.
+    The per-shot numerator is Omega*(1/N)sum_i o_i. Each spent register B_k is
+    measured as soon as its CSWAP ends (no later gate touches it), charged a
+    mid-circuit measurement (t_meas, off the critical path) with outcome flip
+    readout_q, as a tree ancilla is. Dense joint simulation: 1+MN<=11 qubits.
     Returns dict with t, the signed and unsigned moments needed by metrics().
     """
     hw=model;tp=hw.t_prep if t_prep is None else int(t_prep)
@@ -557,39 +597,21 @@ def run_derangement(rho,N:int,model:Hardware,O,t_prep=None,ledger=None):
     led.peak_qubits=_width(M,N,'derangement');led.preparations=N
     Tc=cswap_duration(M,hw)
     state=np.kron(ancilla_plus(hw,False),rho.astype(complex));led.gates1+=1
-    ends=[]
     for k in range(1,N):
-        start=tp+(k-1)*Tc
         nq=1+M*(k+1)
         state=np.kron(state,rho.astype(complex))
         state,_=cswap_gadget(state,nq,0,list(range(1,1+M)),list(range(1+M*k,1+M*(k+1))),hw,led)
-        ends.append(start+Tc)
     T=tp+(N-1)*Tc if N>1 else tp
-    nq=1+M*N
-    for k,e in enumerate(ends,start=1):  # spent B_k idles until the final readout
-        wait=T-e
-        if wait>0:
-            state=apply_idle(state,range(1+M*k,1+M*(k+1)),nq,wait,hw);led.data_idle+=M*wait
-    led.duration=T+hw.t_meas;led.measurements+=1 if N>1 else 0
-    D=d**N
+    led.duration=T+hw.t_meas if N>1 else tp
+    led.measurements+=(1+(N-1)) if N>1 else 0     # the control plus every spent register
     if N>1:
-        p,m=_x_branches(state,D)
+        p,m=_x_branches(state,d**N)
         p,m=observed_branches(p,m,hw.readout_q)
     else:p,m=_herm(rho.astype(complex)),np.zeros((d,d),complex)
     Rf=_herm(p+m);Wf=_herm(p-m)
+    mom=derangement_moments(Rf,Wf,O,M,N,hw.readout_q)
     regs=[tuple(range(M*i,M*(i+1))) for i in range(N)]
-    O2=O@O
-    num=np.mean([np.trace(O@partial_trace(Wf,r,M*N)).real for r in regs])
-    m1=np.mean([np.trace(O@partial_trace(Rf,r,M*N)).real for r in regs])
-    pair=0.
-    for i in range(N):
-        for j in range(N):
-            if i==j:pair+=np.trace(O2@partial_trace(Rf,regs[i],M*N)).real
-            else:pair+=np.trace(np.kron(O,O)@partial_trace(Rf,regs[i]+regs[j],M*N)).real
-    m2=pair/N**2
-    return dict(t=float(np.trace(Wf).real),num=float(num),m1=float(m1),m2=float(m2),
-                trR=float(np.trace(Rf).real),R1=partial_trace(Rf,regs[0],M*N),W1=partial_trace(Wf,regs[0],M*N),
-                Rfull=Rf,Wfull=Wf)
+    return dict(mom,R1=partial_trace(Rf,regs[0],M*N),W1=partial_trace(Wf,regs[0],M*N),Rfull=Rf,Wfull=Wf)
 
 
 def simulate(rho,N,architecture,model,t_prep=None,ledger=None):
@@ -674,7 +696,7 @@ def resources(M,N,architecture,model=None):
     anc_resets={'tree_parallel':max(N//2-1,0),'tree_recycled':max(N-2,0),'tree_sequential':max(N-2,0),
                 'coherent_request':0,'wide_cyclic':0,'derangement':0}[architecture] if N>1 else 0
     depth=(l if architecture=='tree_parallel' else max(N-1,0))
-    return dict(peak_qubits=width,register_swaps=max(N-1,0),native_fredkins=M*max(N-1,0),
+    return dict(peak_qubits=width,register_swaps=max(N-1,0),toffolis=M*max(N-1,0),
                 cnots=2*M*max(N-1,0),
                 controls_measured=(max(N-1,0) if architecture in MEASURED else (1 if N>1 else 0)),
                 fresh_preparations=N,critical_swap_stages=depth,

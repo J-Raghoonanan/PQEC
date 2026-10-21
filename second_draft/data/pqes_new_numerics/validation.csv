@@ -1,4 +1,4 @@
-architecture,M,N,target,source_pauli_p,r_err,w_err,normalization,expected_normalization,peak_qubits,register_swaps,native_fredkins,cnots,controls_measured,fresh_preparations,critical_swap_stages,data_reset_events,ancilla_reset_events
+architecture,M,N,target,source_pauli_p,r_err,w_err,normalization,expected_normalization,peak_qubits,register_swaps,toffolis,cnots,controls_measured,fresh_preparations,critical_swap_stages,data_reset_events,ancilla_reset_events
 tree_parallel,1,2,plus,0.11,0,2.220446049250313e-16,0.8640888888888891,0.8640888888888894,3,1,1,2,1,2,1,0,0
 tree_recycled,1,2,plus,0.11,0,2.220446049250313e-16,0.8640888888888891,0.8640888888888894,3,1,1,2,1,2,1,0,0
 tree_sequential,1,2,plus,0.11,0,2.220446049250313e-16,0.8640888888888891,0.8640888888888894,3,1,1,2,1,2,1,0,0

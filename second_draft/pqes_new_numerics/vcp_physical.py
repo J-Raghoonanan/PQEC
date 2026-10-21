@@ -15,11 +15,13 @@ IMPLEMENTATION (one gadget per purified circuit LAYER):
   -> the layer's gates on main AND on aux, each followed by its gate noise
   -> compiled CSWAP(c; S_main, aux)
   -> X readout of the control (readout error), aux discarded.
-Main qubits outside S idle during the gadget. The single control is reused:
-the next gadget waits for its measurement and reset (no feed-forward needed;
-signs only multiply classically). The auxiliary I/2^k is prepared by a
-uniformly random Pauli on the spent register (exact for any leftover state,
-so no reset), taking one unit in parallel with earlier operations.
+Main qubits outside S idle during the gadget. Each layer has its own freshly
+prepared control: the controls (with their auxiliaries) come round robin from
+the smallest pool of physical pairs that keeps each pair's measurement, reset
+and re-preparation off the main register's critical path (vcp_pool_size), so
+the main register never waits for a previous layer's control. The auxiliary
+I/2^k is prepared by a uniformly random Pauli on the spent register (exact for
+any leftover state, so no reset). Signs only multiply classically.
 
 The ideal identity W = prod_layers P2 * E^(2) holds for Pauli gate noise with
 idle noise switched off; amplitude damping makes the auxiliary state and the
@@ -29,7 +31,8 @@ exactly anyway).
 RESOURCES (per shot): 1 main preparation; every purified gate executes twice
 (main + aux) so noisy-gate executions = 2 G_purified + G_unpurified; one
 control preparation, one auxiliary preparation and one measurement per
-purified layer; 2(2k) CNOTs and 2k Toffolis per purified layer.
+purified layer; 2(2k) CNOTs and 2k Toffolis per purified layer; width
+M + pool*(1+k_max) counting every physical control and auxiliary qubit.
 """
 from __future__ import annotations
 import numpy as np
@@ -66,42 +69,62 @@ def vcp2_layer_gadget(x,layer,M,hw:Hardware,reused_control:bool,alg_hw:Hardware|
     return observed_branches(p,m,hw.readout_q),2*Tc+1,k
 
 
+def gadget_duration(layer,hw:Hardware):
+    k=len({w for g in layer for w in g.wires})
+    return 2*cswap_duration(k,hw)+1
+
+
+def vcp_pool_size(layers_purified,hw:Hardware):
+    """Smallest number of (control, auxiliary) pairs, used round robin, such that
+    a pair's measurement, reset and |+>/twirl re-preparation (t_meas+t_reset+1)
+    always finishes before its next layer starts with gadgets run back to back.
+    The main register then never waits on a previous layer's control."""
+    D=[gadget_duration(L,hw) for L in layers_purified];need=hw.t_meas+hw.t_reset+1
+    for n in range(1,len(D)+1):
+        if all(sum(D[l+1:l+n])>=need for l in range(len(D)-n)):return n
+    return max(len(D),1)
+
+
 def simulate_layerwise_vcp2(M,layers_purified,layers_plain,hw:Hardware,initial=None,ledger=None,alg_hw=None):
     """Purify `layers_purified` layer by layer, then run `layers_plain` unpurified.
 
-    Unnormalized parity-resolved states are propagated: feeding a normalized
-    weighted operator forward as a physical state would hide the signed-record
-    sampling cost. Returns (R, W) and fills `ledger`.
+    Every layer gets its own freshly prepared control (and auxiliary) from a
+    pool of vcp_pool_size() physical pairs, so the main register never waits
+    for a previous control's measurement or reset. Unnormalized parity-resolved
+    states are propagated: feeding a normalized weighted operator forward as a
+    physical state would hide the signed-record sampling cost. Returns (R, W)
+    and fills `ledger` (width counts every physical control and auxiliary).
     """
     led=ledger if ledger is not None else Ledger()
     alg_hw=hw if alg_hw is None else alg_hw
     d=1<<M
     init=ground(M) if initial is None else initial
     states={1:init.astype(complex),-1:np.zeros((d,d),complex)}
-    t=0;cfree=0;cused=False;afree=0;kmax=0
+    pool=vcp_pool_size(layers_purified,hw)
+    pfree=[0]*pool;pused=[False]*pool
+    t=0;kmax=0
     led.preparations=1
-    for layer in layers_purified:
-        cready=cfree+((hw.t_reset+1) if cused else 0)
-        start=max(t,cready,afree+(1 if cused else 0))
-        if start>t:
+    for ell,layer in enumerate(layers_purified):
+        c=ell%pool;reused=pused[c]
+        start=max(t,pfree[c]+((hw.t_reset+1) if reused else 0))
+        if start>t:     # cannot happen with the chosen pool; kept so the clock stays honest
             states={s:apply_idle(states[s],range(M),M,start-t,hw) for s in (1,-1)}
             led.data_idle+=M*(start-t)
         nxt={1:np.zeros((d,d),complex),-1:np.zeros((d,d),complex)}
         for s in (1,-1):
             if not np.any(states[s]):continue
-            (pl,mi),dur,k=vcp2_layer_gadget(states[s],layer,M,hw,cused,alg_hw)
+            (pl,mi),dur,k=vcp2_layer_gadget(states[s],layer,M,hw,reused,alg_hw)
             nxt[s]+=pl;nxt[-s]+=mi
-        if not any(np.any(states[s]) for s in (1,-1)):
-            k=len({w for g in layer for w in g.wires});dur=2*cswap_duration(k,hw)+1
+        k=len({w for g in layer for w in g.wires});dur=gadget_duration(layer,hw)
         kmax=max(kmax,k)
-        if cused:led.ancilla_resets+=1
+        if reused:led.ancilla_resets+=1
         gadget_counts(k,hw,led);gadget_counts(k,hw,led)
         led.gates1+=1+sum(2 for g in layer if len(g.wires)==1)
         led.cnot+=sum(2 for g in layer if len(g.wires)==2)
         led.control_idle+=1;led.data_idle+=(M-k)*dur
         led.measurements+=1
         states=nxt;t=start+dur
-        cfree=t+hw.t_meas;cused=True;afree=t
+        pfree[c]=t+hw.t_meas;pused[c]=True
     for layer in layers_plain:
         states={s:apply_layer(states[s],layer,M,alg_hw) for s in (1,-1)}
         led.gates1+=sum(1 for g in layer if len(g.wires)==1)
@@ -109,7 +132,7 @@ def simulate_layerwise_vcp2(M,layers_purified,layers_plain,hw:Hardware,initial=N
         led.data_idle+=M-len({w for g in layer for w in g.wires})
         t+=1
     led.duration=t+(hw.t_meas if layers_purified else 0)
-    led.peak_qubits=1+M+kmax if layers_purified else M
+    led.peak_qubits=M+pool*(1+kmax) if layers_purified else M
     R=states[1]+states[-1];W=states[1]-states[-1]
     return _herm(R),_herm(W)
 

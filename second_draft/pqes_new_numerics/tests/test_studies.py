@@ -89,3 +89,21 @@ def test_leading_rmse_undefined_outside_delta_method_regime():
     assert np.isfinite(rs.leading_rmse(row,10**6))         # S t^2 = 900
     rows=rs.local_resource_study('quick',3)
     assert all(not np.isfinite(r['mse_lead_C1000']) or r['mse_lead_C1000']>0 for r in rows)
+
+
+def test_cycle_budgets_are_undefined_when_bias_exceeds_target():
+    """Regression: copy budgets for RMSE eps must not be finite when b^2>=eps^2."""
+    rows=rs.repeated_cycles_study('standard')
+    bad=[r for r in rows if (1-r['ideal_virtual_fidelity'])**2>=r['rmse_target']**2]
+    assert bad and all(np.isnan(r['log10_copies_budget']) and not r['feasible_at_eps'] for r in bad)
+    good=[r for r in rows if (1-r['ideal_virtual_fidelity'])**2<r['rmse_target']**2]
+    assert all(np.isfinite(r['log10_copies_budget']) for r in good)
+    assert {r['noise_convention'] for r in rows}=={'pauli_form','replacement_form'}
+
+
+def test_channel_physical_records_the_apparatus_actually_used():
+    rows=rs.physical_vcp_study('quick',3)
+    ideal=[r for r in rows if r['apparatus_case']=='ideal_apparatus']
+    better=[r for r in rows if r['apparatus_case']=='apparatus_gates_10x_better']
+    assert all(r['app_eps2']==0 and r['app_readout_q']==0 and r['app_idle_phi']==0 for r in ideal)
+    assert all(abs(r['app_eps2']-r['eps2']/10)<1e-15 and r['app_readout_q']==r['readout_q'] for r in better)

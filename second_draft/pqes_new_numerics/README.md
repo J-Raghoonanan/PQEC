@@ -20,7 +20,7 @@ python -m pip install -r pqes_new_numerics/requirements.txt
 python -m pytest -q pqes_new_numerics/tests/        # ~2 s
 python pqes_new_numerics/run_simulations.py --profile quick      # ~6 s, smoke test
 python pqes_new_numerics/run_simulations.py --profile standard   # ~2 min
-python pqes_new_numerics/run_simulations.py --profile full --seed 31 --rmse 0.03 --width-cap 7
+python pqes_new_numerics/run_simulations.py --profile full --seed 31 --rmse 0.03
 python pqes_new_numerics/plot_results.py
 ```
 
@@ -67,9 +67,9 @@ The full profile runs in about 10 minutes (≈590 s of compute) on one laptop co
 | `tree_sequential` | 2 | 1 reusable | measured accumulator |
 | `coherent_request` | 2 | 1 coherent | streaming controlled-cyclic VD; B is reset and reprepared |
 | `wide_cyclic` | N | 1 coherent | all copies present, no resets |
-| `derangement` | N | 1 coherent | wide_cyclic circuit; O measured on all N registers and averaged |
+| `derangement` | N | 1 coherent | wide_cyclic circuit; O measured on all N registers and averaged; each spent register read out mid-circuit as soon as its CSWAP ends |
 
-The `derangement` arm is Koczor's cyclic-derangement estimator. It is simulated densely and only for 1+MN ≤ 9.
+The `derangement` arm is Koczor's cyclic-derangement estimator. Each spent register is measured right after its CSWAP, paying the same mid-circuit measurement duration and outcome-flip error (`readout_q`) as a tree ancilla, so it never idles until the final readout. It is simulated densely and only for 1+MN ≤ 9.
 
 The three `tree_*` arms are PQES. The coherent arm is ideal-equivalent to a controlled N-cycle; a test checks this against the explicit permutation unitary.
 
@@ -88,6 +88,13 @@ Each register controlled SWAP is compiled as:
 That is M+2 time units.
 
 Abstract source states use Pauli-form local depolarizing `source_pauli_p` (manuscript Eq. `pauli-kraus`). Algorithm circuits use the gate noise above.
+
+Wherever a bare `p` appears, a `noise_convention` column names its channel:
+- `pauli_form`: (1−p)ρ + p/3 ΣPρP (local depolarizing);
+- `replacement_form`: (1−p)ρ + p I/D (global depolarizing);
+- `z_flip`: (1−p)ρ + pZρZ (dephasing).
+
+In `channel_physical.csv`, unprefixed hardware columns record the algorithm and source hardware; `app_*` columns record the apparatus actually used.
 
 **The clock (shared by every arm).**
 - **Durations:** a gate takes 1 unit; a source preparation takes `t_prep` units (or the source circuit's depth); mid-circuit measurement takes `t_meas` and reset `t_reset`.
@@ -121,7 +128,7 @@ There are two latency profiles: **fast** (`t_meas` = `t_reset` = 1) and **slow**
 4. a second compiled CSWAP;
 5. an X readout.
 
-One control is reused across layers. The auxiliary is prepared by a random Pauli and needs no reset. Resources counted include 2G noisy-gate executions, plus one auxiliary preparation, one control preparation and one measurement per layer.
+Each layer gets its own freshly prepared control (with its auxiliary), drawn round robin from the smallest pool of physical control–auxiliary pairs that keeps measurement, reset and re-preparation off the main register's critical path: 2 pairs with fast measurement and 3 with slow for the study circuit. The main register never waits on a previous layer's control. The reported width counts every physical control and auxiliary qubit. The auxiliary is prepared by a random Pauli and needs no reset. Resources counted include 2G noisy-gate executions, plus one auxiliary preparation, one control preparation and one measurement per layer.
 
 With an ideal apparatus and no idle noise, VCP2 equals ideal channel purification to 10⁻¹²; a test checks this. With idle noise, the algorithm's idle errors on qubits outside a layer are not purified. "VCP2 at a cut" purifies the layers before the cut only.
 
@@ -132,8 +139,8 @@ With an ideal apparatus and no idle noise, VCP2 equals ideal channel purificatio
 | `validation` | — | ideal R = ρ, W = ρᴺ for all six arms, M = 1, 2 and N = 2, 4, 8 |
 | `readout`, `shots` | Fig A | readout visibility (1−2q)^k and the (1−2q)^(−2(N−2)) penalty; estimator Monte Carlo along q, with χ² bands and the ratio bias |
 | `mechanisms` | Fig A2 | each mechanism swept from zero: ε₂, ε₁, q, the reset errors, idle φ and γ, t_meas, t_prep |
-| `phase` | Figs B, B2 | lowest-cost arm at RMSE 0.03 for four cost metrics, width-capped (7) and uncapped; Monte Carlo validation of the planning |
-| `placement` | Fig C | fixed total depth L of `algorithm_blocks` (b_repeats = 2), cut at L_A/L ∈ {0, ¼, ½, ¾, 1}; every arm plus VCP2 at the same cut; entangling and product families |
+| `phase` | Figs B, B2, B3 | lowest-cost arm at RMSE 0.03 for four cost metrics with no width constraint (primary result); winners at explicit width budgets 5, 7, 9 and unconstrained; Monte Carlo validation of the planning |
+| `placement` | Fig C | fixed total depth of the study circuit (`circuits.study_layers`: L = 12 entangling, L = 8 product, both divisible by 4), cut after exactly L_A/L ∈ {0, ¼, ½, ¾, 1}; every arm plus VCP2 at the same cut |
 | `channel_physical` | Fig F | full layerwise VCP2 vs output-only state VD, under ideal, 10×-better and physical apparatus |
 | `channel_proxy` | App. | ideal channel purification with no apparatus (never ranked) |
 | `twirling`, `twirl_mc`, `twirl_budget` | Fig D | fixed K-frame sets (K = 1, 3, …, 243); fresh random frames per copy and per shot; noisy Cliffords; fixed-budget error before and after twirling |
@@ -170,7 +177,7 @@ The suite covers:
   - sequential trees, N = 2–4, M = 1, 2;
   - parallel and recycled trees, N = 4;
   - coherent and wide arms, N = 2–4;
-  - the derangement arm, N = 2, 3;
+  - the derangement arm (spent registers read out at once), N = 2, 3;
 - **clock tests:** hand-derived durations and idle units;
 - **reset counts** per actual reuse;
 - **regressions** for each defect the October 2026 audit found:
@@ -180,6 +187,13 @@ The suite covers:
   - N = 1 readout;
   - VCP accounting;
   - seed nesting across shot counts;
-- **noise structure:** the native-Fredkin ablation being pure visibility, and compiled noise biasing the estimator;
+- **regressions** for the review fixes:
+  - spent derangement registers read out at once (no idle until the final readout);
+  - one fresh control per VCP2 layer, with the main register never waiting;
+  - placement cut fractions realized exactly;
+  - repeated-cycle copy budgets undefined when the bias exceeds the target;
+  - apparatus columns recording the hardware actually used;
+  - leading MSE undefined outside the delta-method regime;
+- **noise structure:** compiled two-qubit noise on the data pair biasing the estimator and separating the trees;
 - **estimator checks:** delta-method and derangement moments against sampling, and shot planning reaching the target RMSE;
 - **study formulas** against brute force.

@@ -42,18 +42,28 @@ Setup: M = 2 entangled target, source noise 0.13, N = 4. All six arms. Each colu
 
 **Top row:** change of the limiting bias. **Bottom row:** v_A relative to the start of the sweep.
 
-The ε₁, readout and ancilla-reset mechanisms only rescale the signed operator; their bias change is exactly zero and they are marked "visibility only". Gate errors on the data pair (ε₂) and idle noise do bias the estimator.
+The ε₁, readout and ancilla-reset mechanisms only rescale the signed operator for every single-register arm; their bias change is exactly zero. The exception is readout error in the derangement arm: its spent registers are read out mid-circuit, so flipped binary outcomes bias the estimate. Gate errors on the data pair (ε₂) and idle noise bias every arm.
 
-## Figure B — Lowest-cost architecture at fixed RMSE
-`PQES_FigB_architecture_cost_map.pdf` (width ≤ 7 qubits), `PQES_FigB_architecture_cost_map_uncapped.pdf` (no cap)
+## Figure B — Lowest-cost architecture at fixed RMSE, no width constraint (primary result)
+`PQES_FigB_architecture_cost_map.pdf`
 
 Setup: M = 2, N = 4, the entangled target with source noise 0.14, ε₂ = 0.005.
 - **Axes:** readout error q (horizontal) and idle rate γ = φ per unit (vertical).
 - **Rows:** fast and slow measurement.
 - **Columns** (four cost metrics, each to RMSE 0.03): shots, total two-qubit gates, total duration, total space-time volume.
-- **Cell labels:** the cheapest arm; `*` marks a runner-up within 5%.
+- **Cell labels:** the cheapest arm among all six, whatever its width; `*` marks a runner-up within 5%.
+- **Widths** (printed on the figure): sequential and coherent 5, recycled 7, wide cyclic and derangement 9, parallel 10.
 
-The CSV also holds ε₂ = 0.002, 0.01 and 0.02. The phase boundary follows from the noise model; a different device can move it.
+The CSV also holds ε₂ = 0.002, 0.01 and 0.02. The boundaries follow from the noise model; a different device can move them.
+
+## Figure B3 — Winner under explicit width budgets
+`PQES_FigB3_width_budgets.pdf`
+
+The cheapest arm by shots at RMSE 0.03 when only arms of width ≤ 5, ≤ 7, ≤ 9 or unconstrained are allowed.
+- **Rows:** ε₂ = 0.005 and 0.01, each at fast and slow measurement.
+- **Blank cells:** no arm within the budget is feasible.
+
+Width is a reported budget axis, not a default. A PQES tree appears as cheapest only under budgets below the 9-qubit width of the wide-cyclic and derangement arms, except where the parallel tree wins outright (ε₂ = 0.01, fast measurement).
 
 ## Figure B2 — Validation of the shot planning
 `PQES_FigB2_planning_validation.pdf`
@@ -63,7 +73,11 @@ For every feasible phase-map cell (every arm and slice), the figure shows the RM
 ## Figure C — Compression placement at fixed total depth
 `PQES_FigC_compression_placement.pdf`
 
-The circuit is the fixed `algorithm_blocks` circuit, U = U_B² U_A, with M = 2. It has L = 13 layers in the entangling family and L = 6 in the product family. Every gate is followed by the same compiled-model noise: ε₂ = 0.005, fast measurement.
+The circuits are fixed `algorithm_blocks` circuits with M = 2 (`circuits.study_layers`):
+- **entangling:** L = 12 layers, the first 12 of U_B² U_A;
+- **product:** L = 8 layers, U_B³ U_A.
+
+Both depths are divisible by 4, so the plotted realized cut/L ∈ {0, ¼, ½, ¾, 1} equals the requested fraction exactly. Every gate is followed by the same compiled-model noise: ε₂ = 0.005, fast measurement.
 
 Compression follows the first L_A layers:
 - **State VD arms (N = 4):** distil ρ_A, then the remaining layers act once on the surviving register. For the derangement arm they act on every register.
@@ -104,6 +118,12 @@ The CSVs also cover θ = π/3, M = 1, 2, 5, p ∈ {0.45, 0.55, 0.7, 0.8} and N =
 
 Setup: local depolarizing (M = 2 entangled target) and global depolarizing (D = 4), p = 0.15, N = 2, 4, 8.
 
+The two `p` are different channels:
+- local: Pauli form (1−p)ρ + p/3 ΣPρP;
+- global: replacement form (1−p)ρ + p I/D.
+
+Curves are compared within a family, not across families at equal p. Points are missing where the virtual fidelity's bias already exceeds 0.03, so no shot count reaches RMSE 0.03.
+
 Panels:
 - **(a)** the formal normalized fidelity F_t;
 - **(b)** log₁₀ Z_t;
@@ -115,7 +135,11 @@ The normalized recurrence is not a physical memory. The nested signed-ensemble c
 ## Figure F — Physical order-two channel purification vs state VD
 `PQES_FigF_vcp2_vs_state_vd.pdf`
 
-Setup: M = 2 entangling circuit, L = 13 layers, fast measurement, N = 2 for state VD. Output-only state VD arms are compared with layerwise VCP2 under three apparatus cases:
+Setup: M = 2 entangling study circuit, L = 12 layers, fast measurement, N = 2 for state VD.
+
+Each VCP2 layer has its own freshly prepared control and auxiliary, drawn round robin from the smallest pool that keeps measurement and reset off the main register's critical path (2 pairs here). The physical controls and auxiliaries are included in the width.
+
+Output-only state VD arms are compared with layerwise VCP2 under three apparatus cases:
 - **physical:** the same hardware as the algorithm;
 - **10× better:** gadget gate errors divided by 10; readout, resets and idle unchanged;
 - **ideal:** a perfect apparatus.

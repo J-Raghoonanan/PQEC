@@ -89,6 +89,20 @@ def full_layers(M,family='entangling',b_repeats=2):
     return layer_gates(A+B)
 
 
+# Fixed total depths of the study circuits. For M=2 they are divisible by 4 so
+# that L_A/L in {0,1/4,1/2,3/4,1} is realized exactly: the entangling circuit is
+# the first 12 of the 13 layers of U_B^2 U_A; the product circuit is U_B^3 U_A
+# (8 layers).
+STUDY_DEPTH={(2,'entangling'):(2,12),(2,'product'):(3,8)}
+
+
+def study_layers(M,family='entangling'):
+    """The fixed circuit used by the placement and channel-purification studies."""
+    reps,L=STUDY_DEPTH.get((M,family),(2,None))
+    layers=full_layers(M,family,reps)
+    return layers[:L] if L else layers
+
+
 def apply_layer(rho,layer,M,hw:Hardware,offset=0,n=None,ledger=None):
     """One noisy time unit: ideal gates, their gate noise, idle on untouched qubits."""
     n=M if n is None else n
@@ -123,11 +137,15 @@ def count_gates(layers):
     return one,two
 
 
-def cut_case(M,family,f,b_repeats=2,hw:Hardware|None=None):
-    """Fixed total depth L; compression after the first round(f*L) layers."""
+def cut_case(M,family,f,hw:Hardware|None=None):
+    """Fixed total depth L (study_layers); compression after the first f*L layers.
+
+    f*L must be an integer, so the requested fraction is realized exactly.
+    """
     hw=Hardware() if hw is None else hw
-    layers=full_layers(M,family,b_repeats);L=len(layers)
+    layers=study_layers(M,family);L=len(layers)
     cut=int(round(f*L))
+    if abs(cut-f*L)>1e-9:raise ValueError(f'L_A/L={f} not realizable at L={L}')
     pre,post=layers[:cut],layers[cut:]
     rhoA=run_layers(ground(M),pre,M,hw)
     target=ideal_output(layers,M)
@@ -156,9 +174,10 @@ def apply_ideal_purified_gate_noise(rho,wires,eps,M,power=1):
 
 
 def vcp_pauli_proxy(M=2,b_repeats=2,eps2=.01,power=2,family='entangling',eps1=None):
-    """Ideal layerwise channel-purification reference fidelity (NOT physical)."""
+    """Ideal layerwise channel-purification reference fidelity (NOT physical).
+    b_repeats=None uses the study circuit (study_layers)."""
     eps1=eps2/10 if eps1 is None else eps1
-    layers=full_layers(M,family,b_repeats)
+    layers=study_layers(M,family) if b_repeats is None else full_layers(M,family,b_repeats)
     target=ideal_output(layers,M)
     rho=ground(M)
     for layer in layers:

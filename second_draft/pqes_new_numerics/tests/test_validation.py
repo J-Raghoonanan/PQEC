@@ -151,7 +151,7 @@ def test_oracle_coherent_and_wide(M,N):
 @pytest.mark.parametrize('N',[2,3])
 def test_oracle_derangement(N):
     M=1;rho,O=noisy_input(1,'tilted',.2)
-    Rb,Wb=oracle.coherent(rho,M,N,_ohw(),0,measure_all=True,tail=M+2)
+    Rb,Wb=oracle.coherent(rho,M,N,_ohw(),0,measure_all=True,tail=0)   # spent registers read out at once
     mom,_,full=simulate_moments(rho,N,'derangement',_hw(),O)
     assert max(np.abs(Rb-full['Rfull']).max(),np.abs(Wb-full['Wfull']).max())<1e-13
 
@@ -236,17 +236,6 @@ def test_variance_penalty_readout_only():
     assert abs(va/vb-(1-2*q)**(-2*(N-2)))<1e-10
 
 
-def test_native_fredkin_ablation_is_pure_visibility():
-    """Audit T2-1: depolarizing that includes the control only rescales W."""
-    rho,O=noisy_input(2,'bell_tilted',.13)
-    hw=Hardware(eps3=.03,readout_q=.04,gate_model='native_fredkin')
-    for arch in SINGLE:
-        for N in (2,4):
-            R,W=simulate(rho,N,arch,hw);P=np.linalg.matrix_power(rho,N)
-            kappa=np.trace(W).real/np.trace(P).real
-            np.testing.assert_allclose(W,kappa*P,atol=1e-13)
-
-
 def test_compiled_gate_noise_biases_estimator_and_separates_trees():
     """Two-qubit errors on the data pair (not the control) bias the estimator,
     and balanced trees accumulate fewer merges on the surviving path."""
@@ -270,8 +259,10 @@ def test_delta_method_moments_match_sampling():
 
 
 def test_derangement_moments_match_joint_sampling():
-    rho,O=noisy_input(1,'tilted',.25);N=3
-    mom,_,full=simulate_moments(rho,N,'derangement',Hardware(eps2=.01,readout_q=.03),O)
+    """Spent registers are read mid-circuit, so their binary outcomes flip with
+    readout_q; the final register is read ideally (independent sampling check)."""
+    rho,O=noisy_input(1,'tilted',.25);N=3;q=.03
+    mom,_,full=simulate_moments(rho,N,'derangement',Hardware(eps2=.01,readout_q=q),O)
     met=moments_metrics(mom,1.)
     Rf,Wf=full['Rfull'],full['Wfull']
     ev,U=np.linalg.eigh(O);UU=np.kron(np.kron(U,U),U)
@@ -279,11 +270,27 @@ def test_derangement_moments_match_joint_sampling():
     for s in (1,-1):
         diag=np.real(np.diag(UU.conj().T@((Rf+s*Wf)/2)@UU))
         for idx,pv in enumerate(diag):
-            bits=np.unravel_index(idx,(2,)*N);probs.append(max(pv,0));den.append(s);num.append(s*np.mean([ev[b] for b in bits]))
+            bits=[int(round(ev[b])) for b in np.unravel_index(idx,(2,)*N)]
+            for flips in np.ndindex(*(2,)*(N-1)):
+                w=np.prod([q if f else 1-q for f in flips])
+                rep=[bits[0]]+[b^f for b,f in zip(bits[1:],flips)]
+                probs.append(max(pv,0)*w);den.append(s);num.append(s*np.mean(rep))
     probs=np.array(probs)/sum(probs);S=3000
     c=np.random.default_rng(4).multinomial(S,probs,size=100000);est=(c@np.array(num))/(c@np.array(den))
     assert abs(est.mean()-met['estimate'])<5e-3
     assert abs(est.var()*S/met['variance_coeff']-1)<.06
+
+
+def test_derangement_spent_registers_are_read_immediately():
+    """Regression: under idle noise the derangement output register must match the
+    wide cyclic arm (same circuit; spent registers never idle), and its ledger
+    charges one mid-circuit measurement per spent register."""
+    rho,O=noisy_input(2,'bell_tilted',.13);hw=Hardware(eps2=.005,idle_phi=5e-3,idle_gamma=2e-3)
+    for N in (2,4):
+        mom,led,full=simulate_moments(rho,N,'derangement',hw,O)
+        lw=Ledger();R,W=simulate(rho,N,'wide_cyclic',hw,ledger=lw)
+        np.testing.assert_allclose(full['R1'],R,atol=1e-13);np.testing.assert_allclose(full['W1'],W,atol=1e-13)
+        assert led.data_idle==lw.data_idle and led.duration==lw.duration and led.measurements==N
 
 
 def test_plan_shots_guard_and_feasibility():
@@ -331,15 +338,35 @@ def test_vcp_accounting_matches_ledger_and_counts_aux_gate_runs():
     acc=vp.vcp_accounting(layers[:cut],layers[cut:])
     G=sum(len(L) for L in layers[:cut])
     assert acc['noisy_gate_executions']==2*G+sum(len(L) for L in layers[cut:])
+    pool=vp.vcp_pool_size(layers[:cut],hw)
     assert led.measurements==acc['ancilla_measurements']==cut
     assert acc['aux_preparations']==acc['control_preparations']==cut
-    assert led.ancilla_resets==cut-1 and led.ccx==acc['cswap_toffolis']
+    assert led.ancilla_resets==max(cut-pool,0) and led.ccx==acc['cswap_toffolis']
+
+
+@pytest.mark.parametrize('profile,pool',[('fast',2),('slow',3)])
+def test_vcp_main_register_never_waits_for_a_control(profile,pool):
+    """Regression: one fresh control per layer from the smallest pool; the main
+    register only idles inside gadgets and in unpurified layers, and the width
+    counts every physical control and auxiliary."""
+    import run_simulations as rs
+    M=2;layers=circuits.study_layers(M,'entangling');hw=rs.reference(profile,.005)
+    assert vp.vcp_pool_size(layers,hw)==pool
+    led=Ledger();vp.simulate_layerwise_vcp2(M,layers[:8],layers[8:],hw,ledger=led)
+    k=[len({w for g in L for w in g.wires}) for L in layers[:8]]
+    expect=sum(2*2*kk*(kk-1)+(M-kk)*vp.gadget_duration(L,hw) for kk,L in zip(k,layers[:8]))
+    expect+=sum(M-len({w for g in L for w in g.wires}) for L in layers[8:])
+    assert led.data_idle==expect
+    assert led.duration==sum(vp.gadget_duration(L,hw) for L in layers[:8])+len(layers[8:])+hw.t_meas
+    assert led.peak_qubits==M+pool*(1+max(k))
 
 
 def test_vcp_at_full_cut_equals_full_layerwise_and_zero_cut_is_unmitigated():
     M=2;layers=circuits.full_layers(M,'entangling',2);hw=Hardware(eps2=.01,eps1=.001)
     R1,W1=vp.simulate_layerwise_vcp2(M,layers,[],hw)
-    case=circuits.cut_case(M,'entangling',1.0,2,hw)
+    layers=circuits.study_layers(M,'entangling')
+    R1,W1=vp.simulate_layerwise_vcp2(M,layers,[],hw)
+    case=circuits.cut_case(M,'entangling',1.0,hw)
     R2,W2=vp.simulate_layerwise_vcp2(M,case['pre'],case['post'],hw)
     np.testing.assert_allclose(W1,W2,atol=1e-14)
     R0,W0=vp.simulate_layerwise_vcp2(M,[],layers,hw)
@@ -349,7 +376,7 @@ def test_vcp_at_full_cut_equals_full_layerwise_and_zero_cut_is_unmitigated():
 
 # ---------------------------------------------------------------- placement
 def test_gate_placement_ideal_unitary_equivalence():
-    M=2;hw0=Hardware();case=circuits.cut_case(M,'entangling',.5,2,Hardware(eps2=.02,eps1=.002))
+    M=2;hw0=Hardware();case=circuits.cut_case(M,'entangling',.5,Hardware(eps2=.02,eps1=.002))
     for arch in ('tree_sequential','coherent_request'):
         Rm,Wm=simulate(case['rho_A'],4,arch,hw0)
         Rm=circuits.run_layers(Rm,case['post'],M,hw0);Wm=circuits.run_layers(Wm,case['post'],M,hw0)
@@ -359,7 +386,7 @@ def test_gate_placement_ideal_unitary_equivalence():
 
 
 def test_noisy_placement_is_not_commutative():
-    M=2;hw=Hardware(eps2=.05,eps1=.005);case=circuits.cut_case(M,'entangling',.5,2,hw)
+    M=2;hw=Hardware(eps2=.05,eps1=.005);case=circuits.cut_case(M,'entangling',.5,hw)
     _,W=simulate(case['rho_A'],4,'coherent_request',Hardware())
     Wmid=circuits.run_layers(W,case['post'],M,hw)
     _,Wout=simulate(circuits.run_layers(case['rho_A'],case['post'],M,hw),4,'coherent_request',Hardware())
@@ -382,3 +409,12 @@ def test_ideal_apparatus_vcp_sees_the_same_algorithm_idle_noise_as_the_source():
     alg=Hardware(eps1=.002,eps2=.02,idle_gamma=2e-3,idle_phi=2e-3)
     R,W=vp.simulate_layerwise_vcp2(M,layers,[],Hardware(),alg_hw=alg)
     np.testing.assert_allclose(R,circuits.run_layers(circuits.ground(M),layers,M,alg),atol=1e-12)
+
+
+def test_placement_cut_fractions_are_realized_exactly():
+    for fam in ('entangling','product'):
+        L=len(circuits.study_layers(2,fam));assert L%4==0
+        for f in (0,.25,.5,.75,1):
+            case=circuits.cut_case(2,fam,f)
+            assert case['cut']/case['L']==f
+    with pytest.raises(ValueError):circuits.cut_case(2,'entangling',.3)

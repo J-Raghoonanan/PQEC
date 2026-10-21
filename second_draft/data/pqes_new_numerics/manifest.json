@@ -3,7 +3,12 @@
   "profile": "full",
   "seed": 31,
   "rmse_target": 0.03,
-  "width_cap": 7,
+  "width_budgets_reported": [
+    "5",
+    "7",
+    "9",
+    "unconstrained"
+  ],
   "delta_method_guard_St2": 50,
   "task_profiles": {
     "validation": "full",
@@ -23,15 +28,15 @@
   },
   "task_runtimes_s": {
     "validation": 0.2,
-    "readout": 1.0,
+    "readout": 0.9,
     "shots": 0.4,
-    "mechanisms": 5.1,
-    "phase": 52.5,
-    "placement": 25.1,
-    "channel_physical": 11.3,
+    "mechanisms": 4.7,
+    "phase": 36.2,
+    "placement": 23.2,
+    "channel_physical": 9.2,
     "channel_proxy": 0.1,
-    "twirling": 112.0,
-    "twirl_mc": 394.0,
+    "twirling": 110.7,
+    "twirl_mc": 410.2,
     "twirl_budget": 0.1,
     "cycles": 0.0,
     "global_depol": 0.8,
@@ -49,8 +54,7 @@
       "idle_phi": 0.0005,
       "t_prep": 3,
       "t_meas": 1,
-      "t_reset": 1,
-      "gate_model": "compiled"
+      "t_reset": 1
     },
     "slow": {
       "eps1": 0.0005,
@@ -63,8 +67,7 @@
       "idle_phi": 0.0005,
       "t_prep": 3,
       "t_meas": 10,
-      "t_reset": 5,
-      "gate_model": "compiled"
+      "t_reset": 5
     }
   },
   "eps2_grid": [
@@ -87,7 +90,9 @@
     "readout": "independent classical flip of each recorded ancilla outcome",
     "source_noise": "Pauli-form local depolarizing source_pauli_p for abstract sources; algorithm circuits use the gate noise above",
     "measurement": "ideal projective O on the measured register(s)",
-    "vcp": "order-2 Liu-style VCP per layer on the gate support, one reused control, auxiliary I/2^k",
-    "derangement": "wide controlled cyclic shift, O on all N registers averaged (Koczor cyclic derangement); dense, 1+MN<=9"
+    "vcp": "order-2 Liu-style VCP per layer on the gate support; a fresh control (and auxiliary I/2^k) per layer from the smallest round-robin pool that keeps measurement/reset off the main register critical path",
+    "derangement": "wide controlled cyclic shift, O on all N registers averaged (Koczor cyclic derangement); each spent register read out mid-circuit right after its CSWAP (t_meas, flip readout_q); dense, 1+MN<=9",
+    "study_circuits": "algorithm_blocks M=2: entangling L=12 (first 12 layers of U_B^2 U_A), product L=8 (U_B^3 U_A); M=1 entangling L=6",
+    "p_conventions": "pauli_form (1-p)rho+p/3 sum P rho P: sources, local depolarizing; replacement_form (1-p)rho+p I/D: global depolarizing, gate noise eps; z_flip (1-p)rho+p Z rho Z: dephasing"
   }
 }
