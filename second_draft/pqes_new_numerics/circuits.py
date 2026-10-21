@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import numpy as np
 from core import (I2,H,X,Y,Z,pure_dm,dag,site_unitary,conj_local,gate_noise,apply_idle,
-                  Hardware,depolarize_subset)
+                  Hardware,Ledger,depolarize_subset)
 
 
 def rotations(axis,theta):
@@ -109,7 +109,8 @@ def study_layers(M,family='entangling'):
 
 
 def apply_layer(rho,layer,M,hw:Hardware,offset=0,n=None,ledger=None):
-    """One noisy time unit: ideal gates, their gate noise, idle on untouched qubits."""
+    """One noisy time unit: ideal gates, their gate noise, idle on untouched qubits.
+    `ledger` (if given) is charged the layer's gates and idle units."""
     n=M if n is None else n
     busy=set()
     for g in layer:
@@ -119,7 +120,10 @@ def apply_layer(rho,layer,M,hw:Hardware,offset=0,n=None,ledger=None):
         busy.update(wires)
     idle=[offset+w for w in range(M) if offset+w not in busy]
     rho=apply_idle(rho,idle,n,1,hw)
-    if ledger is not None:ledger.data_idle+=len(idle)
+    if ledger is not None:
+        ledger.data_idle+=len(idle)
+        ledger.gates1+=sum(1 for g in layer if len(g.wires)==1)
+        ledger.cnot+=sum(1 for g in layer if len(g.wires)==2)
     return rho
 
 
@@ -146,15 +150,17 @@ def cut_case(M,family,f,hw:Hardware|None=None):
     """Fixed total depth L (study_layers); compression after the first f*L layers.
 
     f*L must be an integer, so the requested fraction is realized exactly.
+    `source` is the ledger of one run of the pre-cut layers (one copy of rho_A).
     """
     hw=Hardware() if hw is None else hw
     layers=study_layers(M,family);L=len(layers)
     cut=int(round(f*L))
     if abs(cut-f*L)>1e-9:raise ValueError(f'L_A/L={f} not realizable at L={L}')
     pre,post=layers[:cut],layers[cut:]
-    rhoA=run_layers(ground(M),pre,M,hw)
+    source=Ledger()
+    rhoA=run_layers(ground(M),pre,M,hw,ledger=source)
     target=ideal_output(layers,M)
-    return dict(M=M,family=family,f=f,L=L,cut=cut,pre=pre,post=post,rho_A=rhoA,target=target,
+    return dict(M=M,family=family,f=f,L=L,cut=cut,pre=pre,post=post,rho_A=rhoA,source=source,target=target,
                 gates_pre=count_gates(pre),gates_post=count_gates(post))
 
 

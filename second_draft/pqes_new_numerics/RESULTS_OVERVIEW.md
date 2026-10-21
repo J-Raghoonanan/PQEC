@@ -16,7 +16,7 @@ These are **generic toy-hardware results**, not a device calibration. Each state
 ## Validation
 
 - **Tests and oracle:**
-  - 93 tests pass, including the independent oracle and a regression test for every audit and review defect.
+  - 95 tests pass, including the independent oracle and a regression test for every audit and review defect.
   - The oracle is a brute-force simulator with explicit Kraus sums, every register kept, every outcome string enumerated, and hand-derived clock waits.
   - Agreement is 10⁻¹³ under all noise mechanisms at once.
   - The perturbations tested (a one-unit wait error, a missing reset error, a missing ε₂ term) each give disagreements of about 10⁻³.
@@ -155,7 +155,7 @@ Both depths are divisible by 4, so the cuts L_A/L = 0, ¼, ½, ¾, 1 are realize
 
 **Product family (controlled benchmark; unfavourable for all VD):**
 - The unmitigated bias is −0.0040.
-- Every VD arm, at every cut, has bias −0.0061 to −0.0117.
+- Every VD arm, at every cut, has bias −0.0061 to −0.0115.
 - VCP2 purifies no layer here, because there is no two-qubit gate, so it equals the unmitigated circuit (−0.0040) at every cut.
 
 ## 5. Physical channel purification vs state VD (`channel_physical.csv`, Fig F)

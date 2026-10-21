@@ -125,10 +125,7 @@ def simulate_layerwise_vcp2(M,layers_eligible,layers_plain,hw:Hardware,initial=N
     led.preparations=1
     def plain(layer):
         nonlocal states,t
-        states={s:apply_layer(states[s],layer,M,alg_hw) for s in (1,-1)}
-        led.gates1+=sum(1 for g in layer if len(g.wires)==1)
-        led.cnot+=sum(1 for g in layer if len(g.wires)==2)
-        led.data_idle+=M-len({w for g in layer for w in g.wires})
+        states={1:apply_layer(states[1],layer,M,alg_hw,ledger=led),-1:apply_layer(states[-1],layer,M,alg_hw)}
         t+=1
     for layer in layers_eligible:
         if not has_two_qubit_gate(layer):

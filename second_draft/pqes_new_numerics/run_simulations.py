@@ -123,11 +123,11 @@ def reference(profile='fast',eps2=.005,**kw):
 def hw_cols(hw):return {('eps3' if k=='eps3' else k):v for k,v in hw.record().items()}
 
 
-def cost_record(led,mom_row,plan,extra_2q=0,extra_1q=0,copies=None):
+def cost_record(led,mom_row,plan,copies=None):
     """Per-shot and total resource vector; totals use the planned shots."""
     copies=led.preparations if copies is None else copies
-    per=dict(copies_per_shot=copies,cnot_per_shot=led.cnot+extra_2q,ccx_per_shot=led.ccx,
-             gates1_per_shot=led.gates1+extra_1q,duration_per_shot=led.duration,
+    per=dict(copies_per_shot=copies,cnot_per_shot=led.cnot,ccx_per_shot=led.ccx,
+             gates1_per_shot=led.gates1,duration_per_shot=led.duration,
              width=led.peak_qubits,spacetime_per_shot=led.peak_qubits*led.duration)
     S=plan['shots']
     tot={('total_'+k[:-9] if k.endswith('_per_shot') else 'total_'+k):(S*v if plan['feasible'] else np.nan)
@@ -153,18 +153,22 @@ def write_csv(data,output):
     return df
 
 
-def arm_eval(rho,N,arch,hw,O,mu0,t_prep=None,post=None,M=None,alg_hw=None):
+def arm_eval(rho,N,arch,hw,O,mu0,t_prep=None,post=None,M=None,alg_hw=None,source=None):
     """Run one VD arm (optionally followed by an unpurified downstream block
-    `post` on every measured register). Returns (metrics row, ledger, table)."""
+    `post` on every measured register). `source` is the ledger of one run of
+    the circuit that prepared rho; every copy is charged its gates and idle
+    units. Returns (metrics row, ledger, table)."""
     M=int(round(math.log2(rho.shape[0]))) if M is None else M
     alg_hw=hw if alg_hw is None else alg_hw
     post=post or []
     mom,led,obj=simulate_moments(rho,N,arch,hw,O,t_prep)
+    if source is not None:
+        led.data_idle+=N*source.data_idle;led.cnot+=N*source.cnot;led.gates1+=N*source.gates1
     if arch=='derangement':
         if post:
             Rf,Wf=obj['Rfull'],obj['Wfull'];n=M*N
             for layer in post:
-                for i in range(N):   # count each register's post-layer idle once
+                for i in range(N):   # count each register's post-layer gates and idle once
                     Rf=apply_layer(Rf,layer,M,alg_hw,offset=M*i,n=n,ledger=led)
                     Wf=apply_layer(Wf,layer,M,alg_hw,offset=M*i,n=n)
             obj=dict(obj,Rfull=Rf,Wfull=Wf)
@@ -341,14 +345,15 @@ def placement_study(profile,seed,eps=EPS):
                     for N in Ns:
                         for arch in ARCH:
                             if arch=='derangement' and not derangement_ok(M,N):continue
-                            met,led,table=arm_eval(case['rho_A'],N,arch,hw,O,1.,t_prep=case['cut'],post=case['post'],M=M)
+                            met,led,table=arm_eval(case['rho_A'],N,arch,hw,O,1.,t_prep=case['cut'],post=case['post'],M=M,
+                                                   source=case['source'])
                             plan=plan_shots(met,eps)
                             post_copies=N if arch=='derangement' else 1
                             rec=dict(common,protocol=arch,N=N,**met,feasible=plan['feasible'],shots=plan['shots'],
                                      guard_binding=plan['guard_binding'],
                                      algorithm_gates=N*(g1A+g2A)+post_copies*(g1B+g2B),
                                      **led.record('clock_'),
-                                     **cost_record(led,met,plan,extra_2q=N*g2A+post_copies*g2B,extra_1q=N*g1A+post_copies*g1B))
+                                     **cost_record(led,met,plan))
                             rows.append(rec)
                     led=Ledger()
                     R,W=vp.simulate_layerwise_vcp2(M,case['pre'],case['post'],hw,ledger=led)
@@ -385,18 +390,18 @@ def physical_vcp_study(profile,seed,eps=EPS):
                     hw={'ideal_apparatus':Hardware(t_prep=hwp.t_prep,t_meas=hwp.t_meas,t_reset=hwp.t_reset),
                         'apparatus_gates_10x_better':replace(hwp,eps1=hwp.eps1/10,eps2=hwp.eps2/10,eps3=hwp.e3/10),
                         'physical':hwp}[app]
-                    rho=run_layers(circuits.ground(M),layers,M,hwp)
+                    src=Ledger();rho=run_layers(circuits.ground(M),layers,M,hwp,ledger=src)
                     common=dict(M=M,family=fam,L=len(layers),latency_profile=lp,apparatus_case=app,rmse_target=eps,
                                 **hw_cols(hwp),**{'app_'+k:v for k,v in hw_cols(hw).items()})
                     for N in (2,4):
                         for arch in ARCH:
                             if arch=='derangement' and not derangement_ok(M,N):continue
-                            met,led,table=arm_eval(rho,N,arch,hw,O,1.,t_prep=len(layers),M=M)
+                            met,led,table=arm_eval(rho,N,arch,hw,O,1.,t_prep=len(layers),M=M,source=src)
                             plan=plan_shots(met,eps)
                             rec=dict(common,protocol=arch,N=N,**met,feasible=plan['feasible'],shots=plan['shots'],
                                      guard_binding=plan['guard_binding'],noisy_gate_executions=N*(g1+g2),
                                      main_preparations=N,aux_preparations=0,**led.record('clock_'),
-                                     **cost_record(led,met,plan,extra_2q=N*g2,extra_1q=N*g1))
+                                     **cost_record(led,met,plan))
                             if plan['feasible']:rec.update(mc_validate(table,1.,plan['shots'],mc_reps,seed_for(seed,'vcp',M,fam,e2,lp,app,arch,N)))
                             rows.append(rec)
                     led=Ledger()

@@ -32,7 +32,7 @@ The committed data in `../data/pqes_new_numerics/` come from the `full` profile,
 
 The full profile runs in about 10 minutes (≈590 s of compute) on one laptop core (per-task times are in the manifest). A single task can be rerun alone, e.g. `--task placement`; the manifest then merges that task's profile and runtime.
 
-The committed data were generated with NumPy 2.5.4. Seeds are fixed per key, but NumPy does not guarantee identical `Generator` streams across versions. Under another NumPy version, every sampled quantity changes within its sampling error: the Monte Carlo RMSE and its CI, `mc_*`, `empirical`, `mse_sampled_*`, and the `fixed_K_empirical` rows of `twirling.csv`. Every deterministic column stays the same.
+The committed data were generated with NumPy 2.5.4 (x86_64 wheel). Seeds are fixed per key, but NumPy does not guarantee identical `Generator` streams across versions, and the LAPACK build sets the eigenbasis in which degenerate observable outcomes are sampled. Under another NumPy version or build, every sampled quantity changes within its sampling error: the Monte Carlo RMSE and its CI, `mc_*`, `empirical`, `mse_sampled_*`, and the `fixed_K_empirical` rows of `twirling.csv`. Deterministic columns agree to round-off, about 1e-13 relative across NumPy versions; a shot count that sits exactly on the S·t² ≥ 50 guard can round up by one.
 
 ## Files
 
@@ -107,7 +107,7 @@ In `channel_physical.csv`, unprefixed hardware columns record the algorithm and 
   - `data_reset_p`: the fresh copy is replaced by |0…0⟩ (phenomenological);
   - `ancilla_reset_p`: |+⟩ becomes |−⟩.
 - **Readout:** each recorded ancilla outcome flips independently with probability `readout_q`.
-- **Per-run ledger:** duration, idle exposure of data and control, preparations, resets, measurements, CNOTs, Toffolis, one-qubit gates and peak width.
+- **Per-run ledger:** duration, idle exposure of data and control, preparations, resets, measurements, CNOTs, Toffolis, one-qubit gates and peak width. When the source is an algorithm circuit (placement, channel purification), every arm's ledger includes that circuit's gates and idle units on every copy that runs it, and the downstream block on every register that runs it.
 
 **Reference hardware.** These values are generic and dimensionless; they are not a device calibration:
 - ε₂ ∈ {0.002, 0.005, 0.01, 0.02}, with ε₁ = ε₂/10 and ε₃ = ε₂;
