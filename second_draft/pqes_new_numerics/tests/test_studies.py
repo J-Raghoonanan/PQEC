@@ -117,6 +117,7 @@ def test_vd_clock_ledger_charges_the_algorithm_circuit_on_every_copy():
     M=2;hw=rs.reference('fast',.005)
     idle=lambda Ls:sum(M-len({w for g in L for w in g.wires}) for L in Ls)
     two=lambda Ls:sum(len(g.wires)==2 for L in Ls for g in L)
+    one=lambda Ls:sum(len(g.wires)==1 for L in Ls for g in L)
     place=[r for r in rs.placement_study('quick',3) if r['protocol']!='vcp2_layerwise' and r['eps2']==.005]
     for r in place:
         case=circuits.cut_case(M,r['family'],r['f'],hw);N=r['N']
@@ -124,15 +125,19 @@ def test_vd_clock_ledger_charges_the_algorithm_circuit_on_every_copy():
         _,bare,_=simulate_moments(case['rho_A'],N,r['protocol'],hw,case['target'],case['cut'])
         assert r['clock_data_idle']==bare.data_idle+N*idle(case['pre'])+runs*idle(case['post'])
         assert r['clock_cnot']==r['cnot_per_shot']==bare.cnot+N*two(case['pre'])+runs*two(case['post'])
-        assert r['clock_gates1']==r['gates1_per_shot']
+        assert r['clock_gates1']==r['gates1_per_shot']==bare.gates1+N*one(case['pre'])+runs*one(case['post'])
     der={}
     for r in place:
         if r['protocol']=='derangement':der.setdefault((r['family'],r['N']),set()).add(r['clock_data_idle'])
     assert der and all(len(v)==1 for v in der.values())
     full={(r['protocol'],r['N']):r for r in place if r['family']=='entangling' and r['f']==1}
     phys=[r for r in rs.physical_vcp_study('quick',3) if r['protocol']!='vcp2_layerwise']
-    assert all(r['clock_cnot']==r['cnot_per_shot'] and r['clock_gates1']==r['gates1_per_shot'] for r in phys)
+    layers=circuits.study_layers(M,'entangling');O=circuits.ideal_output(layers,M)
+    rho=circuits.run_layers(circuits.ground(M),layers,M,hw)
     for r in phys:
+        N=r['N'];_,bare,_=simulate_moments(rho,N,r['protocol'],hw,O,len(layers))
+        assert r['clock_cnot']==r['cnot_per_shot']==bare.cnot+N*two(layers)
+        assert r['clock_gates1']==r['gates1_per_shot']==bare.gates1+N*one(layers)
         if r['apparatus_case']=='physical' and r['eps2']==.005:
             ref=full[(r['protocol'],r['N'])]
             assert all(r[k]==ref[k] for k in ('clock_data_idle','clock_cnot','clock_gates1','clock_duration'))
