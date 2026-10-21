@@ -1,27 +1,27 @@
-"""Known algorithm targets, physically noisy circuit blocks, and VCP proxy.
+"""Known algorithm targets, layered noisy circuits, and the ideal channel proxy.
 
-This code deliberately distinguishes TWO physically different uses of a state:
-  1. The ideal TARGET projector P0 for benchmarking observable error.
-  2. A noisy input density matrix rho_A prepared by the first circuit block.
+Two physically different uses of a state are kept apart:
+  1. the ideal TARGET projector P0 used to benchmark observable error;
+  2. noisy density matrices produced by running the noisy circuit.
 
-A generic ideal circuit is separated into A and B. The real noisy B block is
-CPTP and acts once on the surviving output for mid-circuit compression, but
-N times on N separately prepared outputs for end-only purification.
+Every algorithm gate is followed by the SAME replacement depolarizing channel
+used for the SWAP gadgets (core.gate_noise: eps1 after one-qubit gates, eps2
+after two-qubit gates). Gates are grouped into ASAP layers of one time unit;
+qubits not acted on in a layer receive the shared idle channel for that unit.
 
-Using a full known projector P0 is an analytical benchmark: it assumes we can
-perform that final measurement perfectly (or equivalently uncompute the known
-ideal preparation and measure all zeros). The cost/noise of uncomputation is
-NOT included here; this assumption is explicitly noted in the README.
+Using a full known projector P0 is an analytical benchmark: it assumes the
+final measurement is perfect (or the known ideal preparation is uncomputed).
+That cost is NOT included; the README states this assumption.
 
-The optional VCP proxy is explicitly an IDEAL CHANNEL-LEVEL estimator under
-stochastic Pauli noise, not a simulation of a noisy VCP implementation. Its
-input-output fidelity must never be used as a matched physical-resource claim.
+The channel PROXY applies ideal order-N channel purification to each gate's
+Pauli channel with no apparatus at all. It is a reference curve only and is
+never ranked against physical circuits.
 """
 from __future__ import annotations
 from dataclasses import dataclass
-import math
 import numpy as np
-from core import I2,H,X,Y,Z,pure_dm,dag,site_unitary,depolarize_subset
+from core import (I2,H,X,Y,Z,pure_dm,dag,site_unitary,conj_local,gate_noise,apply_idle,
+                  Hardware,depolarize_subset)
 
 
 def rotations(axis,theta):
@@ -46,14 +46,14 @@ class Gate:
     matrix:np.ndarray
 
 
-def algorithm_blocks(M:int, b_repeats:int=1):
-    """Fixed, deterministic, reproducible entangling circuit family.
+def algorithm_blocks(M:int, b_repeats:int=1, family:str='entangling'):
+    """Fixed, deterministic, reproducible circuit family U=U_B^r U_A.
 
-    M=1: no fake entanglers, but noncommuting single-qubit rotations.
-    M=2: A includes H, Ry, CZ, Rz; B includes Ry, CX, Rx, CZ, Rz.
-    M=3: the same two-qubit interactions on (0,1) plus extra (1,2) CZ.
-    B_repeats varies the downstream gate count WITHOUT changing the
-    meaning of which ideal target the plot is evaluated against.
+    M=1: noncommuting single-qubit rotations only.
+    M=2: A has H, Ry, CZ, Rz; B has Ry, CX, Rx, CZ, Rz.
+    M=3: the same two-qubit interactions on (0,1) plus a (1,2) CZ.
+    family='product' drops every two-qubit gate (controlled product-state
+    benchmark: the ideal output is a product state, and so is every noisy one).
     """
     if M not in (1,2,3):raise ValueError('M=1..3')
     A=[Gate('H0',(0,),H),Gate('RY0',(0,),rotations('y',.66))]
@@ -66,77 +66,103 @@ def algorithm_blocks(M:int, b_repeats:int=1):
     if M>2:
         A.append(Gate('CZ12',(1,2),CZ()))
         B.append(Gate('RX2',(2,),rotations('x',.28)))
+    if family=='product':
+        A=[g for g in A if len(g.wires)==1];B=[g for g in B if len(g.wires)==1]
+    elif family!='entangling':raise ValueError(family)
     return A,B*b_repeats
 
 
-def apply_gates(rho,gates,M:int,noise_p:float):
-    """Noisy deterministic implementation of a known unitary circuit.
-
-    Every 1- or 2-qubit ideal gate is followed by a depolarizing channel
-    acting on *exactly the same wires*. This is a gate-local channel; its
-    probability noise_p is separate from the Fredkin error probability.
-    """
+def layer_gates(gates):
+    """ASAP layering: a gate goes in the first layer after the last layer that
+    touches any of its wires. Gate order on each wire is preserved."""
+    layers=[];last={}
     for g in gates:
-        U=site_unitary(g.matrix,g.wires,M)
-        rho=U@rho@dag(U)
-        if noise_p:rho=depolarize_subset(rho,g.wires,M,noise_p)
+        k=max((last.get(w,-1) for w in g.wires),default=-1)+1
+        if k==len(layers):layers.append([])
+        layers[k].append(g)
+        for w in g.wires:last[w]=k
+    return layers
+
+
+def full_layers(M,family='entangling',b_repeats=2):
+    A,B=algorithm_blocks(M,b_repeats,family)
+    return layer_gates(A+B)
+
+
+def apply_layer(rho,layer,M,hw:Hardware,offset=0,n=None,ledger=None):
+    """One noisy time unit: ideal gates, their gate noise, idle on untouched qubits."""
+    n=M if n is None else n
+    busy=set()
+    for g in layer:
+        wires=tuple(offset+w for w in g.wires)
+        rho=conj_local(rho,g.matrix,wires,n)
+        rho=gate_noise(rho,wires,n,hw)
+        busy.update(wires)
+    idle=[offset+w for w in range(M) if offset+w not in busy]
+    rho=apply_idle(rho,idle,n,1,hw)
+    if ledger is not None:ledger.data_idle+=len(idle)
     return rho
 
 
-def fixed_circuit_case(M=2,b_repeats=1,algorithm_p=.025):
-    A,B=algorithm_blocks(M,b_repeats)
-    ground=np.zeros((1<<M,1<<M),complex);ground[0,0]=1
-    rho_ideal_A=apply_gates(ground,A,M,0)
-    rho_ideal_output=apply_gates(rho_ideal_A,B,M,0)
-    rho_noisy_A=apply_gates(ground,A,M,algorithm_p)
-    rho_noisy_output=apply_gates(rho_noisy_A,B,M,algorithm_p)
-    return dict(M=M,b_repeats=b_repeats,A=A,B=B,ideal=rho_ideal_output,
-                input_A=rho_noisy_A,noisy_output=rho_noisy_output,
-                algorithm_gate_p=algorithm_p)
-
-
-def apply_downstream(rho,case):
-    return apply_gates(rho,case['B'],case['M'],case['algorithm_gate_p'])
-
-
-def apply_ideal_pauli_channel(rho,wires,p,M,power=1):
-    """Ideal VCP-style Pauli channel with weights raised to power N.
-
-    Only a controlled *theoretical proxy*. Does not simulate physical VCP
-    ancillas, Choi preparation, normalization readout noise or gate overhead.
-    For a one-qubit Pauli stochastic channel, the Choi eigenvalues are
-    (1-p,p/3,p/3,p/3), and ideal Nth-order channel purification yields
-    normalized powers. We apply this per error location, not to a general
-    coherent or nonunital channel. Eq. consistent with VCP (Liu et al.,
-    PRX Quantum 6, 020325 (2025)).
-    """
-    probabilities=np.array([1-p,p/3,p/3,p/3],float)**power
-    probabilities/=probabilities.sum()
-    for wire in wires:
-        ps=(I2,X,Y,Z)
-        out=np.zeros_like(rho)
-        for prob,P in zip(probabilities,ps):
-            U=site_unitary(P,(wire,),M)
-            out+=prob*(U@rho@dag(U))
-        rho=out
+def run_layers(rho,layers,M,hw:Hardware,ledger=None):
+    for layer in layers:rho=apply_layer(rho,layer,M,hw,ledger=ledger)
     return rho
 
 
-def vcp_pauli_proxy(M=2,b_repeats=1,physical_p=.025,power=2):
-    """Ideal layerwise VCP diagnostic; NOT included in matched-cost rankings.
+def ground(M):
+    g=np.zeros((1<<M,1<<M),complex);g[0,0]=1;return g
 
-    Here every physical gate's local depolarizing noise is replaced by a
-    tensor product of ideal purified *single-qubit* Pauli channels. Thus the
-    comparison uses the same location-wise stochastic Pauli noise assumption
-    for different powers, but it DOES NOT model a physical VCP circuit or
-    its sampling variance. The metric is an optimistic channel-level target.
+
+def ideal_output(layers,M):
+    return run_layers(ground(M),layers,M,Hardware())
+
+
+def count_gates(layers):
+    one=sum(1 for L in layers for g in L if len(g.wires)==1)
+    two=sum(1 for L in layers for g in L if len(g.wires)==2)
+    return one,two
+
+
+def cut_case(M,family,f,b_repeats=2,hw:Hardware|None=None):
+    """Fixed total depth L; compression after the first round(f*L) layers."""
+    hw=Hardware() if hw is None else hw
+    layers=full_layers(M,family,b_repeats);L=len(layers)
+    cut=int(round(f*L))
+    pre,post=layers[:cut],layers[cut:]
+    rhoA=run_layers(ground(M),pre,M,hw)
+    target=ideal_output(layers,M)
+    return dict(M=M,family=family,f=f,L=L,cut=cut,pre=pre,post=post,rho_A=rhoA,target=target,
+                gates_pre=count_gates(pre),gates_post=count_gates(post))
+
+
+def pauli_channel_probs(eps,k):
+    """Replacement depolarizing D_eps on k qubits as a Pauli channel."""
+    pI=1-eps+eps/4**k;pP=eps/4**k
+    return pI,pP
+
+
+def apply_ideal_purified_gate_noise(rho,wires,eps,M,power=1):
+    """Ideal order-`power` purification of D_eps on `wires` (proxy only).
+
+    D_eps is the Pauli channel with weights (1-eps+eps/4^k, eps/4^k,...); ideal
+    channel purification raises the weights to `power` and renormalizes
+    (Liu et al., PRX Quantum 6, 020325, Eq. 2). No ancilla, no sampling cost.
     """
-    A,B=algorithm_blocks(M,b_repeats)
-    ground=np.zeros((1<<M,1<<M),complex);ground[0,0]=1
-    target=apply_gates(ground,A+B,M,0)
-    rho=ground
-    for g in A+B:
-        U=site_unitary(g.matrix,g.wires,M)
-        rho=U@rho@dag(U)
-        rho=apply_ideal_pauli_channel(rho,g.wires,physical_p,M,power)
+    k=len(wires);pI,pP=pauli_channel_probs(eps,k)
+    wI,wP=pI**power,pP**power;Z_=wI+(4**k-1)*wP
+    # sum_P P rho P over all 4^k Paulis = 4^k * (I/d (x) Tr_wires rho)
+    full=depolarize_subset(rho,tuple(wires),M,1.0)*4**k
+    return (wI*rho+wP*(full-rho))/Z_
+
+
+def vcp_pauli_proxy(M=2,b_repeats=2,eps2=.01,power=2,family='entangling',eps1=None):
+    """Ideal layerwise channel-purification reference fidelity (NOT physical)."""
+    eps1=eps2/10 if eps1 is None else eps1
+    layers=full_layers(M,family,b_repeats)
+    target=ideal_output(layers,M)
+    rho=ground(M)
+    for layer in layers:
+        for g in layer:
+            rho=conj_local(rho,g.matrix,g.wires,M)
+            rho=apply_ideal_purified_gate_noise(rho,g.wires,eps1 if len(g.wires)==1 else eps2,M,power)
     return float(np.trace(rho@target).real)
