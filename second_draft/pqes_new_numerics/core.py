@@ -18,7 +18,7 @@ SIX ARCHITECTURES, ONE HARDWARE MODEL, ONE CLOCK
   derangement       wide_cyclic circuit; O measured on ALL N registers and
                     averaged (cyclic-derangement estimator, Koczor 2021). Each
                     spent register is read out mid-circuit right after its
-                    CSWAP (t_meas, outcome flip readout_q), like a tree ancilla
+                    CSWAP (t_meas); observable readouts are ideal in all arms
 
 Every register-level controlled SWAP is COMPILED: CSWAP(c;a,b) =
 CNOT(b->a) CCX(c,a->b) CNOT(b->a). For a register of M pairs the CNOTs of
@@ -527,56 +527,35 @@ def run_coherent(rho,N:int,model:Hardware,t_prep=None,ledger=None,wide=False):
     return _herm(p+m),_herm(p-m)
 
 
-def _is_projector(O):
-    ev=np.linalg.eigvalsh(_herm(np.asarray(O,complex)))
-    return bool(np.all(np.isclose(ev,0,atol=1e-9)|np.isclose(ev,1,atol=1e-9)))
-
-
-def derangement_moments(Rf,Wf,O,M,N,q_spent=0.):
+def derangement_moments(Rf,Wf,O,M,N):
     """Register-averaged estimator moments of the cyclic-derangement arm.
 
-    Register 0 (A) is read at the end like every other arm's output register.
-    Registers 1..N-1 are read mid-circuit right after their CSWAP, so their
-    binary O outcome is flipped with probability q_spent (O must then be a
-    projector): the reported outcome has mean Tr(O_eff R) with
-    O_eff=(1-2q)O+qI, and independent flips factorize across registers.
+    Like every arm's final observable readout, each register's O readout is
+    ideal (spent registers are read mid-circuit, charged t_meas only); only
+    the sign/control readout carries readout_q.
     """
     n=M*N;regs=[tuple(range(M*i,M*(i+1))) for i in range(N)]
-    binary=_is_projector(O)
-    if q_spent and not binary:raise ValueError('mid-circuit readout flips need a projector observable')
-    Oe=[O]+[(1-2*q_spent)*O+q_spent*np.eye(1<<M)]*(N-1)
     R1=[partial_trace(Rf,r,n) for r in regs]
-    num=np.mean([np.trace(Oe[i]@partial_trace(Wf,r,n)).real for i,r in enumerate(regs)])
-    m1=np.mean([np.trace(Oe[i]@R1[i]).real for i in range(N)])
+    num=np.mean([np.trace(O@partial_trace(Wf,r,n)).real for r in regs])
+    m1=np.mean([np.trace(O@R1[i]).real for i in range(N)])
     pair=0.
     for i in range(N):
         for j in range(N):
-            if i==j:pair+=np.trace((Oe[i] if binary else O@O)@R1[i]).real   # binary: o^2=o
-            else:pair+=np.trace(np.kron(Oe[i],Oe[j])@partial_trace(Rf,regs[i]+regs[j],n)).real
+            pair+=(np.trace(O@O@R1[i]).real if i==j else
+                   np.trace(np.kron(O,O)@partial_trace(Rf,regs[i]+regs[j],n)).real)
     return dict(t=float(np.trace(Wf).real),num=float(num),m1=float(m1),m2=float(pair/N**2),trR=float(np.trace(Rf).real))
 
 
-def derangement_table(Rf,Wf,O,M,N,q_spent=0.):
-    """Joint (reported parity, register-averaged reported outcome) distribution."""
+def derangement_table(Rf,Wf,O,M,N):
+    """Joint (reported parity, register-averaged O outcome) distribution."""
     ev,U=np.linalg.eigh(_herm(np.asarray(O,complex)));d=1<<M
     UU=U
     for _ in range(N-1):UU=np.kron(UU,U)
-    binary=_is_projector(O)
-    if q_spent and not binary:raise ValueError('mid-circuit readout flips need a projector observable')
     sg=[];vals=[];probs=[]
     for s in (1,-1):
         diag=np.clip(np.real(np.diag(UU.conj().T@((Rf+s*Wf)/2)@UU)),0,None).reshape((d,)*N)
-        if binary:
-            bit=np.isclose(ev,1).astype(int)
-            pb=np.zeros((2,)*N)
-            for idx in np.ndindex(*(d,)*N):pb[tuple(bit[list(idx)])]+=diag[idx]
-            for i in range(1,N):        # independent flips of the spent registers' outcomes
-                pb=(1-q_spent)*pb+q_spent*np.flip(pb,axis=i)
-            for bits in np.ndindex(*(2,)*N):
-                sg.append(s);vals.append(float(np.mean(bits)));probs.append(pb[bits])
-        else:
-            for idx in np.ndindex(*(d,)*N):
-                sg.append(s);vals.append(float(np.mean([ev[k] for k in idx])));probs.append(diag[idx])
+        for idx in np.ndindex(*(d,)*N):
+            sg.append(s);vals.append(float(np.mean([ev[k] for k in idx])));probs.append(diag[idx])
     probs=np.array(probs);probs/=probs.sum()
     return np.array(sg,float),np.array(vals,float),probs
 
@@ -586,8 +565,9 @@ def run_derangement(rho,N:int,model:Hardware,O,t_prep=None,ledger=None):
 
     The per-shot numerator is Omega*(1/N)sum_i o_i. Each spent register B_k is
     measured as soon as its CSWAP ends (no later gate touches it), charged a
-    mid-circuit measurement (t_meas, off the critical path) with outcome flip
-    readout_q, as a tree ancilla is. Dense joint simulation: 1+MN<=11 qubits.
+    mid-circuit measurement duration t_meas (off the critical path). As in
+    every arm, observable readouts are ideal; readout_q acts on the control's
+    sign readout only. Dense joint simulation: 1+MN<=11 qubits.
     Returns dict with t, the signed and unsigned moments needed by metrics().
     """
     hw=model;tp=hw.t_prep if t_prep is None else int(t_prep)
@@ -609,7 +589,7 @@ def run_derangement(rho,N:int,model:Hardware,O,t_prep=None,ledger=None):
         p,m=observed_branches(p,m,hw.readout_q)
     else:p,m=_herm(rho.astype(complex)),np.zeros((d,d),complex)
     Rf=_herm(p+m);Wf=_herm(p-m)
-    mom=derangement_moments(Rf,Wf,O,M,N,hw.readout_q)
+    mom=derangement_moments(Rf,Wf,O,M,N)
     regs=[tuple(range(M*i,M*(i+1))) for i in range(N)]
     return dict(mom,R1=partial_trace(Rf,regs[0],M*N),W1=partial_trace(Wf,regs[0],M*N),Rfull=Rf,Wfull=Wf)
 

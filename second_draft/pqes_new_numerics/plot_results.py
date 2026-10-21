@@ -364,7 +364,10 @@ def fig_channel_physical(data,dest):
         for xi,v in zip(x+k*w,vals):e.text(xi,v*1.05,f'{v:g}',ha='center',fontsize=6,rotation=90)
     e.set_xticks(x+.4-w/2,[lab for _,lab in keys]);e.set_yscale('log')
     _panel(e,'d','Per-shot resources at eps2=0.005 (physical, N=2)');e.legend(fontsize=7)
-    fig.suptitle('Physical order-two channel purification (Liu-style, per layer, gate support) vs state VD; M=2 entangling, L=13 layers, fast measurement')
+    a.text(.02,.02,'At N=2 every state-VD arm except the derangement is the same circuit:\nparallel tree and measured accumulator lie under coherent streaming.',
+           transform=a.transAxes,fontsize=7)
+    fig.suptitle(f'Physical order-two channel purification (Liu-style, layers with a two-qubit gate, gate support) vs state VD; '
+                 f'M=2 entangling, L={int(sub.L.iloc[0])} layers, eps1=eps2/10, fast measurement')
     fig.tight_layout();_save(fig,dest,'PQES_FigF_vcp2_vs_state_vd')
 
 

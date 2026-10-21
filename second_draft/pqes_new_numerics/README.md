@@ -69,7 +69,7 @@ The full profile runs in about 10 minutes (≈590 s of compute) on one laptop co
 | `wide_cyclic` | N | 1 coherent | all copies present, no resets |
 | `derangement` | N | 1 coherent | wide_cyclic circuit; O measured on all N registers and averaged; each spent register read out mid-circuit as soon as its CSWAP ends |
 
-The `derangement` arm is Koczor's cyclic-derangement estimator. Each spent register is measured right after its CSWAP, paying the same mid-circuit measurement duration and outcome-flip error (`readout_q`) as a tree ancilla, so it never idles until the final readout. It is simulated densely and only for 1+MN ≤ 9.
+The `derangement` arm is Koczor's cyclic-derangement estimator. Each spent register is measured right after its CSWAP, charged the mid-circuit measurement duration `t_meas`, so it never idles until the final readout. It is simulated densely and only for 1+MN ≤ 9.
 
 The three `tree_*` arms are PQES. The coherent arm is ideal-equivalent to a controlled N-cycle; a test checks this against the explicit permutation unitary.
 
@@ -128,7 +128,16 @@ There are two latency profiles: **fast** (`t_meas` = `t_reset` = 1) and **slow**
 4. a second compiled CSWAP;
 5. an X readout.
 
-Each layer gets its own freshly prepared control (with its auxiliary), drawn round robin from the smallest pool of physical control–auxiliary pairs that keeps measurement, reset and re-preparation off the main register's critical path: 2 pairs with fast measurement and 3 with slow for the study circuit. The main register never waits on a previous layer's control. The reported width counts every physical control and auxiliary qubit. The auxiliary is prepared by a random Pauli and needs no reset. Resources counted include 2G noisy-gate executions, plus one auxiliary preparation, one control preparation and one measurement per layer.
+**Purification policy:** only layers that contain a two-qubit gate are purified, because Liu-style VCP targets the noisy entangling channels. One-qubit-only layers run unpurified with their ε₁ = ε₂/10 noise; purifying them would add far more gadget error than it removes.
+- The M = 2 entangling study circuit has 4 such layers out of 12.
+- The M = 2 product circuit has none of its 8, and the M = 1 circuit none of its 6, so on those circuits VCP2 reduces to the unmitigated circuit.
+
+Each purified layer gets its own freshly prepared control (with its auxiliary). These are drawn round robin from the smallest pool of physical control–auxiliary pairs that keeps measurement, reset and re-preparation off the main register's critical path: for the entangling study circuit, 2 pairs with fast measurement and 3 with slow.
+- The main register never waits on a previous layer's control.
+- The reported width counts every physical control and auxiliary qubit.
+- The auxiliary is prepared by a random Pauli and needs no reset.
+
+Resources counted include 2G_purified + G_unpurified noisy-gate executions, plus one auxiliary preparation, one control preparation and one measurement per purified layer.
 
 With an ideal apparatus and no idle noise, VCP2 equals ideal channel purification to 10⁻¹²; a test checks this. With idle noise, the algorithm's idle errors on qubits outside a layer are not purified. "VCP2 at a cut" purifies the layers before the cut only.
 
@@ -155,7 +164,7 @@ With an ideal apparatus and no idle noise, VCP2 equals ideal channel purificatio
    - Toffolis are native three-qubit gates with ε₃ = ε₂;
    - there is no connectivity or routing model;
    - all gates take one unit.
-2. **The final observable** is the known ideal target projector, measured perfectly. Its uncomputation cost is not included.
+2. **Observable readouts are ideal in all arms.** The observable is the known ideal target projector, measured perfectly on every measured register, including the derangement arm's mid-circuit readouts; its uncomputation cost is not included. Readout error `readout_q` acts only on recorded sign and control bits (tree ancillas, the coherent control, VCP2 controls).
 3. **Data reset error** is phenomenological (|0…0⟩ substitution).
 4. **VCP2 auxiliary:**
    - the I/2ᵏ auxiliary is prepared ideally;
@@ -177,7 +186,7 @@ The suite covers:
   - sequential trees, N = 2–4, M = 1, 2;
   - parallel and recycled trees, N = 4;
   - coherent and wide arms, N = 2–4;
-  - the derangement arm (spent registers read out at once), N = 2, 3;
+  - the derangement arm (spent registers read out at once, ideally), N = 2, 3;
 - **clock tests:** hand-derived durations and idle units;
 - **reset counts** per actual reuse;
 - **regressions** for each defect the October 2026 audit found:
@@ -188,7 +197,8 @@ The suite covers:
   - VCP accounting;
   - seed nesting across shot counts;
 - **regressions** for the review fixes:
-  - spent derangement registers read out at once (no idle until the final readout);
+  - spent derangement registers read out at once (no idle until the final readout), with ideal observable readouts;
+  - VCP2 purifying only layers with a two-qubit gate;
   - one fresh control per VCP2 layer, with the main register never waiting;
   - placement cut fractions realized exactly;
   - repeated-cycle copy budgets undefined when the bias exceeds the target;

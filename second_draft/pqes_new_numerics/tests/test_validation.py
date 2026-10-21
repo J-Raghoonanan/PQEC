@@ -259,26 +259,32 @@ def test_delta_method_moments_match_sampling():
 
 
 def test_derangement_moments_match_joint_sampling():
-    """Spent registers are read mid-circuit, so their binary outcomes flip with
-    readout_q; the final register is read ideally (independent sampling check)."""
-    rho,O=noisy_input(1,'tilted',.25);N=3;q=.03
-    mom,_,full=simulate_moments(rho,N,'derangement',Hardware(eps2=.01,readout_q=q),O)
+    """Observable readouts are ideal in every arm; readout_q acts on the control's
+    sign only (independent sampling check of the moments)."""
+    rho,O=noisy_input(1,'tilted',.25);N=3
+    mom,_,full=simulate_moments(rho,N,'derangement',Hardware(eps2=.01,readout_q=.03),O)
     met=moments_metrics(mom,1.)
     Rf,Wf=full['Rfull'],full['Wfull']
     ev,U=np.linalg.eigh(O);UU=np.kron(np.kron(U,U),U)
     probs=[];num=[];den=[]
-    for s in (1,-1):
-        diag=np.real(np.diag(UU.conj().T@((Rf+s*Wf)/2)@UU))
+    for s_ in (1,-1):
+        diag=np.real(np.diag(UU.conj().T@((Rf+s_*Wf)/2)@UU))
         for idx,pv in enumerate(diag):
-            bits=[int(round(ev[b])) for b in np.unravel_index(idx,(2,)*N)]
-            for flips in np.ndindex(*(2,)*(N-1)):
-                w=np.prod([q if f else 1-q for f in flips])
-                rep=[bits[0]]+[b^f for b,f in zip(bits[1:],flips)]
-                probs.append(max(pv,0)*w);den.append(s);num.append(s*np.mean(rep))
+            bits=np.unravel_index(idx,(2,)*N);probs.append(max(pv,0));den.append(s_);num.append(s_*np.mean([ev[b] for b in bits]))
     probs=np.array(probs)/sum(probs);S=3000
     c=np.random.default_rng(4).multinomial(S,probs,size=100000);est=(c@np.array(num))/(c@np.array(den))
     assert abs(est.mean()-met['estimate'])<5e-3
     assert abs(est.var()*S/met['variance_coeff']-1)<.06
+
+
+def test_derangement_readout_error_is_visibility_only():
+    """Regression: readout error must not bias the derangement estimate (its
+    observable readouts are ideal, as in every other arm)."""
+    rho,O=noisy_input(2,'bell_tilted',.13)
+    base=moments_metrics(simulate_moments(rho,4,'derangement',Hardware(),O)[0],1.)
+    for q in (.02,.05):
+        m=moments_metrics(simulate_moments(rho,4,'derangement',Hardware(readout_q=q),O)[0],1.)
+        assert abs(m['estimate']-base['estimate'])<1e-12 and abs(m['normalization']-(1-2*q)*base['normalization'])<1e-12
 
 
 def test_derangement_spent_registers_are_read_immediately():
@@ -336,12 +342,13 @@ def test_vcp_accounting_matches_ledger_and_counts_aux_gate_runs():
     hw=Hardware(eps2=.01,eps1=.001,readout_q=.01,idle_phi=.001,t_meas=2,t_reset=1)
     led=Ledger();vp.simulate_layerwise_vcp2(M,layers[:cut],layers[cut:],hw,ledger=led)
     acc=vp.vcp_accounting(layers[:cut],layers[cut:])
-    G=sum(len(L) for L in layers[:cut])
-    assert acc['noisy_gate_executions']==2*G+sum(len(L) for L in layers[cut:])
+    pur=[L for L in layers[:cut] if any(len(g.wires)==2 for g in L)]
+    G=sum(len(L) for L in pur);rest=sum(len(L) for L in layers)-G
+    assert len(pur)<cut and acc['noisy_gate_executions']==2*G+rest
     pool=vp.vcp_pool_size(layers[:cut],hw)
-    assert led.measurements==acc['ancilla_measurements']==cut
-    assert acc['aux_preparations']==acc['control_preparations']==cut
-    assert led.ancilla_resets==max(cut-pool,0) and led.ccx==acc['cswap_toffolis']
+    assert led.measurements==acc['ancilla_measurements']==len(pur)
+    assert acc['aux_preparations']==acc['control_preparations']==len(pur)
+    assert led.ancilla_resets==max(len(pur)-pool,0) and led.ccx==acc['cswap_toffolis']
 
 
 @pytest.mark.parametrize('profile,pool',[('fast',2),('slow',3)])
@@ -353,17 +360,17 @@ def test_vcp_main_register_never_waits_for_a_control(profile,pool):
     M=2;layers=circuits.study_layers(M,'entangling');hw=rs.reference(profile,.005)
     assert vp.vcp_pool_size(layers,hw)==pool
     led=Ledger();vp.simulate_layerwise_vcp2(M,layers[:8],layers[8:],hw,ledger=led)
-    k=[len({w for g in L for w in g.wires}) for L in layers[:8]]
-    expect=sum(2*2*kk*(kk-1)+(M-kk)*vp.gadget_duration(L,hw) for kk,L in zip(k,layers[:8]))
-    expect+=sum(M-len({w for g in L for w in g.wires}) for L in layers[8:])
+    supp=lambda L:len({w for g in L for w in g.wires})
+    ent=lambda L:any(len(g.wires)==2 for g in L)
+    expect=sum(2*2*supp(L)*(supp(L)-1)+(M-supp(L))*vp.gadget_duration(L,hw) if ent(L) else M-supp(L) for L in layers[:8])
+    expect+=sum(M-supp(L) for L in layers[8:])
     assert led.data_idle==expect
-    assert led.duration==sum(vp.gadget_duration(L,hw) for L in layers[:8])+len(layers[8:])+hw.t_meas
-    assert led.peak_qubits==M+pool*(1+max(k))
+    assert led.duration==sum(vp.gadget_duration(L,hw) if ent(L) else 1 for L in layers[:8])+len(layers[8:])+hw.t_meas
+    assert led.peak_qubits==M+pool*(1+max(supp(L) for L in layers[:8] if ent(L)))
 
 
 def test_vcp_at_full_cut_equals_full_layerwise_and_zero_cut_is_unmitigated():
-    M=2;layers=circuits.full_layers(M,'entangling',2);hw=Hardware(eps2=.01,eps1=.001)
-    R1,W1=vp.simulate_layerwise_vcp2(M,layers,[],hw)
+    M=2;hw=Hardware(eps2=.01,eps1=.001)
     layers=circuits.study_layers(M,'entangling')
     R1,W1=vp.simulate_layerwise_vcp2(M,layers,[],hw)
     case=circuits.cut_case(M,'entangling',1.0,hw)
@@ -418,3 +425,17 @@ def test_placement_cut_fractions_are_realized_exactly():
             case=circuits.cut_case(2,fam,f)
             assert case['cut']/case['L']==f
     with pytest.raises(ValueError):circuits.cut_case(2,'entangling',.3)
+
+
+def test_vcp2_purifies_only_layers_with_a_two_qubit_gate():
+    """Regression: one-qubit-only layers run unpurified; a circuit with no
+    two-qubit gate (product benchmark) reduces to the unmitigated circuit."""
+    M=2;hw=Hardware(eps2=.01,eps1=.001,readout_q=.01,idle_phi=1e-3)
+    prod=circuits.study_layers(M,'product')
+    led=Ledger();R,W=vp.simulate_layerwise_vcp2(M,prod,[],hw,ledger=led)
+    np.testing.assert_allclose(R,W,atol=1e-14)
+    np.testing.assert_allclose(R,circuits.run_layers(circuits.ground(M),prod,M,hw),atol=1e-14)
+    assert led.measurements==0 and led.ccx==0 and led.peak_qubits==M
+    ent=circuits.study_layers(M,'entangling')
+    led=Ledger();vp.simulate_layerwise_vcp2(M,ent,[],hw,ledger=led)
+    assert led.measurements==sum(any(len(g.wires)==2 for g in L) for L in ent)==4

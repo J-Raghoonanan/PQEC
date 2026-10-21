@@ -9,6 +9,11 @@ for Pauli noise. VCP may act on a SUBSET of qubits (their Sec. III.1.3,
 Fig. 2d) and one control can purify a whole layer of independent channels
 (their Eq. 5: (E1 (x) E2)^(2) = E1^(2) (x) E2^(2)).
 
+PURIFICATION POLICY: only layers that contain a two-qubit gate are purified
+(Liu-style VCP targets the noisy entangling channels); one-qubit-only layers
+run unpurified with their eps1 noise. A circuit with no two-qubit gate (the
+product benchmark, M=1) therefore reduces to the unmitigated circuit.
+
 IMPLEMENTATION (one gadget per purified circuit LAYER):
   control |+>, auxiliary register on the layer's support S (k=|S| qubits) in I/2^k
   -> compiled CSWAP(c; S_main, aux)            (core.cswap_gadget, k+2 units)
@@ -38,7 +43,7 @@ from __future__ import annotations
 import numpy as np
 from core import (Hardware,Ledger,PLUS_DM,dag,tensor,conj_local,gate_noise,apply_idle,
                   cswap_gadget,cswap_duration,gadget_counts,ancilla_plus,observed_branches,_x_branches,_herm)
-from circuits import apply_layer,ground,count_gates
+from circuits import apply_layer,ground,count_gates,has_two_qubit_gate
 
 
 def vcp2_layer_gadget(x,layer,M,hw:Hardware,reused_control:bool,alg_hw:Hardware|None=None):
@@ -74,23 +79,41 @@ def gadget_duration(layer,hw:Hardware):
     return 2*cswap_duration(k,hw)+1
 
 
-def vcp_pool_size(layers_purified,hw:Hardware):
-    """Smallest number of (control, auxiliary) pairs, used round robin, such that
-    a pair's measurement, reset and |+>/twirl re-preparation (t_meas+t_reset+1)
-    always finishes before its next layer starts with gadgets run back to back.
-    The main register then never waits on a previous layer's control."""
-    D=[gadget_duration(L,hw) for L in layers_purified];need=hw.t_meas+hw.t_reset+1
-    for n in range(1,len(D)+1):
-        if all(sum(D[l+1:l+n])>=need for l in range(len(D)-n)):return n
-    return max(len(D),1)
+def is_entangling(layer):
+    """Purification policy: only layers containing a two-qubit gate get a gadget."""
+    return has_two_qubit_gate(layer)
 
 
-def simulate_layerwise_vcp2(M,layers_purified,layers_plain,hw:Hardware,initial=None,ledger=None,alg_hw=None):
-    """Purify `layers_purified` layer by layer, then run `layers_plain` unpurified.
+def _timeline(layers_eligible,hw:Hardware):
+    """Back-to-back schedule of the eligible layers: (start,end,purified) per layer."""
+    t=0;out=[]
+    for L in layers_eligible:
+        d=gadget_duration(L,hw) if is_entangling(L) else 1
+        out.append((t,t+d,is_entangling(L)));t+=d
+    return out
 
-    Every layer gets its own freshly prepared control (and auxiliary) from a
-    pool of vcp_pool_size() physical pairs, so the main register never waits
-    for a previous control's measurement or reset. Unnormalized parity-resolved
+
+def vcp_pool_size(layers_eligible,hw:Hardware):
+    """Smallest number of (control, auxiliary) pairs, used round robin over the
+    purified layers, such that a pair's measurement, reset and |+>/twirl
+    re-preparation (t_meas+t_reset+1) always finishes before its next gadget
+    starts. The main register then never waits on a previous layer's control."""
+    gad=[(a,b) for a,b,p in _timeline(layers_eligible,hw) if p];need=hw.t_meas+hw.t_reset+1
+    for n in range(1,len(gad)+1):
+        if all(gad[j+n][0]-gad[j][1]>=need for j in range(len(gad)-n)):return n
+    return max(len(gad),1)
+
+
+def simulate_layerwise_vcp2(M,layers_eligible,layers_plain,hw:Hardware,initial=None,ledger=None,alg_hw=None):
+    """Channel-purify the eligible layers (those before the cut), then run
+    `layers_plain` unpurified.
+
+    Only eligible layers that contain a two-qubit gate get a VCP2 gadget; one-
+    qubit-only layers are executed in place with their eps1 noise (purifying
+    them would add far more gadget error than it removes). Every gadget gets
+    its own freshly prepared control (and auxiliary) from a pool of
+    vcp_pool_size() physical pairs, so the main register never waits for a
+    previous control's measurement or reset. Unnormalized parity-resolved
     states are propagated: feeding a normalized weighted operator forward as a
     physical state would hide the signed-record sampling cost. Returns (R, W)
     and fills `ledger` (width counts every physical control and auxiliary).
@@ -100,12 +123,21 @@ def simulate_layerwise_vcp2(M,layers_purified,layers_plain,hw:Hardware,initial=N
     d=1<<M
     init=ground(M) if initial is None else initial
     states={1:init.astype(complex),-1:np.zeros((d,d),complex)}
-    pool=vcp_pool_size(layers_purified,hw)
+    pool=vcp_pool_size(layers_eligible,hw)
     pfree=[0]*pool;pused=[False]*pool
-    t=0;kmax=0
+    t=0;kmax=0;ngad=0
     led.preparations=1
-    for ell,layer in enumerate(layers_purified):
-        c=ell%pool;reused=pused[c]
+    def plain(layer):
+        nonlocal states,t
+        states={s:apply_layer(states[s],layer,M,alg_hw) for s in (1,-1)}
+        led.gates1+=sum(1 for g in layer if len(g.wires)==1)
+        led.cnot+=sum(1 for g in layer if len(g.wires)==2)
+        led.data_idle+=M-len({w for g in layer for w in g.wires})
+        t+=1
+    for layer in layers_eligible:
+        if not is_entangling(layer):
+            plain(layer);continue
+        c=ngad%pool;reused=pused[c];ngad+=1
         start=max(t,pfree[c]+((hw.t_reset+1) if reused else 0))
         if start>t:     # cannot happen with the chosen pool; kept so the clock stays honest
             states={s:apply_idle(states[s],range(M),M,start-t,hw) for s in (1,-1)}
@@ -125,23 +157,21 @@ def simulate_layerwise_vcp2(M,layers_purified,layers_plain,hw:Hardware,initial=N
         led.measurements+=1
         states=nxt;t=start+dur
         pfree[c]=t+hw.t_meas;pused[c]=True
-    for layer in layers_plain:
-        states={s:apply_layer(states[s],layer,M,alg_hw) for s in (1,-1)}
-        led.gates1+=sum(1 for g in layer if len(g.wires)==1)
-        led.cnot+=sum(1 for g in layer if len(g.wires)==2)
-        led.data_idle+=M-len({w for g in layer for w in g.wires})
-        t+=1
-    led.duration=t+(hw.t_meas if layers_purified else 0)
-    led.peak_qubits=M+pool*(1+kmax) if layers_purified else M
+    for layer in layers_plain:plain(layer)
+    led.duration=t+(hw.t_meas if ngad else 0)
+    led.peak_qubits=M+pool*(1+kmax) if ngad else M
     R=states[1]+states[-1];W=states[1]-states[-1]
     return _herm(R),_herm(W)
 
 
-def vcp_accounting(layers_purified,layers_plain):
-    """Static resource vector of layerwise VCP2 (checked against the Ledger in tests)."""
-    g1p,g2p=count_gates(layers_purified);g1u,g2u=count_gates(layers_plain)
-    nl=len(layers_purified)
+def vcp_accounting(layers_eligible,layers_plain):
+    """Static resource vector of layerwise VCP2 (checked against the Ledger in tests).
+    Only eligible layers containing a two-qubit gate are purified."""
+    pur=[L for L in layers_eligible if is_entangling(L)]
+    rest=[L for L in layers_eligible if not is_entangling(L)]+list(layers_plain)
+    g1p,g2p=count_gates(pur);g1u,g2u=count_gates(rest)
+    nl=len(pur)
     return dict(main_preparations=1,aux_preparations=nl,control_preparations=nl,
                 ancilla_measurements=nl,noisy_gate_executions=2*(g1p+g2p)+g1u+g2u,
                 purified_gates=g1p+g2p,purified_layers=nl,
-                cswap_toffolis=2*sum(len({w for g in L for w in g.wires}) for L in layers_purified))
+                cswap_toffolis=2*sum(len({w for g in L for w in g.wires}) for L in pur))

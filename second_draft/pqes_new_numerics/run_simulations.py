@@ -164,13 +164,13 @@ def arm_eval(rho,N,arch,hw,O,mu0,t_prep=None,post=None,M=None,alg_hw=None):
         if post:
             Rf,Wf=obj['Rfull'],obj['Wfull'];n=M*N
             for layer in post:
-                for i in range(N):
-                    Rf=apply_layer(Rf,layer,M,alg_hw,offset=M*i,n=n)
+                for i in range(N):   # count each register's post-layer idle once
+                    Rf=apply_layer(Rf,layer,M,alg_hw,offset=M*i,n=n,ledger=led)
                     Wf=apply_layer(Wf,layer,M,alg_hw,offset=M*i,n=n)
             obj=dict(obj,Rfull=Rf,Wfull=Wf)
-            mom=derangement_moments(Rf,Wf,O,M,N,hw.readout_q)
+            mom=derangement_moments(Rf,Wf,O,M,N)
             led.duration+=len(post)
-        table=derangement_table(obj['Rfull'],obj['Wfull'],O,M,N,hw.readout_q)
+        table=derangement_table(obj['Rfull'],obj['Wfull'],O,M,N)
     else:
         R,W=obj
         if post:
@@ -319,8 +319,10 @@ def placement_study(profile,seed,eps=EPS):
     """Fixed total depth L of the study circuit (circuits.study_layers: L=12
     entangling, L=8 product), cut after exactly f*L layers. VD arms compress rho_A and the remaining layers act
     once on the surviving register (on every register for derangement); VCP2
-    purifies the layers before the cut and leaves the rest unpurified. f=1 is
-    output-only VD / full layerwise VCP2; f=0 is unmitigated."""
+    purifies the layers before the cut that contain a two-qubit gate and leaves
+    the rest unpurified. f=1 is output-only VD / full layerwise VCP2. f=0 is
+    unmitigated for VCP2; the VD arms at f=0 compress the ideal initial state
+    with a noisy apparatus and then run the whole circuit."""
     rows=[];M=2
     fams=['entangling','product']
     fs=[0,.5,1] if profile=='quick' else [0,.25,.5,.75,1]
@@ -792,8 +794,8 @@ def main():
                      'readout':'independent classical flip of each recorded ancilla outcome',
                      'source_noise':'Pauli-form local depolarizing source_pauli_p for abstract sources; algorithm circuits use the gate noise above',
                      'measurement':'ideal projective O on the measured register(s)',
-                     'vcp':'order-2 Liu-style VCP per layer on the gate support; a fresh control (and auxiliary I/2^k) per layer from the smallest round-robin pool that keeps measurement/reset off the main register critical path',
-                     'derangement':'wide controlled cyclic shift, O on all N registers averaged (Koczor cyclic derangement); each spent register read out mid-circuit right after its CSWAP (t_meas, flip readout_q); dense, 1+MN<=9',
+                     'vcp':'order-2 Liu-style VCP on the gate support of every layer that contains a two-qubit gate (one-qubit-only layers unpurified, eps1=eps2/10); a fresh control (and auxiliary I/2^k) per purified layer from the smallest round-robin pool that keeps measurement/reset off the main register critical path',
+                     'derangement':'wide controlled cyclic shift, O on all N registers averaged (Koczor cyclic derangement); each spent register read out mid-circuit right after its CSWAP (t_meas; observable readouts ideal as in every arm); dense, 1+MN<=9',
                      'study_circuits':'algorithm_blocks M=2: entangling L=12 (first 12 layers of U_B^2 U_A), product L=8 (U_B^3 U_A); M=1 entangling L=6',
                      'p_conventions':'pauli_form (1-p)rho+p/3 sum P rho P: sources, local depolarizing; replacement_form (1-p)rho+p I/D: global depolarizing, gate noise eps; z_flip (1-p)rho+p Z rho Z: dephasing'})
     mpath.write_text(json.dumps(manifest,indent=2))

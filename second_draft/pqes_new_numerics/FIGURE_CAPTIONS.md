@@ -42,7 +42,7 @@ Setup: M = 2 entangled target, source noise 0.13, N = 4. All six arms. Each colu
 
 **Top row:** change of the limiting bias. **Bottom row:** v_A relative to the start of the sweep.
 
-The ε₁, readout and ancilla-reset mechanisms only rescale the signed operator for every single-register arm; their bias change is exactly zero. The exception is readout error in the derangement arm: its spent registers are read out mid-circuit, so flipped binary outcomes bias the estimate. Gate errors on the data pair (ε₂) and idle noise bias every arm.
+The ε₁, readout and ancilla-reset mechanisms only rescale the signed operator; their bias change is exactly zero and they are marked "visibility only". Observable readouts are ideal in every arm. Gate errors on the data pair (ε₂) and idle noise bias every arm.
 
 ## Figure B — Lowest-cost architecture at fixed RMSE, no width constraint (primary result)
 `PQES_FigB_architecture_cost_map.pdf`
@@ -63,7 +63,7 @@ The cheapest arm by shots at RMSE 0.03 when only arms of width ≤ 5, ≤ 7, ≤
 - **Rows:** ε₂ = 0.005 and 0.01, each at fast and slow measurement.
 - **Blank cells:** no arm within the budget is feasible.
 
-Width is a reported budget axis, not a default. A PQES tree appears as cheapest only under budgets below the 9-qubit width of the wide-cyclic and derangement arms, except where the parallel tree wins outright (ε₂ = 0.01, fast measurement).
+Width is a reported budget axis, not a default. A PQES tree appears as cheapest only under budgets below the 9-qubit width of the wide-cyclic and derangement arms; with no constraint the cyclic-derangement arm wins every feasible cell.
 
 ## Figure B2 — Validation of the shot planning
 `PQES_FigB2_planning_validation.pdf`
@@ -81,7 +81,10 @@ Both depths are divisible by 4, so the plotted realized cut/L ∈ {0, ¼, ½, ¾
 
 Compression follows the first L_A layers:
 - **State VD arms (N = 4):** distil ρ_A, then the remaining layers act once on the surviving register. For the derangement arm they act on every register.
-- **VCP2:** purifies the layers before the cut and leaves the rest unpurified.
+- **VCP2:** purifies the layers before the cut that contain a two-qubit gate and leaves the rest unpurified.
+  - Entangling circuit: 4 of the 12 layers contain a two-qubit gate.
+  - Product circuit: none of its 8 layers do, so VCP2 there is the unmitigated circuit at every cut.
+  - ε₁ = ε₂/10 throughout.
 - **Endpoints:** L_A/L = 1 is output-only VD and full layerwise VCP2. L_A/L = 0 is unmitigated for VCP2.
 
 Panels, one row per family (entangling, product):
@@ -137,7 +140,9 @@ The normalized recurrence is not a physical memory. The nested signed-ensemble c
 
 Setup: M = 2 entangling study circuit, L = 12 layers, fast measurement, N = 2 for state VD.
 
-Each VCP2 layer has its own freshly prepared control and auxiliary, drawn round robin from the smallest pool that keeps measurement and reset off the main register's critical path (2 pairs here). The physical controls and auxiliaries are included in the width.
+VCP2 purifies only the 4 of 12 layers that contain a two-qubit gate; the 8 one-qubit-only layers run unpurified with ε₁ = ε₂/10.
+
+Each purified layer has its own freshly prepared control and auxiliary, drawn round robin from the smallest pool that keeps measurement and reset off the main register's critical path (2 pairs here). The physical controls and auxiliaries are included in the width.
 
 Output-only state VD arms are compared with layerwise VCP2 under three apparatus cases:
 - **physical:** the same hardware as the algorithm;
@@ -150,7 +155,7 @@ Panels:
 - **(c)** total two-qubit gates to reach RMSE 0.03, feasible points only;
 - **(d)** per-shot resources at ε₂ = 0.005, physical apparatus: copies, two-qubit gates, Toffolis, duration, width.
 
-VCP2 counts 2G noisy-gate executions and one auxiliary preparation, control preparation and measurement per layer. Results are order two only.
+VCP2 counts 2G_purified + G_unpurified noisy-gate executions, and one auxiliary preparation, control preparation and measurement per purified layer. Results are order two only.
 
 ## Figure G — Global depolarizing: exact results
 `PQES_FigG_global_depolarizing.pdf`
@@ -180,4 +185,4 @@ VCP2 counts 2G noisy-gate executions and one auxiliary preparation, control prep
 ## Appendix — Ideal channel-purification proxy
 `PQES_App_IdealVCP_channel_proxy_ONLY.pdf`
 
-Order-N ideal purification of every gate's depolarizing channel, with no ancilla, sampling cost or gadget noise. This is a reference curve only and is never ranked against physical circuits.
+Order-N ideal purification of the depolarizing channel of every gate in the layers that contain a two-qubit gate (the same policy as physical VCP2), with no ancilla, sampling cost or gadget noise. This is a reference curve only and is never ranked against physical circuits.

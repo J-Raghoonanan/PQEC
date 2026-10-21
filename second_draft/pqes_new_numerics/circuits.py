@@ -72,6 +72,11 @@ def algorithm_blocks(M:int, b_repeats:int=1, family:str='entangling'):
     return A,B*b_repeats
 
 
+def has_two_qubit_gate(layer):
+    """Channel-purification policy shared by VCP2 and its proxy."""
+    return any(len(g.wires)==2 for g in layer)
+
+
 def layer_gates(gates):
     """ASAP layering: a gate goes in the first layer after the last layer that
     touches any of its wires. Gate order on each wire is preserved."""
@@ -175,13 +180,15 @@ def apply_ideal_purified_gate_noise(rho,wires,eps,M,power=1):
 
 def vcp_pauli_proxy(M=2,b_repeats=2,eps2=.01,power=2,family='entangling',eps1=None):
     """Ideal layerwise channel-purification reference fidelity (NOT physical).
+    Only layers containing a two-qubit gate are purified, as in vcp_physical.
     b_repeats=None uses the study circuit (study_layers)."""
     eps1=eps2/10 if eps1 is None else eps1
     layers=study_layers(M,family) if b_repeats is None else full_layers(M,family,b_repeats)
     target=ideal_output(layers,M)
     rho=ground(M)
-    for layer in layers:
+    for layer in layers:   # same policy as physical VCP2: purify layers with a two-qubit gate only
+        pw=power if has_two_qubit_gate(layer) else 1
         for g in layer:
             rho=conj_local(rho,g.matrix,g.wires,M)
-            rho=apply_ideal_purified_gate_noise(rho,g.wires,eps1 if len(g.wires)==1 else eps2,M,power)
+            rho=apply_ideal_purified_gate_noise(rho,g.wires,eps1 if len(g.wires)==1 else eps2,M,pw)
     return float(np.trace(rho@target).real)
