@@ -32,6 +32,8 @@ The committed data in `../data/pqes_new_numerics/` come from the `full` profile,
 
 The full profile runs in about 10 minutes (≈590 s of compute) on one laptop core (per-task times are in the manifest). A single task can be rerun alone, e.g. `--task placement`; the manifest then merges that task's profile and runtime.
 
+The committed data were generated with NumPy 2.5.4. Seeds are fixed per key, but NumPy does not guarantee identical `Generator` streams across versions. Under another NumPy version, every sampled quantity changes within its sampling error: the Monte Carlo RMSE and its CI, `mc_*`, `empirical`, `mse_sampled_*`, and the `fixed_K_empirical` rows of `twirling.csv`. Every deterministic column stays the same.
+
 ## Files
 
 | File | Purpose |
