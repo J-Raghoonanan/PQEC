@@ -101,7 +101,7 @@ The study uses M = 2, N = 4 and the entangled source with Pauli noise 0.14.
 - at ε₂ = 0.01 only 24 cells have a feasible arm of width ≤ 5.
 
 *Width ≤ 7 (adds the recycled tree):*
-- ε₂ = 0.002 and 0.005: coherent streaming still wins 28–36 of 36 cells; its median shot ratio to the best tree is 0.72–0.86.
+- ε₂ = 0.002 and 0.005: coherent streaming still wins 29–36 cells (of the 30–36 cells with a feasible arm within the budget); its median shot ratio to the best tree is 0.72–0.86.
 - ε₂ = 0.01, fast: **the depth-first recycled tree wins 23 of the 30 cells** that have a feasible arm within the budget; coherent streaming needs a median 1.13× (up to 1.71×) its shots. With slow measurement the recycled tree wins 7 of 24.
 
 *Width ≤ 9:* the derangement arm wins every feasible cell.

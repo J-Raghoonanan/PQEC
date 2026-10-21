@@ -235,7 +235,7 @@ def fig_placement(data,dest):
     fams=list(dict.fromkeys(d.family))
     fig,axes=plt.subplots(len(fams),4,figsize=(16,4.2*len(fams)),squeeze=False)
     for i,fam in enumerate(fams):
-        sub=d[(d.family==fam)&np.isclose(d.eps2,e2)&(d.latency_profile=='fast')]
+        sub=d[(d.family==fam)&np.isclose(d.eps2,e2)&(d.latency_profile=='fast')];gates={}
         for prot in list(ARCH)+['vcp2_layerwise']:
             cur=sub[(sub.protocol==prot)&((sub.N==4)|(sub.protocol=='vcp2_layerwise'))].sort_values('f_realized')
             if prot=='derangement' and cur.empty:cur=sub[(sub.protocol==prot)&(sub.N==2)].sort_values('f_realized')
@@ -243,13 +243,24 @@ def fig_placement(data,dest):
             kw=_arch_kw(prot);x=cur.f_realized
             axes[i,0].plot(x,cur.bias.abs(),**kw)
             axes[i,1].plot(x,cur.variance_coeff,**kw)
-            ok=cur[_feasible(cur.feasible)]
+            ok=cur[_feasible(cur.feasible)];gates[prot]=ok.set_index('f_realized').total_cnot
             axes[i,2].plot(ok.f_realized,ok.total_cnot,**kw)
             # budget panel: line style encodes the budget only (arm = colour + marker)
             for col,ls,lw in (('rmse_lead_C1000','--',.9),('rmse_lead_C10000','-',1.8),('rmse_lead_C100000',':',.9)):
                 axes[i,3].plot(x,cur[col],color=COLORS[prot],marker=MARKER[prot],ms=3 if lw<1 else 6,lw=lw,ls=ls)
         axes[i,0].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
         axes[i,3].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
+        notes=[]
+        v=gates.get('vcp2_layerwise',pd.Series(dtype=float))
+        if len(v) and (v==0).all() and (sub[sub.protocol=='vcp2_layerwise'].purified_layers==0).all():
+            notes.append('Layerwise VCP2: no layer has a two-qubit gate,\nso it is the unmitigated circuit: 0 two-qubit\n'
+                         'gates at every cut (not drawable on a log axis)')
+        w=gates.get('wide_cyclic',pd.Series(dtype=float));c=gates.get('coherent_request',pd.Series(dtype=float))
+        if len(w) and w.equals(gates.get('derangement')):
+            joins=[f for f in w.index if f in c.index and c[f]==w[f]]
+            notes.append('Wide cyclic and derangement coincide\nat every cut'
+                         +(f'; coherent streaming joins\nthem at cut/L={", ".join(f"{f:g}" for f in joins)}' if joins else ''))
+        if notes:axes[i,2].text(.02,.98,'\n'.join(notes),transform=axes[i,2].transAxes,fontsize=7,va='top')
         L=int(sub.L.iloc[0])
         _panel(axes[i,0],chr(97+4*i),f'{fam}: |bias| (L={L} layers)',logy=True);axes[i,0].set_ylabel(r'$|\mu_A-\mu_0|$')
         _panel(axes[i,1],chr(98+4*i),f'{fam}: variance coefficient',logy=True);axes[i,1].set_ylabel('$v_A$')
@@ -258,7 +269,8 @@ def fig_placement(data,dest):
         for ax in axes[i]:ax.set_xlabel('realized compression point cut$/L$')
     h,l=axes[0,0].get_legend_handles_labels();fig.legend(h,l,loc='upper center',ncol=7,frameon=False,bbox_to_anchor=(.5,1.03))
     fig.suptitle(f'Placement at fixed total depth: M=2, N=4 (derangement N=4), eps2={e2:g}, fast measurement. '
-                 'Missing points in (c,g): infeasible (|bias|>=0.03). VCP2: purify layers before the cut.',y=1.06)
+                 'Missing points in (c,g): infeasible (|bias|>=0.03) or 0 two-qubit gates (noted in the panel). '
+                 'VCP2: purify layers before the cut.',y=1.06)
     fig.tight_layout();_save(fig,dest,'PQES_FigC_compression_placement')
 
 

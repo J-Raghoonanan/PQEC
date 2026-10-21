@@ -356,7 +356,7 @@ def placement_study(profile,seed,eps=EPS):
                     acc=vp.vcp_accounting(case['pre'],case['post'])
                     rec=dict(common,protocol='vcp2_layerwise',N=2,**met,feasible=plan['feasible'],shots=plan['shots'],
                              guard_binding=plan['guard_binding'],algorithm_gates=acc['noisy_gate_executions'],
-                             vcp_control_pool=vp.vcp_pool_size(case['pre'],hw) if case['pre'] else 0,
+                             vcp_control_pool=vp.vcp_pool_size(case['pre'],hw),
                              **acc,**led.record('clock_'),**cost_record(led,met,plan,copies=1))
                     rows.append(rec)
     return rows

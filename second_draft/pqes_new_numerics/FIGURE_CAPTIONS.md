@@ -90,7 +90,7 @@ Compression follows the first L_A layers:
 Panels, one row per family (entangling, product):
 - **(a, e)** limiting |bias|;
 - **(b, f)** v_A;
-- **(c, g)** total two-qubit gates to reach RMSE 0.03, where missing points are infeasible (|bias| ≥ 0.03);
+- **(c, g)** total two-qubit gates to reach RMSE 0.03, drawn only at feasible cuts (|bias| < 0.03). A missing point is infeasible, except in (g): there VCP2 is the unmitigated circuit with 0 two-qubit gates at every cut, which a log axis cannot show (noted in the panel). Also in (g), wide cyclic and derangement coincide at every cut, and coherent streaming joins them at L_A/L = 0;
 - **(d, h)** leading RMSE at copy budgets C = 10³ (dashed), 10⁴ (solid) and 10⁵ (dotted), drawn only where S·t² ≥ 50.
 
 Slow measurement and the other ε₂ values are in `placement.csv`. Mid-circuit compression leaves downstream noise unfiltered. Its bias is reported as it is; it is not hidden behind the gate savings.

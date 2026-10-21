@@ -369,6 +369,17 @@ def test_vcp_main_register_never_waits_for_a_control(profile,pool):
     assert led.peak_qubits==M+pool*(1+max(supp(L) for L in layers[:8] if ent(L)))
 
 
+def test_vcp_without_a_purified_layer_reserves_no_control_pair():
+    """Regression: with no two-qubit layer before the cut there is no gadget, so
+    the reported pool, width and measurements must all be those of the bare circuit."""
+    M=2;hw=Hardware(eps2=.01,eps1=.001,t_meas=2,t_reset=1)
+    product=circuits.study_layers(M,'product')
+    for pre,post in (([],product),(product,[])):
+        assert vp.vcp_pool_size(pre,hw)==0
+        led=Ledger();vp.simulate_layerwise_vcp2(M,pre,post,hw,ledger=led)
+        assert led.measurements==0 and led.peak_qubits==M and led.duration==len(product)
+
+
 def test_vcp_at_full_cut_equals_full_layerwise_and_zero_cut_is_unmitigated():
     M=2;hw=Hardware(eps2=.01,eps1=.001)
     layers=circuits.study_layers(M,'entangling')

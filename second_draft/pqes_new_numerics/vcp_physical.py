@@ -79,17 +79,12 @@ def gadget_duration(layer,hw:Hardware):
     return 2*cswap_duration(k,hw)+1
 
 
-def is_entangling(layer):
-    """Purification policy: only layers containing a two-qubit gate get a gadget."""
-    return has_two_qubit_gate(layer)
-
-
 def _timeline(layers_eligible,hw:Hardware):
     """Back-to-back schedule of the eligible layers: (start,end,purified) per layer."""
     t=0;out=[]
     for L in layers_eligible:
-        d=gadget_duration(L,hw) if is_entangling(L) else 1
-        out.append((t,t+d,is_entangling(L)));t+=d
+        d=gadget_duration(L,hw) if has_two_qubit_gate(L) else 1
+        out.append((t,t+d,has_two_qubit_gate(L)));t+=d
     return out
 
 
@@ -97,11 +92,12 @@ def vcp_pool_size(layers_eligible,hw:Hardware):
     """Smallest number of (control, auxiliary) pairs, used round robin over the
     purified layers, such that a pair's measurement, reset and |+>/twirl
     re-preparation (t_meas+t_reset+1) always finishes before its next gadget
-    starts. The main register then never waits on a previous layer's control."""
+    starts. The main register then never waits on a previous layer's control.
+    No purified layer means no pair: 0."""
     gad=[(a,b) for a,b,p in _timeline(layers_eligible,hw) if p];need=hw.t_meas+hw.t_reset+1
     for n in range(1,len(gad)+1):
         if all(gad[j+n][0]-gad[j][1]>=need for j in range(len(gad)-n)):return n
-    return max(len(gad),1)
+    return 0
 
 
 def simulate_layerwise_vcp2(M,layers_eligible,layers_plain,hw:Hardware,initial=None,ledger=None,alg_hw=None):
@@ -135,7 +131,7 @@ def simulate_layerwise_vcp2(M,layers_eligible,layers_plain,hw:Hardware,initial=N
         led.data_idle+=M-len({w for g in layer for w in g.wires})
         t+=1
     for layer in layers_eligible:
-        if not is_entangling(layer):
+        if not has_two_qubit_gate(layer):
             plain(layer);continue
         c=ngad%pool;reused=pused[c];ngad+=1
         start=max(t,pfree[c]+((hw.t_reset+1) if reused else 0))
@@ -167,8 +163,8 @@ def simulate_layerwise_vcp2(M,layers_eligible,layers_plain,hw:Hardware,initial=N
 def vcp_accounting(layers_eligible,layers_plain):
     """Static resource vector of layerwise VCP2 (checked against the Ledger in tests).
     Only eligible layers containing a two-qubit gate are purified."""
-    pur=[L for L in layers_eligible if is_entangling(L)]
-    rest=[L for L in layers_eligible if not is_entangling(L)]+list(layers_plain)
+    pur=[L for L in layers_eligible if has_two_qubit_gate(L)]
+    rest=[L for L in layers_eligible if not has_two_qubit_gate(L)]+list(layers_plain)
     g1p,g2p=count_gates(pur);g1u,g2u=count_gates(rest)
     nl=len(pur)
     return dict(main_preparations=1,aux_preparations=nl,control_preparations=nl,
