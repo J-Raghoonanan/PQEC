@@ -127,11 +127,16 @@ def cost_record(led,mom_row,plan,extra_2q=0,extra_1q=0,copies=None):
     tot={('total_'+k[:-9] if k.endswith('_per_shot') else 'total_'+k):(S*v if plan['feasible'] else np.nan)
          for k,v in per.items() if k!='width'}
     out=dict(per);out.update(tot)
-    b,v,c=mom_row['bias'],mom_row['variance_coeff'],mom_row['ratio_bias_coeff']
-    for C in BUDGETS:
-        Sc=math.floor(C/copies)
-        out[f'rmse_lead_C{int(C)}']=(math.sqrt(max(b*b+(v+2*b*c)/Sc,0.)) if Sc>=1 and np.isfinite(v) else np.nan)
+    for C in BUDGETS:out[f'rmse_lead_C{int(C)}']=leading_rmse(mom_row,math.floor(C/copies))
     return out
+
+
+def leading_rmse(row,S,guard=50.):
+    """sqrt(b^2+(v+2bc)/S), reported only where the delta method holds (S t^2>=guard)."""
+    b,v,c,t=row['bias'],row['variance_coeff'],row['ratio_bias_coeff'],row['normalization']
+    if S<1 or not np.isfinite(v) or S*t*t<guard:return np.nan
+    m=b*b+(v+2*b*c)/S
+    return math.sqrt(m) if m>0 else np.nan
 
 
 def write_csv(data,output):
@@ -587,9 +592,7 @@ def twirl_budget_study(profile):
                         for N in (1,2,4,8):
                             met=metrics(rho,np.linalg.matrix_power(rho,N),P,1.)
                             rec=dict(M=M,theta=theta,p=p,eps_clifford=eps_c,mode=mode,N=N,**met)
-                            for C in BUDGETS:
-                                S=math.floor(C/N);b,v,c=met['bias'],met['variance_coeff'],met['ratio_bias_coeff']
-                                rec[f'rmse_lead_C{int(C)}']=math.sqrt(max(b*b+(v+2*b*c)/S,0.)) if np.isfinite(v) else np.nan
+                            for C in BUDGETS:rec[f'rmse_lead_C{int(C)}']=leading_rmse(met,math.floor(C/N))
                             rows.append(rec)
     return rows
 
@@ -612,7 +615,7 @@ def repeated_cycles_study(profile,eps=EPS):
     rows=[]
     powers=[2,4] if profile=='quick' else [2,4,8]
     plist=[.2] if profile=='quick' else [.05,.15,.3,.45]
-    cases=[('local',1,'plus'),('local',2,'bell_tilted'),('global',2,'D2'),('global',4,'D4')]
+    cases=[('local',1,'plus'),('local',2,'bell_tilted'),('global',2,'global_D4'),('global',4,'global_D16')]
     for chan,M,kind in cases:
         D=2**M
         if kind in ('plus','bell_tilted'):_,P0=noisy_input(M,kind,0)
@@ -678,13 +681,19 @@ def global_depol_study(profile):
     pgrid=np.linspace(0,.98,25 if profile=='quick' else 99)
     for D in Ds:
         for N in (1,2,4,8):
-            for p in pgrid:
+            Fit=np.ones_like(pgrid)            # repeated map iterated from the pure target
+            for _ in range(20000):
+                nxt=global_map(Fit,pgrid,D,N) if N>1 else (1-pgrid)*Fit+pgrid/D
+                if np.max(np.abs(nxt-Fit))<1e-14:Fit=nxt;break
+                Fit=nxt
+            for p,Fi in zip(pgrid,Fit):
                 F,T,v,a=global_closed_forms(D,N,p)
                 fps=global_fixed_points(p,D,N,4001) if N>1 else []
                 rec=dict(D=D,N=N,p=p,F_N=F,T_N=T,variance_coeff=v,input_fidelity=a,
-                         repeated_stable_F=max(fps) if fps else 1/D,repeated_n_fixed_points=len(fps),
+                         repeated_stable_F=float(Fi),repeated_n_fixed_points_interior=len(fps),
                          mixed_point_stable=bool(N*(1-p)<1))
-                for C in BUDGETS:rec[f'mse_lead_C{int(C)}']=(1-F)**2+N*v/C
+                for C in BUDGETS:   # draft Eq. global_resource_mse, only where S t^2>=50
+                    rec[f'mse_lead_C{int(C)}']=(1-F)**2+N*v/C if math.floor(C/N)*T*T>=50 else np.nan
                 rows.append(rec)
             if N>1:
                 bnd.append(dict(D=D,N=N,p_c=1-1/N,p_SN_numeric=p_saddle_node(D,N),
@@ -720,11 +729,13 @@ def local_resource_study(profile,seed):
                 probs=np.clip(probs,0,None);probs/=probs.sum()
                 sg=np.array([1,-1,1,-1.]);o=np.array([1,1,0,0.])
                 rec=dict(target=kind,M=M,p=p,N=N,F_N=F,T_N=T,input_fidelity=Fin,variance_coeff=v,ratio_bias_coeff=c,
+                         **{f'St2_C{int(C)}':math.floor(C/N)*T**2 for C in BUDGETS},
                          bias=bias,mismatch_floor=floor,
                          small_p_floor_prediction=(1-p*p*np.sin(4*np.pi/8)**2/9 if kind!='plus' else 1.))
                 for C in BUDGETS:
                     S=math.floor(C/N)
-                    rec[f'mse_lead_C{int(C)}']=bias**2+(v+2*bias*c)/S
+                    r_=leading_rmse(dict(bias=bias,variance_coeff=v,ratio_bias_coeff=c,normalization=T),S)
+                    rec[f'mse_lead_C{int(C)}']=r_**2 if np.isfinite(r_) else np.nan
                     rng=np.random.default_rng(seed_for(seed,'local',kind,M,p,N,C))
                     cnt=rng.multinomial(S,probs,size=reps);num=cnt@(sg*o);den=cnt@sg
                     ok=den!=0;e=num[ok]/den[ok]

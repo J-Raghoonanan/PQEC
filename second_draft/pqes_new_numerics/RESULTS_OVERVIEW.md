@@ -1,51 +1,235 @@
-# Full-profile numerical run: technical summary and interpretation
+# Full-profile results: what the data show
 
-**Data source:** `data/pqes_new_numerics/`, produced by `run_simulations.py --profile full --seed 31 --rmse 0.12 --width-cap 7`. Figures regenerated independently by `plot_results.py`. The `manifest.json` is the authoritative record of the run conventions. The results are for an **explicitly defined hypothetical native-Fredkin, Markovian noise model**, not a calibrated quantum computer. These values may be quoted only together with their noise-model qualifications.
+**Data:** `data/pqes_new_numerics/`, produced by `run_simulations.py --profile full --seed 31 --rmse 0.03 --width-cap 7`.
+- Tasks first run by hand were rerun individually and are recorded in `manifest.json`.
+- The full profile takes about 590 s of compute (about 10 min wall), most of it in the twirl Monte Carlo (383 s) and the K-frame study (110 s).
+
+**Model:**
+- compiled CNOT–Toffoli–CNOT SWAP gadgets with the draft's two-qubit depolarizing channel;
+- one shared clock with idle noise on every waiting qubit;
+- resets charged per actual reuse;
+- the reference hardware in `README.md`.
+
+These are **generic toy-hardware results**, not a device calibration. Each statement below holds within that model and the stated regime.
 
 ## Validation
 
-- **43 independent unit tests passed.**
-- The maximum Frobenius-norm residual for `R=rho` across the saved ideal validation cases was below `3e-15`; the maximum for `W=rho**N` was below `2e-15`.
-- Physical outcomes for the noisy measured SWAP circuit and noisy order-two VCP superinstrument remain positive, and the unconditional maps preserve trace.
-- Independent parity readout errors obey their exact analytic attenuation formulas; the ideal unitary covariance/placement relation was checked directly.
+- **Tests and oracle:**
+  - 86 tests pass, including the independent oracle and the regression test for every audit defect.
+  - The oracle is a brute-force simulator with explicit Kraus sums, every register kept, every outcome string enumerated, and hand-derived clock waits.
+  - Agreement is 10⁻¹³ under all noise mechanisms at once.
+  - The perturbations tested (a one-unit wait error, a missing reset error or a missing ε₂ term) each give disagreements of about 10⁻³.
+- **Ideal identities:** all six arms give R = ρ and W = ρᴺ to ≤ 2.7×10⁻¹⁵ (70 cases; M = 1, 2; N = 2, 4, 8).
+- **Shot planning at RMSE 0.03:**
+  - The Monte Carlo RMSE at the planned shot count is 0.961–1.075 times the target over all 1104 feasible phase-map cells.
+  - The 95% CI covers the target in 91% of cells.
+- **Estimator Monte Carlo** (`shots.csv`, 400 trials per point):
+  - sd/√(v/S) ranges from 0.93 to 1.11 over 64 points, with no zero denominators;
+  - the ratio bias agrees with c_A/S.
+- **Breakdown regime:** the delta method fails for S·t² ≲ 10. At such points, sampled MSEs exceed the leading formula by orders of magnitude, and leading MSEs are reported as undefined.
 
-## Independent readout errors provide a counterexample to any universal SWAP-tree advantage
+## 1. Readout errors favour one-control arms (unfavourable for PQES)
 
-For the simulated two-qubit entangled target, power `N=8`, assignment error `q=0.08`, and otherwise ideal apparatus:
+With independent readout error q on every recorded outcome:
+- the measured trees keep visibility (1−2q)^{N−1};
+- the coherent, wide cyclic and derangement arms keep (1−2q).
 
-| Physical architecture | Signed normalization | Leading variance coefficient |
-|---|---:|---:|
-| Parallel measured SWAP tree | 0.018734 | 831.066879 |
-| Recycled balanced SWAP tree | 0.018734 | 831.066879 |
-| Sequential measured accumulator | 0.018734 | 831.066879 |
-| Coherent-control streaming VD | 0.053329 | 102.562219 |
+At M = 2, N = 8, q = 0.08:
 
-The ratio `831.066879/102.562219` matches the predicted `(1−2q)^(−2(N−2))`. **Measured SWAP parity is more costly in this model** because the product of N−1 noisy reported outcomes has lower visibility. This is a methodological validation and a scientifically important unfavorable case for PQES.
+| Arm | v_A |
+|---|---|
+| Every measured tree | 831.07 |
+| Coherent and wide cyclic | 102.56 |
 
-## Width- and coherence-constrained tradeoff
+The ratio is 8.103, which equals (1−2q)^{−12}.
 
-The `phase.csv` table contains a grid across assignment error, additional coherent-control idle Z noise, native-Fredkin depolarization and data idle noise. It includes the systematic estimator bias, variance coefficient, peak width and a leading-asymptotic planning estimate for shots and Fredkin count needed at RMSE 0.12.
+Ancilla reset error acts the same way. It is a pure visibility factor charged N−2 times on the sequential and recycled trees, N/2−1 times on the parallel tree, and never on one-control arms.
 
-A maximum width of seven coherent qubits applies only in this specific phase-map study; the 10-qubit parallel balanced tree is excluded from its cost ranking while retained in other studies. The chosen native-Fredkin model, wait-time schedule, and width limit determine the winning region. A real hardware advantage cannot be claimed without a matched native two-qubit gate compilation, calibrated reset and measurement timings, and physical-control constraints.
+## 2. Which mechanism hurts whom (M = 2, N = 4, one mechanism at a time)
 
-## Physical order-two VCP versus physical state VD
+**Two-qubit gate error on the data pair (ε₂)** is the only gate mechanism that biases the estimator:
 
-An additional experiment models the **actual order-two VCP quantum instrument** (two controlled swaps surrounding two Pauli-channel instances, one maximally mixed auxiliary input and measured ancilla) at every circuit noise location. These trajectories are compared with measured and coherent output-only state VD2 circuits under the same per-location Pauli noise model.
+| Arm | Bias change at ε₂ = 0.02 |
+|---|---|
+| Parallel and recycled trees | −0.038 |
+| Sequential, coherent and wide | −0.041 |
+| Derangement | −0.027 |
 
-For `M=2`, 2 repetitions of the downstream algorithmic block, Pauli noise probability `p_channel=0.06`, and physical apparatus `gate_p=0.008`, `control_z_p=0.005`, `readout_q=0.012`:
+Balanced trees put fewer merges on the surviving path.
 
-| Protocol | Estimated target expectation | Absolute bias | Variance coefficient | Native Fredkins/trajectory | Noisy channel calls | Target-state preparations |
-|---|---:|---:|---:|---:|---:|---:|
-| Measured state VD2 | 0.641873 | 0.358127 | 3.619423 | 2 | 34 | 2 |
-| Coherent state VD2 | 0.641873 | 0.358127 | 3.619423 | 2 | 34 | 2 |
-| Physical layerwise VCP2 | 0.977379 | 0.022621 | 3500.757083 | 68 | 34 | 1 |
+**Visibility-only mechanisms.** ε₁ (on the ancilla H), readout and ancilla reset change v only; the bias change is exactly 0.
 
-This shows that **lower systematic bias can coexist with much higher sampling variance** and very different resource requirements. At the listed parameters, the VCP2 normalization is so small that its physical estimation may be statistically more expensive despite having the more accurate asymptotic mean. The comparison does **not** imply broad superiority of state VD or VCP. It is limited to order two and a stochastic Pauli channel, with ideal auxiliary preparation and final target measurement.
+**Idle dephasing** (5×10⁻³ per unit):
 
-## Ideal repeated noise–power cycles are not deterministic physical memory correction
+| Arm | Bias change |
+|---|---|
+| Wide cyclic | −0.008 |
+| Parallel tree | −0.010 |
+| Recycled tree | −0.014 |
+| Derangement | −0.028 (spent registers wait for the final measurement) |
 
-The repeated-cycle CSV records both virtual-state fidelity and `log10 Z_t`, where `Z_t` is the normalization of a direct nested signed-ensemble realization. For example, the simulated `M=2` nonmaximally entangled input, local Pauli `p=0.25`, purification power `N=4`, at `t=9` normalized cycles yields a mathematically defined virtual fidelity of approximately `0.7667`, but the nested trajectory consumes `4^9=262144` original copies, and `log10(Z_t)≈−71931`. Thus its signed estimator is not a practically accessible deterministic corrected memory. Do not interpret the virtual normalized trajectory alone as physical error-correction performance.
+**Measurement latency** (t_meas = 20):
+- trees: bias −0.004 to −0.008 and v × 1.18–1.32;
+- one-readout arms: unaffected.
 
-## Current claim boundaries
+**Preparation time** (t_prep = 30), v multipliers:
 
-The provided full-profile data are reliable **within the explicitly documented simulation** and support detailed apparatus comparisons. They **do not yet prove** a device-independent advantage for PQES over VD or VCP. For publication, the remaining improvements are native 1q/2q compilation, realistic ancilla readout and reset scheduling, independently calibrated noise channels, sampling confidence intervals for selected optimized points, and an order-higher VCP comparison if that becomes necessary for the target journal.
+| Arm | v × |
+|---|---|
+| Coherent streaming (its control idles during every re-preparation) | 1.80 |
+| Sequential tree | 1.29 |
+| Recycled tree | 1.16 |
+| Parallel, wide and derangement | 1.00 |
+
+## 3. Architecture cost at RMSE 0.03 (`phase.csv`, Figs B, B2)
+
+The study uses M = 2, N = 4 and the entangled source with Pauli noise 0.14.
+- Axes: readout q ∈ [0, 0.05] and idle rate ∈ [0, 4×10⁻³].
+- Slices: ε₂ ∈ {0.002, 0.005, 0.01, 0.02} and fast/slow measurement.
+- Costs: shots, two-qubit gates, duration and space-time volume, with and without a 7-qubit width cap.
+
+**Uncapped:**
+- The cyclic-derangement estimator (9 qubits) is cheapest in almost every feasible cell, needing about 2.5× fewer shots than single-register readout.
+- Exceptions are at the highest idle rates, where its waiting registers decohere:
+  - wide cyclic VD wins the 6 cells at idle 4×10⁻³ for ε₂ = 0.002 and 0.005 (and at ε₂ = 0.01 with slow measurement);
+  - the parallel tree wins 6 cells at ε₂ = 0.01 with fast measurement.
+
+**Width ≤ 7 qubits, ε₂ = 0.002 and 0.005:**
+- Coherent streaming VD wins 28–36 of 36 cells.
+- Measured trees win only at q = 0 or at the highest idle rates with fast measurement (5–8 cells). With slow measurement they win no cell.
+- The coherent arm needs a median 0.72–0.86 times the shots of the best capped tree.
+
+**Width ≤ 7 qubits, ε₂ = 0.01 (favourable for PQES):**
+- The depth-first recycled tree is the cheapest capped arm in 23 of 30 feasible cells with fast measurement, and in 7 of 24 with slow measurement.
+- With fast measurement, coherent streaming needs a median 1.13× (up to 1.71×) as many shots.
+- The cause is the recycled tree's smaller gate-induced bias (e.g. −0.0234 vs −0.0257 at q = 0.01), which matters because the target is close to the bias floor (ε² − b² is small).
+- At a larger target RMSE the margin shrinks; at a smaller one every capped arm becomes infeasible.
+
+**ε₂ = 0.02:** no arm within 7 qubits reaches RMSE 0.03. Only the derangement arm does, in 6 cells.
+
+**Feasibility:** infeasible cells (|bias| ≥ 0.03) occur at the highest idle rate for every ε₂, spread with ε₂, and dominate at ε₂ = 0.02.
+
+## 4. Compression placement at fixed total depth (`placement.csv`, Fig C)
+
+The circuit is `algorithm_blocks`, M = 2, b_repeats = 2: L = 13 layers (entangling) and L = 6 (product). Settings: ε₂ = 0.005, fast measurement, N = 4.
+
+**Entangling family:**
+
+| Configuration | Bias |
+|---|---|
+| Unmitigated | −0.0239 |
+| Output-only VD, every arm | −0.0100 to −0.0108 |
+| Compression at L_A/L = 0.5 | −0.0238 |
+| Compression at L_A/L = 0.25 | −0.028 |
+
+- **Mid-circuit compression is unfavourable here.** At L_A/L = 0.5 the bias is no better than unmitigated: the downstream noise is unfiltered and the SWAP gadget adds its own errors. Its two-qubit-gate saving does not compensate.
+- **Total two-qubit gates to RMSE 0.03, output-only:**
+
+| Arm | Gates |
+|---|---|
+| Derangement | 2368 |
+| Wide cyclic | 3552 |
+| Parallel tree | 4256 |
+| Sequential tree | 5216 |
+| Coherent streaming | 5472 |
+| Recycled tree | 5472 |
+
+- **Across ε₂ ∈ {0.002, …, 0.02},** output-only VD lowers |bias| about 2.3×, from −0.0108 to −0.0049 (ε₂ = 0.002) and from −0.0860 to −0.036 (ε₂ = 0.02, infeasible at 0.03).
+
+**Product family (controlled benchmark; unfavourable for all VD):**
+- The unmitigated bias is −0.0030.
+- Every VD arm, at every cut, has bias −0.0085 to −0.0105: the distillation apparatus adds more error than this weakly noisy circuit contains.
+
+**VCP2 at the same cut** is infeasible for every cut ≥ 0.25 in both families (§5).
+
+## 5. Physical channel purification vs state VD (`channel_physical.csv`, Fig F)
+
+Order-two, Liu-style channel purification: per layer, on the gate support, one reused control. The M = 2 entangling circuit has 13 layers.
+
+**Ideal apparatus** (the algorithm gates and their idle noise are unchanged):
+- VCP2 removes the gate noise, but not the algorithm's idle noise on qubits outside each layer.
+- Its bias is about −0.0021 at every ε₂. Output-only state VD (N = 2) has bias −0.00004 (ε₂ = 0.002), −0.0002, −0.0008 and −0.0030 (ε₂ = 0.02).
+- So VCP2 has the smaller bias only at ε₂ = 0.02.
+- VCP2 costs 98 two-qubit gates, 44 Toffolis and 146 time units per shot, against 14 gates, 2 Toffolis and 18 units for state VD.
+- Total two-qubit gates to RMSE 0.03 are 5.2–14.7×10³, against 0.74–1.9×10³ for state VD.
+
+**Physical apparatus (the same compiled gates):**
+- VCP2's own unpurified CSWAP errors, plus idle noise over its 8× longer schedule, give bias −0.127 (ε₂ = 0.002) to −0.458 (ε₂ = 0.02).
+- That is worse than the unmitigated circuit, and infeasible at every ε₂.
+- With 10× better gadget gates (readout, resets and idle unchanged) the bias is still −0.078 to −0.127.
+- The only physically feasible VCP2 row is M = 1, ε₂ = 0.002, fast measurement.
+- Output-only state VD is feasible for ε₂ ≤ 0.01 (bias −0.005 to −0.019).
+
+This result is specific to order two, this compilation (one control per layer, no parallel controls), and gate-support auxiliaries prepared ideally.
+
+## 6. Randomized Clifford frames (Fig D)
+
+**Fixed K-frame sets** (p = 0.45, θ = π/2, N = 4; frames sampled with replacement, 100 sets per K): the mean fidelity error falls as K grows:
+
+| M | K = 1 | K = 243 |
+|---|---|---|
+| 1 | 0.146 | 0.0006 |
+| 5 | 0.478 | 0.0028 |
+
+The power-state trace distance falls roughly as K^{−1/2}; for M = 5 it goes from 0.67 to 0.066.
+
+**Fresh frames for every copy and every shot:**
+- The unbiased numerator and denominator match Tr(P ρ̄ᴺ) and Tr ρ̄ᴺ (|z| ≤ 3.0 over 192 configurations, M up to 5).
+- Where S·t² ≥ 50, the ratio matches the prediction with |z| ≤ 2.4, and sd/√(v/S) is 0.88–1.10.
+- No enumeration of the 3ᴹ frames is needed.
+
+**Exact fidelity** (θ = π/2, N = 4, M = 2), independent / shared / untwirled:
+
+| p | Independent | Shared | Untwirled |
+|---|---|---|---|
+| 0.45 | 0.936 | 0.748 | 0.477 |
+| 0.80 | 0.137 | 0.230 | 0.000 |
+
+Past the twirled boundary (p = 0.8 > 3/4), shared frames exceed independent ones.
+
+**Fixed budget** (C = 10⁴ copies, best N, M = 2):
+- Twirling lowers the RMSE, e.g. 0.592 → 0.213 at θ = π/2, p = 0.45, and 0.213 → 0.070 at p = 0.3.
+- Clifford gate error ε_C = 0.02 raises the RMSE by at most 12%.
+- At these dephasing strengths every RMSE stays far above 0.03, because bias dominates.
+
+## 7. Repeated virtual cycles (Fig E)
+
+The normalized recurrence can keep a high fidelity while the nested signed-ensemble cost explodes. At p = 0.15, global depolarizing, D = 4:
+- **N = 4:** F_5 ≈ 1.000, yet log₁₀ Z_5 = −70.7, so one estimate to RMSE 0.03 needs about 10^147 original copies.
+- **N = 2:** the budget is about 10^10.6 copies at t = 5 and about 10^218 at t = 10.
+
+Local depolarizing (M = 2) behaves the same: at N = 4, about 10^340 copies at t = 5. The repeated map is therefore not an operational memory beyond a few cycles.
+
+## 8. Global and local depolarizing benchmarks (Figs G, H)
+
+**Global saddle-node p_SN(D,N)** (numerical):
+
+| D | N = 2 | N = 4 | N = 8 |
+|---|---|---|---|
+| 2 | 0.500 | 0.750 | 0.875 |
+| 4 | 0.536 | 0.781 | 0.895 |
+| 8 | 0.602 | 0.833 | 0.925 |
+
+- For N = 2 these equal D/(D+2√(D−1)).
+- For D = 2 they equal p_c(N) = 1 − 1/N.
+
+**Global optimal N** at C = 10⁴ copies:
+- D = 4: N = 2 for p ≤ 0.25, N = 4 for 0.26–0.51, N = 2 beyond.
+- D = 8: N = 2 throughout.
+
+**Local depolarizing** (|+⟩^M, C = 10⁴):
+- The optimal N is 2–4.
+- Sampled and leading MSE agree to a median 1.8% (90th percentile 5.6%) wherever S·t² ≥ 50.
+- For M = 5 at p ≥ 0.5 the optimal choice is **N = 1**, i.e. no distillation (unfavourable).
+- The entangled target cos(π/8)|00⟩ + sin(π/8)|11⟩ saturates at its eigenvector-mismatch floor (F_16 = 0.9851 at p = 0.3, equal to the floor). The small-p prediction 1 − p²/9 holds at small p.
+
+## Claim boundaries
+
+- **What the data support:**
+  - an explicit, unfavourable readout result for measured trees;
+  - a narrow favourable regime for the depth-first recycled tree (width ≤ 7, ε₂ ≈ 0.01, fast measurement, target RMSE near the bias floor);
+  - no advantage elsewhere;
+  - larger gains from estimators that read out every register (cyclic derangement), whenever width allows.
+- **Unfavourable for compression and channel purification:** mid-circuit compression and compiled VCP2 are both unfavourable at these parameters.
+- **What could move these conclusions:** a different compilation (native CSWAP, parallel controls), a different noise model (coherent or correlated errors) or a calibrated device. None is modelled here.
+- **No claim** of a device-independent or hardware advantage of PQES over other virtual-distillation variants is supported.

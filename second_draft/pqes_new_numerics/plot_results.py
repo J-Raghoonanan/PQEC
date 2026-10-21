@@ -126,16 +126,20 @@ def fig_mechanisms(data,dest):
     d=d[d.N==4];mechs=list(dict.fromkeys(d.mechanism))
     fig,axes=plt.subplots(2,len(mechs),figsize=(2.6*len(mechs),6.2),squeeze=False)
     for j,mech in enumerate(mechs):
-        g=d[d.mechanism==mech]
+        g=d[d.mechanism==mech];span=0.
         for arch in ARCH:
             cur=g[g.architecture==arch].sort_values('value')
             if cur.empty:continue
-            base=cur.iloc[0]
-            axes[0,j].plot(cur.value,cur.bias,**_arch_kw(arch,markersize=4,lw=1.2))
+            base=cur.iloc[0];db=cur.bias-base.bias;span=max(span,float(db.abs().max()))
+            axes[0,j].plot(cur.value,db,**_arch_kw(arch,markersize=4,lw=1.2))
             axes[1,j].plot(cur.value,cur.variance_coeff/base.variance_coeff,**_arch_kw(arch,markersize=4,lw=1.2))
         _panel(axes[0,j],chr(97+j),mech);axes[0,j].set_xlabel(mech);axes[1,j].set_xlabel(mech)
+        if span<1e-9:
+            axes[0,j].set_ylim(-1e-3,1e-3)
+            axes[0,j].text(.5,.5,'no bias:\nvisibility only',transform=axes[0,j].transAxes,ha='center',fontsize=8)
+        axes[0,j].ticklabel_format(axis='y',useOffset=False,style='sci',scilimits=(-2,2))
         axes[1,j].spines[['top','right']].set_visible(False);axes[1,j].grid(True,alpha=.25)
-    axes[0,0].set_ylabel(r'bias $\mu_A-\mu_0$');axes[1,0].set_ylabel(r'$v/v$ at sweep start')
+    axes[0,0].set_ylabel(r'bias change $\Delta b_A$');axes[1,0].set_ylabel(r'$v/v$ at sweep start')
     h,l=axes[0,0].get_legend_handles_labels();fig.legend(h,l,loc='upper center',ncol=6,frameon=False,bbox_to_anchor=(.5,1.04))
     fig.suptitle('One-at-a-time apparatus mechanisms (M=2 bell_tilted, source p=0.13, N=4; t_meas and t_prep sweeps at idle 1e-3/unit)',y=1.09)
     fig.tight_layout();_save(fig,dest,'PQES_FigA2_apparatus_mechanisms')
@@ -218,13 +222,15 @@ def fig_placement(data,dest):
             ok=cur[_feasible(cur.feasible)]
             axes[i,2].plot(ok.f,ok.total_cnot,**kw)
             axes[i,3].plot(cur.f,cur['rmse_lead_C10000'],**kw)
+            for col,ls in (('rmse_lead_C1000',(0,(4,2))),('rmse_lead_C100000',(0,(1,2)))):
+                axes[i,3].plot(cur.f,cur[col],color=COLORS[prot],marker=MARKER[prot],ms=3,lw=.9,ls=ls)
         axes[i,0].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
         axes[i,3].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
         L=int(sub.L.iloc[0])
         _panel(axes[i,0],chr(97+4*i),f'{fam}: |bias| (L={L} layers)',logy=True);axes[i,0].set_ylabel(r'$|\mu_A-\mu_0|$')
         _panel(axes[i,1],chr(98+4*i),f'{fam}: variance coefficient',logy=True);axes[i,1].set_ylabel('$v_A$')
         _panel(axes[i,2],chr(99+4*i),f'{fam}: two-qubit gates to RMSE 0.03',logy=True);axes[i,2].set_ylabel('total two-qubit gates')
-        _panel(axes[i,3],chr(100+4*i),f'{fam}: RMSE at C=$10^4$ copies',logy=True);axes[i,3].set_ylabel('leading RMSE')
+        _panel(axes[i,3],chr(100+4*i),f'{fam}: RMSE at C=$10^3$ (dashed), $10^4$, $10^5$ (dotted)',logy=True);axes[i,3].set_ylabel('leading RMSE')
         for ax in axes[i]:ax.set_xlabel('compression point $L_A/L$')
     h,l=axes[0,0].get_legend_handles_labels();fig.legend(h,l,loc='upper center',ncol=7,frameon=False,bbox_to_anchor=(.5,1.03))
     fig.suptitle(f'Placement at fixed total depth: M=2, N=4 (derangement N=4), eps2={e2:g}, fast measurement. '
@@ -353,14 +359,14 @@ def fig_global(data,dest):
             s=d[(d.D==D)&(d.N==N)].sort_values('p')
             b.plot(s.p,s.F_N,color=cols.get(D,'k'),ls=lss[N],label=f'D={D}, N={N}')
             c.plot(s.p,s.T_N,color=cols.get(D,'k'),ls=lss[N],label=f'D={D}, N={N}')
-    _panel(a,'a','Repeated cycles: stable fixed point (vertical: $p_{SN}$)');a.set_ylabel('$F_\\infty$')
+    _panel(a,'a','Repeated cycles from the pure target (vertical: $p_{SN}$)');a.set_ylabel('$F_\\infty$')
     _panel(b,'b','One-shot power fidelity $F_N$');b.set_ylabel('$F_N$')
     _panel(c,'c','Signed normalization $T_N$',logy=True);c.set_ylabel('$T_N$')
     s=d[d.D==4]
     for N in (1,2,4,8):
         g=s[s.N==N].sort_values('p');e.plot(g.p,g['mse_lead_C10000'],ls=lss[N],color='#333333',label=f'N={N}')
     best=s.loc[s.groupby('p')['mse_lead_C10000'].idxmin()]
-    e.scatter(best.p,best['mse_lead_C10000'],c=[cols.get(int(n),'k') if n in cols else '#999999' for n in best.N],s=12,zorder=3,label='optimal N (coloured)')
+    e.scatter(best.p,best['mse_lead_C10000'],c=[cols.get(int(n),'k') if n in cols else '#999999' for n in best.N],s=12,zorder=3,label='optimal N: blue 2, orange 4, purple 8')
     _panel(e,'d','Leading MSE at C=$10^4$ copies, D=4',logy=True);e.set_ylabel('MSE')
     for ax in axes.ravel():ax.set_xlabel('global depolarizing $p$')
     a.legend(fontsize=7,ncol=2);b.legend(fontsize=6,ncol=2);e.legend(fontsize=7)
@@ -388,9 +394,11 @@ def fig_local(data,dest):
         s=prod[(prod.M==M)&np.isclose(prod.p,.3)].sort_values('N')
         if s.empty:continue
         c.plot(s.N,s['mse_lead_C10000'],color=cols.get(M,'k'),label=f'M={M} leading')
-        c.errorbar(s.N,s['mse_sampled_C10000'],yerr=1.96*s['mse_sampled_se_C10000'],color=cols.get(M,'k'),fmt='o',ms=3,capsize=2,label=f'M={M} sampled')
+        ok=s['St2_C10000']>=50
+        c.errorbar(s.N[ok],s['mse_sampled_C10000'][ok],yerr=1.96*s['mse_sampled_se_C10000'][ok],color=cols.get(M,'k'),fmt='o',ms=3,capsize=2,label=f'M={M} sampled')
+        c.scatter(s.N[~ok],s['mse_sampled_C10000'][~ok],s=14,facecolors='none',edgecolors=cols.get(M,'k'))
         i=s['mse_lead_C10000'].idxmin();c.scatter([s.N[i]],[s['mse_lead_C10000'][i]],s=120,facecolors='none',edgecolors=cols.get(M,'k'))
-    _panel(c,'c','MSE at C=$10^4$ copies, p=0.3 (circle: optimal N)',logy=True);c.set_ylabel('MSE')
+    _panel(c,'c','MSE at C=$10^4$ copies, p=0.3 (big circle: optimal N; hollow: S t$^2$<50)',logy=True);c.set_ylabel('MSE')
     ent=d[d.target!='plus']
     for p in sorted(ent.p.unique()):
         s=ent[np.isclose(ent.p,p)].sort_values('N')

@@ -79,3 +79,13 @@ def test_per_qubit_factorization_of_random_frames():
 def test_reference_profiles_are_recorded():
     a,b=rs.reference('fast'),rs.reference('slow')
     assert a.t_meas<b.t_meas and a.eps1==a.eps2/10
+
+
+def test_leading_rmse_undefined_outside_delta_method_regime():
+    """Regression: b^2+(v+2bc)/S can turn negative when S t^2 is small; it must
+    be reported as undefined, never clamped to zero or used to pick an optimal N."""
+    row=dict(bias=-.05,variance_coeff=400.,ratio_bias_coeff=-2e4,normalization=.03)
+    assert np.isnan(rs.leading_rmse(row,3000))           # S t^2 = 2.7
+    assert np.isfinite(rs.leading_rmse(row,10**6))         # S t^2 = 900
+    rows=rs.local_resource_study('quick',3)
+    assert all(not np.isfinite(r['mse_lead_C1000']) or r['mse_lead_C1000']>0 for r in rows)

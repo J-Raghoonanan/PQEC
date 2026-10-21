@@ -373,3 +373,12 @@ def test_independent_vs_shared_frame_average_noncommuting_nonlinearity():
     F=lambda z:np.trace(project@z).real/np.trace(z).real
     assert abs(F(np.linalg.matrix_power(avg,2))-F(sum(np.linalg.matrix_power(r,2) for r in states)/3))>1e-3
     np.testing.assert_allclose(avg,(1-4*p/3)*project+(4*p/3)*np.eye(2)/2)
+
+
+def test_ideal_apparatus_vcp_sees_the_same_algorithm_idle_noise_as_the_source():
+    """Regression: with an ideal apparatus, VCP2's unsigned output must equal the
+    noisy algorithm run with the same algorithm idle noise (matched comparison)."""
+    M=2;layers=circuits.full_layers(M,'entangling',2)
+    alg=Hardware(eps1=.002,eps2=.02,idle_gamma=2e-3,idle_phi=2e-3)
+    R,W=vp.simulate_layerwise_vcp2(M,layers,[],Hardware(),alg_hw=alg)
+    np.testing.assert_allclose(R,circuits.run_layers(circuits.ground(M),layers,M,alg),atol=1e-12)

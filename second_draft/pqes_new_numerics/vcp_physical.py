@@ -57,7 +57,8 @@ def vcp2_layer_gadget(x,layer,M,hw:Hardware,reused_control:bool,alg_hw:Hardware|
         for wires in (tuple(1+w for w in g.wires),tuple(amap[w] for w in g.wires)):
             state=conj_local(state,g.matrix,wires,n)
             state=gate_noise(state,wires,n,alg_hw)
-    state=apply_idle(state,[0]+outside,n,1,hw)
+    state=apply_idle(state,[0],n,1,hw)            # control waits: apparatus idle
+    state=apply_idle(state,outside,n,1,alg_hw)    # untouched main qubits in this layer: algorithm idle, as in run_layers
     state,_=cswap_gadget(state,n,0,[1+w for w in S],aux,hw)
     state=apply_idle(state,outside,n,Tc,hw)
     d=1<<M;e=1<<k
