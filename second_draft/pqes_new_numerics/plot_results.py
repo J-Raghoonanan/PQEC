@@ -1,32 +1,13 @@
 #!/usr/bin/env python3
 """PQES publication plotting — LOAD CSVs, NEVER recompute quantum dynamics.
 
-This is intentionally a separate file from run_simulations.py, replicating the
-user's earlier `rho2_plots.py` workflow. The plotting conventions follow that
-script: seaborn-v0_8-paper, Times New Roman preference, Matplotlib mathtext,
-large APS-ready labels, heavy curves, conspicuous marker shapes, multi-panel
-figures, vector PDF + 300dpi PNG, and generous panel dimensions.
-
-The chosen data are NOT retroactively filtered to make one architecture win.
-The exact error/noise setting is written on each figure. If a CSV has not yet
-been generated, we SKIP the corresponding figure and print which task to run.
-
-Use:
     python pqes_new_numerics/plot_results.py
-    python pqes_new_numerics/plot_results.py --data-dir data/pqes_new_numerics
-    python pqes_new_numerics/plot_results.py --figure readout
+    python pqes_new_numerics/plot_results.py --figure placement
 
-Figure map:
- vcp       -> PHYSICAL order-2 layerwise Pauli VCP vs two state-VD instruments;
- readout   -> noisy ancilla readout disadvantage and shot-level checks;
- phase     -> resource-correct architecture-selection heat maps;
- placement -> mid-circuit vs end-only, matched apparatus/midpoint rights;
- twirling  -> independent versus shared frame averaging, K-frame statistics;
- cycles    -> ideal virtual fidelity versus exponential nested resource cost;
- channel   -> IDEAL VCP Pauli-channel theoretical proxy; never hardware ranks.
-
-Every panel is a visualization of a named CSV column or computed ratio of
-CSV columns; quantum instrument code is NEVER imported here.
+Every panel states its slice (eps2, latency profile, N, M, ...) on the figure.
+Overlapping curves are drawn with distinct markers and line styles, so a hidden
+series is never silent; a coincidence of arms is noted in the panel instead.
+If a CSV is missing, the figure is skipped and the task to run is printed.
 """
 from __future__ import annotations
 import argparse
@@ -36,47 +17,31 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 from matplotlib.colors import ListedColormap
 from matplotlib import font_manager
+from scipy import stats
 
-# The user's rho2_plots.py settings are reproduced as the baseline.
-# Use the EXACT requested font when available (e.g. on the user's Mac),
-# otherwise an available metrically compatible serif fallback.
-_installed_fonts={f.name for f in font_manager.fontManager.ttflist}
-_SERIF_FONT=next((f for f in ('Times New Roman','Liberation Serif','DejaVu Serif')
-                  if f in _installed_fonts),'DejaVu Serif')
+_installed={f.name for f in font_manager.fontManager.ttflist}
+_SERIF=next((f for f in ('Times New Roman','Liberation Serif','DejaVu Serif') if f in _installed),'DejaVu Serif')
 try:plt.style.use('seaborn-v0_8-paper')
 except OSError:pass
-plt.rcParams.update({
-    'font.size':20,
-    'axes.titlesize':40,
-    'axes.labelsize':40,
-    'xtick.labelsize':28,
-    'ytick.labelsize':28,
-    'legend.fontsize':20,
-    'figure.titlesize':40,
-    'font.family':_SERIF_FONT,
-    'mathtext.fontset':'dejavusans',
-    'axes.linewidth':1.2,
-    'grid.linewidth':0.8,
-    'lines.linewidth':3,
-    'lines.markersize':12,
-    'pdf.fonttype':42,
-    'ps.fonttype':42,
-})
+plt.rcParams.update({'font.size':11,'axes.titlesize':12,'axes.labelsize':12,'xtick.labelsize':10,
+                     'ytick.labelsize':10,'legend.fontsize':9,'figure.titlesize':13,'font.family':_SERIF,
+                     'mathtext.fontset':'dejavuserif','axes.linewidth':1.,'lines.linewidth':1.8,
+                     'lines.markersize':6,'pdf.fonttype':42,'ps.fonttype':42})
 
-ARCH=('tree_parallel','tree_recycled','tree_sequential','coherent_request')
-LABEL={'tree_parallel':'Parallel SWAP tree',
-       'tree_recycled':'Recycled SWAP tree',
-       'tree_sequential':'Measured accumulator',
-       'coherent_request':'Coherent-control VD'}
-COLORS={'tree_parallel':'#2E86AB',
-        'tree_recycled':'#00845A',
-        'tree_sequential':'#F18F01',
-        'coherent_request':'#7B3294'}
-MARKER={'tree_parallel':'o','tree_recycled':'s','tree_sequential':'^',
-        'coherent_request':'D'}
+ARCH=('tree_parallel','tree_recycled','tree_sequential','coherent_request','wide_cyclic','derangement')
+LABEL={'tree_parallel':'Parallel SWAP tree','tree_recycled':'Recycled SWAP tree','tree_sequential':'Measured accumulator',
+       'coherent_request':'Coherent streaming VD','wide_cyclic':'Wide cyclic VD','derangement':'Cyclic derangement',
+       'vcp2_layerwise':'Layerwise VCP2'}
+SHORT={'tree_parallel':'P','tree_recycled':'R','tree_sequential':'S','coherent_request':'C','wide_cyclic':'W',
+       'derangement':'D','vcp2_layerwise':'V'}
+COLORS={'tree_parallel':'#2E86AB','tree_recycled':'#00845A','tree_sequential':'#F18F01','coherent_request':'#7B3294',
+        'wide_cyclic':'#C73E1D','derangement':'#5C5C5C','vcp2_layerwise':'#1B998B'}
+MARKER={'tree_parallel':'o','tree_recycled':'s','tree_sequential':'^','coherent_request':'D','wide_cyclic':'v',
+        'derangement':'P','vcp2_layerwise':'X'}
+LS={'tree_parallel':'-','tree_recycled':'--','tree_sequential':':','coherent_request':'-.','wide_cyclic':(0,(5,1)),
+    'derangement':(0,(1,1)),'vcp2_layerwise':'-'}
 ROOT=Path(__file__).resolve().parent.parent
 DATA_DEFAULT=ROOT/'data'/'pqes_new_numerics'
 FIG_DEFAULT=ROOT/'figures'/'pqes_new_numerics'
@@ -85,336 +50,430 @@ FIG_DEFAULT=ROOT/'figures'/'pqes_new_numerics'
 def _load(data,name):
     path=data/f'{name}.csv'
     if not path.is_file():
-        print(f'  Missing {path}. To generate: --task {name}')
-        return None
+        print(f'  Missing {path}. To generate: --task {name}');return None
     return pd.read_csv(path)
 
 
 def _save(fig,dest,stem):
     dest.mkdir(parents=True,exist_ok=True)
     for typ in ('pdf','png'):
-        fname=dest/f'{stem}.{typ}'
-        fig.savefig(fname,bbox_inches='tight',dpi=300)
-        print('  Saved',fname)
+        fname=dest/f'{stem}.{typ}';fig.savefig(fname,bbox_inches='tight',dpi=300);print('  Saved',fname)
     plt.close(fig)
 
 
 def _panel(ax,letter,title,logx=False,logy=False):
-    """Same uncluttered aesthetic as old figures; smaller local titles avoid overlap."""
-    ax.set_title(title,fontsize=24,pad=12)
-    ax.text(.025,.975,letter,transform=ax.transAxes,fontsize=25,va='top',
-            ha='left',fontweight='bold',color='#444444')
+    ax.set_title(f'({letter}) {title}',loc='left')
     if logx:ax.set_xscale('log')
     if logy:ax.set_yscale('log')
-    ax.spines[['top','right']].set_visible(False)
-    ax.grid(True,alpha=.27,linewidth=.8)
-    ax.tick_params(labelsize=17)
+    ax.spines[['top','right']].set_visible(False);ax.grid(True,alpha=.25,linewidth=.6)
 
 
-def _axis(ax,x=None,y=None):
-    if x:ax.set_xlabel(x,fontsize=23)
-    if y:ax.set_ylabel(y,fontsize=23)
+def _arch_kw(a,**kw):
+    return dict(color=COLORS[a],marker=MARKER[a],linestyle=LS[a],label=LABEL[a],**kw)
 
 
-def _legend(ax,**kw):ax.legend(frameon=False,fontsize=13,**kw)
+def _feasible(s):return s.astype(str).str.lower()=='true'
 
 
+# ------------------------------------------------------------------ Fig A
 def fig_readout(data,dest):
-    """Key falsification/validation plot.
-
-    a. Relative signed normalization t(q)/t(0), analytic (1-2q)**(#measurements).
-    b. Ratio v_tree/v_coherent, N=4+; shows systematic readout penalty.
-    c. Gate mechanism sweep, normalized ratio v/v_ideal (includes 2q entanglers).
-    d. Empirical shot estimator standard deviation vs leading v/S prediction.
-    """
-    d=_load(data,'readout');g=_load(data,'gate_noise');s=_load(data,'shots')
-    if d is None:return
-    fig,axes=plt.subplots(2,2,figsize=(13,10))
-    a,b,c,e=axes.ravel()
-    sub=d[(d.M==d.M.max())].copy()
-    for N in sorted(sub.N.unique()):
+    d=_load(data,'readout');s=_load(data,'shots')
+    if d is None or s is None:return
+    fig,axes=plt.subplots(2,2,figsize=(12,9));a,b,c,e=axes.ravel()
+    sub=d[d.M==d.M.max()]
+    for N,ls in ((4,'-'),(8,'--')):
         for arch in ('tree_sequential','coherent_request'):
             cur=sub[(sub.N==N)&(sub.architecture==arch)].sort_values('readout_q')
-            if len(cur)==0:continue
-            norm0=float(cur[cur.readout_q==0].iloc[0].normalization)
-            a.plot(cur.readout_q,cur.normalization/norm0,
-                   color=COLORS[arch],marker=MARKER[arch],linestyle='-' if N==4 else ':',
-                   linewidth=2,label=f'{LABEL[arch]}, N={N}')
-    _panel(a,'a','Signed visibility vs readout error');_axis(a,r'Readout probability, $q$',r'$t(q)/t(0)$')
-    _legend(a,loc='best')
-    for N in sorted(sub.N.unique()):
-        if N==2:continue
-        measured=sub[(sub.N==N)&(sub.architecture=='tree_sequential')].sort_values('readout_q')
-        coherent=sub[(sub.N==N)&(sub.architecture=='coherent_request')].sort_values('readout_q')
-        if len(measured)!=len(coherent):continue
-        ratio=measured.variance_coeff.to_numpy()/coherent.variance_coeff.to_numpy()
-        b.plot(measured.readout_q,ratio,'o-',label=rf'$N={N}$',markersize=7)
-        b.plot(measured.readout_q,(1-2*measured.readout_q)**(-2*(N-2)),
-               'k:',linewidth=1.5,label='Analytical prediction' if N==4 else None)
-    _panel(b,'b','Tree-to-coherent shot-variance ratio');_axis(b,r'Readout probability, $q$',r'$v_{\rm tree}/v_{\rm coh}$')
-    _legend(b)
-    if g is not None:
+            if cur.empty or not (cur.readout_q==0).any():continue
+            t0=float(cur[cur.readout_q==0].normalization.iloc[0])
+            a.plot(cur.readout_q,cur.normalization/t0,color=COLORS[arch],marker=MARKER[arch],linestyle=ls,
+                   label=f'{LABEL[arch]}, N={N}')
+    a.text(.02,.04,'All measured trees coincide with the accumulator;\nwide cyclic and derangement with coherent VD',
+           transform=a.transAxes,fontsize=8)
+    _panel(a,'a','Signed visibility vs readout error');a.set_xlabel('Readout error $q$');a.set_ylabel('$t(q)/t(0)$');a.legend()
+    for N,col in ((4,'#2E86AB'),(8,'#C73E1D')):
+        m=sub[(sub.N==N)&(sub.architecture=='tree_sequential')].sort_values('readout_q')
+        co=sub[(sub.N==N)&(sub.architecture=='coherent_request')].sort_values('readout_q')
+        if m.empty or len(m)!=len(co):continue
+        b.plot(m.readout_q,m.variance_coeff.to_numpy()/co.variance_coeff.to_numpy(),'o',color=col,label=f'simulated, N={N}')
+        b.plot(m.readout_q,(1-2*m.readout_q)**(-2*(N-2)),'-',color=col,lw=1,label=f'$(1-2q)^{{-2(N-2)}}$, N={N}')
+    _panel(b,'b','Measured-tree / coherent variance ratio',logy=True);b.set_xlabel('Readout error $q$')
+    b.set_ylabel(r'$v_{\rm tree}/v_{\rm coh}$');b.legend()
+    s4=s[s.N==4]
+    for (arch,q),g in s4.groupby(['architecture','readout_q']):
+        if q not in (0,.05,.1):continue
+        agg=g.groupby('shots').agg(sd=('empirical','std'),n=('empirical','count'),v=('variance_coeff','first')).reset_index()
+        clt=np.sqrt(agg.v/agg.shots);r=agg.sd/clt
+        lo=np.sqrt((agg.n-1)/stats.chi2.ppf(.975,agg.n-1));hi=np.sqrt((agg.n-1)/stats.chi2.ppf(.025,agg.n-1))
+        c.errorbar(agg.shots*(1.06 if arch=='coherent_request' else 1),r,yerr=[r-r*lo,r*hi-r],color=COLORS[arch],
+                   marker=MARKER[arch],linestyle=':' if q else '-',capsize=3,label=f'{LABEL[arch]}, q={q:g}')
+    c.axhline(1,color='k',lw=.8)
+    _panel(c,'c','Monte Carlo sd / delta-method sd (95% CI), N=4',logx=True);c.set_xlabel('Shots $S$');c.set_ylabel(r'sd$(\hat\mu)/\sqrt{v/S}$');c.legend(fontsize=7)
+    for arch in ('tree_sequential','coherent_request'):
+        g=s4[(s4.architecture==arch)&np.isclose(s4.readout_q,.05)]
+        agg=g.groupby('shots').agg(m=('empirical','mean'),se=('empirical','sem'),mu=('estimate','first'),cc=('ratio_bias_coeff','first')).reset_index()
+        e.errorbar(agg.shots,(agg.m-agg.mu)*agg.shots,yerr=1.96*agg.se*agg.shots,color=COLORS[arch],marker=MARKER[arch],capsize=3,
+                   label=f'{LABEL[arch]}: MC')
+        e.plot(agg.shots,agg.cc,color=COLORS[arch],lw=1,label=f'{LABEL[arch]}: $c_A$')
+    _panel(e,'d','Ratio bias x S at q=0.05, N=4 (95% CI)',logx=True);e.set_xlabel('Shots $S$');e.set_ylabel(r'$S(\bar{\hat\mu}-\mu_A)$');e.legend(fontsize=8)
+    fig.suptitle(f'Readout errors and estimator statistics (M={int(sub.M.max())} bell_tilted for a-b; M=1 tilted, eps2=0.005 for c-d)')
+    fig.tight_layout();_save(fig,dest,'PQES_FigA_readout_and_shots')
+
+
+def fig_mechanisms(data,dest):
+    d=_load(data,'mechanisms')
+    if d is None:return
+    d=d[d.N==4];mechs=list(dict.fromkeys(d.mechanism))
+    fig,axes=plt.subplots(2,len(mechs),figsize=(2.6*len(mechs),6.2),squeeze=False)
+    for j,mech in enumerate(mechs):
+        g=d[d.mechanism==mech];span=0.
         for arch in ARCH:
-            cur=g[(g.N==g.N.max())&(g.architecture==arch)]
-            baseline=cur[cur.noise_case=='ideal']
-            if baseline.empty:continue
-            v0=float(baseline.iloc[0].variance_coeff)
-            cur=cur[~cur.noise_case.isin(['ideal'])]
-            c.plot(range(len(cur)),cur.variance_coeff/v0,marker=MARKER[arch],
-                   color=COLORS[arch],linewidth=1.7,markersize=7,label=LABEL[arch])
-            labels=cur.noise_case.to_list()
-        pretty={'fredkin_0p01':'Fredkin\n1%','ancilla_z_0p02':'Ancilla Z\n2%',
-                    'readout_0p02':'Readout\n2%','memory_0p02':'Memory\n2%',
-                    'coherent_idle_0p05':'Control idle\n5%',
-                    'reset_0p025':'Reset\n2.5%','combined':'Combined'}
-        c.set_xticks(range(len(labels)),[pretty.get(x,x) for x in labels],rotation=35,ha='right',fontsize=12)
-        _legend(c)
-    _panel(c,'c','Apparatus error mechanisms')
-    _axis(c,y=r'Relative variance, $v/v_{\rm ideal}$')
-    if s is not None:
-        for arch in ('tree_sequential','coherent_request'):
-            subshot=s[(s.N==s.N.max())&(s.architecture==arch)]
-            pairs=subshot.groupby('shots').agg(empirical_std=('empirical','std'),
-                                               variance=('variance_coeff','first')).reset_index()
-            e.plot(pairs.shots,pairs.empirical_std,marker=MARKER[arch],color=COLORS[arch],
-                   label=LABEL[arch]+' sampled')
-            e.plot(pairs.shots,np.sqrt(pairs.variance/pairs.shots),
-                   linestyle=':',color=COLORS[arch],label=LABEL[arch]+' CLT')
-    _panel(e,'d','Measured shot fluctuations',logx=True,logy=True)
-    _axis(e,r'Experimental shots, $S$',r'$\operatorname{sd}(\widehat\mu)$')
-    _legend(e)
-    fig.tight_layout(pad=3.2)
-    _save(fig,dest,'PQES_FigA_readout_and_instrument_noise')
+            cur=g[g.architecture==arch].sort_values('value')
+            if cur.empty:continue
+            base=cur.iloc[0];db=cur.bias-base.bias;span=max(span,float(db.abs().max()))
+            axes[0,j].plot(cur.value,db,**_arch_kw(arch,markersize=4,lw=1.2))
+            axes[1,j].plot(cur.value,cur.variance_coeff/base.variance_coeff,**_arch_kw(arch,markersize=4,lw=1.2))
+        _panel(axes[0,j],chr(97+j),mech);axes[0,j].set_xlabel(mech);axes[1,j].set_xlabel(mech)
+        if span<1e-9:
+            axes[0,j].set_ylim(-1e-3,1e-3)
+            axes[0,j].text(.5,.5,'no bias:\nvisibility only',transform=axes[0,j].transAxes,ha='center',fontsize=8)
+        axes[0,j].ticklabel_format(axis='y',useOffset=False,style='sci',scilimits=(-2,2))
+        axes[1,j].spines[['top','right']].set_visible(False);axes[1,j].grid(True,alpha=.25)
+    axes[0,0].set_ylabel(r'bias change $\Delta b_A$');axes[1,0].set_ylabel(r'$v/v$ at sweep start')
+    h,l=axes[0,0].get_legend_handles_labels();fig.legend(h,l,loc='upper center',ncol=6,frameon=False,bbox_to_anchor=(.5,1.04))
+    fig.suptitle('One-at-a-time apparatus mechanisms (M=2 bell_tilted, source p=0.13, N=4; t_meas and t_prep sweeps at idle 1e-3/unit)',y=1.09)
+    fig.tight_layout();_save(fig,dest,'PQES_FigA2_apparatus_mechanisms')
+
+
+# ------------------------------------------------------------------ Fig B
+METRICS=(('shots','Shots at RMSE 0.03'),('total_cnot','Two-qubit gates'),('total_duration','Duration (gate units)'),
+         ('total_spacetime','Space-time volume'))
+
+
+WIDTH_BUDGETS=(5,7,9,None)   # None = unconstrained (the primary result)
+
+
+def _winner_map(sub,metric,width_budget=None):
+    qs=np.sort(sub.readout_q.unique());rs=np.sort(sub.idle_rate.unique())
+    win=np.full((len(rs),len(qs)),np.nan);txt=np.full(win.shape,'',dtype=object)
+    for yi,r in enumerate(rs):
+        for xi,q in enumerate(qs):
+            rr=sub[np.isclose(sub.readout_q,q)&np.isclose(sub.idle_rate,r)&_feasible(sub.feasible)]
+            if width_budget is not None:rr=rr[rr.width<=width_budget]
+            if rr.empty:continue
+            rr=rr.sort_values([metric,'width','clock_duration'])
+            best=rr.iloc[0];win[yi,xi]=ARCH.index(best.architecture);txt[yi,xi]=SHORT[best.architecture]
+            if len(rr)>1 and rr.iloc[1][metric]<=1.05*best[metric]:txt[yi,xi]+='*'
+    return qs,rs,win,txt
+
+
+def _heat(ax,sub,metric,budget,title,cmap):
+    qs,rs,win,txt=_winner_map(sub,metric,budget)
+    ax.imshow(win,origin='lower',aspect='auto',vmin=-.5,vmax=len(ARCH)-.5,cmap=cmap)
+    for yi in range(len(rs)):
+        for xi in range(len(qs)):ax.text(xi,yi,txt[yi,xi],ha='center',va='center',fontsize=7,color='white')
+    ax.set_xticks(range(len(qs)),[f'{q:.2f}' for q in qs],fontsize=7)
+    ax.set_yticks(range(len(rs)),[f'{r*1e3:g}' for r in rs],fontsize=7)
+    ax.set_title(title,fontsize=10,loc='left')
+    ax.set_xlabel('Readout error $q$');ax.set_ylabel(r'Idle rate ($10^{-3}$/unit)')
+
+
+def _arch_handles():
+    return [plt.Line2D([0],[0],marker='s',linestyle='',color=COLORS[a],markersize=8,
+                       label=f'{SHORT[a]}: {LABEL[a]}') for a in ARCH]
 
 
 def fig_phase(data,dest):
-    """Do not infer a 'winner' from virtual fidelity alone.
-
-    We rank each architecture by input-copy/SWAP-gate cost using the same
-    target RMSE and reject cases with b^2>=eps^2. Hardware width remains a
-    separate axis: for M=2,N=4 a parallel tree and a sequential one cannot
-    be compared simply by declaring qubits free. This is a conditional model.
-    """
     d=_load(data,'phase')
     if d is None:return
-    gate=d.gate_p.unique()[0];mem=d.memory_z_p.unique()[0]
-    sub=d[(d.gate_p==gate)&(d.memory_z_p==mem)].copy()
-    qs=np.sort(sub.readout_q.unique());idle=np.sort(sub.control_idle_p.unique())
-    winners=np.full((len(idle),len(qs)),np.nan)
-    ratio=np.full_like(winners,np.nan)
-    costs={}
-    for yi,ci in enumerate(idle):
-        for xi,q in enumerate(qs):
-            rr=sub[np.isclose(sub.control_idle_p,ci)&np.isclose(sub.readout_q,q)]
-            rr=rr[rr.feasible.astype(str).str.lower()=='true']
-            if rr.empty:continue
-            # Lexicographic optimization: fewer SWAP gates, then narrower width,
-            # then shorter swap critical path. This avoids fake winners on ties.
-            rr=rr.sort_values(['total_fredkins','peak_qubits','critical_swap_stages'])
-            best=rr.iloc[0]
-            winners[yi,xi]=ARCH.index(best.architecture)
-            info=rr.set_index('architecture')
-            if {'tree_sequential','coherent_request'}.issubset(info.index):
-                ratio[yi,xi]=info.loc['tree_sequential','total_fredkins']/info.loc['coherent_request','total_fredkins']
-    fig,axes=plt.subplots(2,2,figsize=(13,10))
-    a,b,c,e=axes.ravel()
-    cmap=ListedColormap([COLORS[x] for x in ARCH]);cmap.set_bad('#eeeeee')
-    im=a.imshow(winners,origin='lower',aspect='auto',vmin=-.5,vmax=3.5,cmap=cmap)
-    a.set_xticks(range(len(qs)),[f'{q:.3f}' for q in qs]);a.set_yticks(range(len(idle)),[f'{i:.3f}' for i in idle]);
-    _panel(a,'a','Lowest-cost architecture');_axis(a,r'Readout error, $q$',r'Control idle error')
-    handles=[plt.Line2D([0],[0],marker='s',linestyle='',color=COLORS[x],label=LABEL[x],markersize=9) for x in ARCH]
-    # Place the architecture legend in a dedicated figure band above panels.
-    z=b.imshow(ratio,origin='lower',aspect='auto',cmap='coolwarm',vmin=.5,vmax=2.)
-    cb=fig.colorbar(z,ax=b,shrink=.8)
-    cb.set_label('Cost ratio',fontsize=15)
-    cb.ax.tick_params(labelsize=12)
-    b.set_xticks(range(len(qs)),[f'{q:.3f}' for q in qs]);b.set_yticks(range(len(idle)),[f'{i:.3f}' for i in idle]);
-    _panel(b,'b','Measured/coherent cost ratio');_axis(b,r'Readout error, $q$',r'Control idle error')
-    central=q=qs[len(qs)//2]
+    e2=.005 if np.isclose(d.eps2,.005).any() else float(d.eps2.iloc[0])
+    profiles=[p for p in ('fast','slow') if (d.latency_profile==p).any()]
+    cmap=ListedColormap([COLORS[a] for a in ARCH]);cmap.set_bad('#eeeeee')
+    widths=d.groupby('architecture').width.first().to_dict()
+    wtxt=', '.join(f'{SHORT[a]}={int(widths[a])}' for a in ARCH if a in widths)
+    # primary result: no width constraint
+    fig,axes=plt.subplots(len(profiles),len(METRICS),figsize=(3.6*len(METRICS),3.4*len(profiles)),squeeze=False)
+    for i,lp in enumerate(profiles):
+        sub=d[np.isclose(d.eps2,e2)&(d.latency_profile==lp)]
+        for j,(metric,title) in enumerate(METRICS):
+            _heat(axes[i,j],sub,metric,None,f'({chr(97+i*len(METRICS)+j)}) {title}\n{lp} measurement',cmap)
+    fig.legend(handles=_arch_handles(),loc='upper center',ncol=6,frameon=False,bbox_to_anchor=(.5,1.05),fontsize=8)
+    fig.suptitle(f'Lowest-cost arm at RMSE 0.03 for each cost metric, no width constraint; M=2, N=4, eps2={e2:g}, '
+                 f'eps1=eps2/10. Widths: {wtxt}. * = runner-up within 5%',y=1.1,fontsize=10)
+    fig.tight_layout();_save(fig,dest,'PQES_FigB_architecture_cost_map')
+    # width as an explicit budget axis (Pareto reporting)
+    slices=[(e,lp) for e in (.005,.01) for lp in profiles if (np.isclose(d.eps2,e)&(d.latency_profile==lp)).any()]
+    fig,axes=plt.subplots(len(slices),len(WIDTH_BUDGETS),figsize=(3.6*len(WIDTH_BUDGETS),3.3*len(slices)),squeeze=False)
+    for i,(e,lp) in enumerate(slices):
+        sub=d[np.isclose(d.eps2,e)&(d.latency_profile==lp)]
+        for j,wb in enumerate(WIDTH_BUDGETS):
+            lab='unconstrained' if wb is None else f'width <= {wb}'
+            _heat(axes[i,j],sub,'shots',wb,f'({chr(97+i*len(WIDTH_BUDGETS)+j)}) {lab}\neps2={e:g}, {lp} measurement',cmap)
+    fig.legend(handles=_arch_handles(),loc='upper center',ncol=6,frameon=False,bbox_to_anchor=(.5,1.03),fontsize=8)
+    fig.suptitle(f'Fewest shots at RMSE 0.03 under a width budget (blank: no arm fits and is feasible). Widths: {wtxt}',y=1.06,fontsize=10)
+    fig.tight_layout();_save(fig,dest,'PQES_FigB3_width_budgets')
+    f=d[_feasible(d.feasible)&d.rmse.notna()]
+    fig,ax=plt.subplots(1,2,figsize=(11,4));off=0
     for arch in ARCH:
-        dd=sub[(sub.architecture==arch)&np.isclose(sub.readout_q,q)].sort_values('control_idle_p')
-        c.plot(dd.control_idle_p,dd.variance_coeff,marker=MARKER[arch],color=COLORS[arch],
-               markersize=7,label=LABEL[arch])
-    _panel(c,'c',f'Variance at $q={q:.3f}$');_axis(c,r'Coherent-control idle error',r'Variance coefficient, $v$')
-    _legend(c)
-    for arch in ARCH:
-        dd=sub[(sub.architecture==arch)&np.isclose(sub.readout_q,q)].sort_values('control_idle_p')
-        e.plot(dd.control_idle_p,dd.total_fredkins,marker=MARKER[arch],color=COLORS[arch],
-               markersize=7,label=LABEL[arch])
-    _panel(e,'d',f'Total Fredkins at RMSE={float(sub.rmse_target.iloc[0]):.2f}')
-    _axis(e,r'Coherent-control idle error',r'Estimated total Fredkins')
-    _legend(e)
-    fig.suptitle(f'Matched $M=2$, $N=4$, width cap={int(sub.width_cap.iloc[0])}: Fredkin noise={gate:g}',fontsize=20,y=.995)
-    fig.legend(handles=handles,loc='upper center',bbox_to_anchor=(.5,.945),ncol=4,fontsize=11,frameon=False)
-    fig.tight_layout(rect=(.01,.02,.99,.88),pad=2.5)
-    _save(fig,dest,'PQES_FigB_architecture_phase_diagram')
+        g=f[f.architecture==arch]
+        x=off+np.arange(len(g));off+=len(g)
+        ax[0].errorbar(x,g.rmse,yerr=[g.rmse-g.rmse_lo,g.rmse_hi-g.rmse],fmt='.',
+                       color=COLORS[arch],label=LABEL[arch],ms=3,elinewidth=.5)
+    ax[0].axhline(float(d.rmse_target.iloc[0]),color='k',lw=1)
+    _panel(ax[0],'a','Achieved RMSE at the planned shots (95% CI), all cells');ax[0].set_xlabel('cell index (grouped by arm)')
+    ax[0].set_ylabel('Monte Carlo RMSE');ax[0].legend(fontsize=7,ncol=2)
+    ax[1].hist((f.rmse/f.rmse_target),bins=40,color='#555555')
+    _panel(ax[1],'b','RMSE / target over all feasible cells');ax[1].set_xlabel('achieved / target')
+    fig.tight_layout();_save(fig,dest,'PQES_FigB2_planning_validation')
 
 
+# ------------------------------------------------------------------ Fig C
 def fig_placement(data,dest):
-    """Fair comparison allows coherent cyclic VD and PQES the SAME midpoint."""
     d=_load(data,'placement')
     if d is None:return
-    M=int(d.M.max());N=int(d.N.max());p=float(sorted(d.algorithm_gate_p.unique())[len(d.algorithm_gate_p.unique())//2])
-    sub=d[(d.M==M)&(d.N==N)&np.isclose(d.algorithm_gate_p,p)].copy()
-    fig,axes=plt.subplots(2,2,figsize=(13,10));a,b,c,e=axes.ravel()
-    marks={'output_only':'s','intermediate':'o'}
-    lines={'output_only':':','intermediate':'-'}
-    for arch in ('tree_sequential','coherent_request'):
-        for place in ('output_only','intermediate'):
-            dd=sub[(sub.architecture==arch)&(sub.placement==place)].sort_values('b_repeats')
-            if dd.empty:continue
-            kw=dict(color=COLORS[arch],marker=marks[place],linestyle=lines[place],markersize=8,
-                    label=f'{LABEL[arch]} / {place}')
-            a.plot(dd.b_repeats,dd.bias.abs(),**kw)
-            c.plot(dd.b_repeats,dd.variance_coeff,**kw)
-            e.plot(dd.b_repeats,dd.normalization.abs(),**kw)
-    _panel(a,'a','Systematic estimator bias');_axis(a,r'Downstream block repetitions',r'$|\mu-\mu_{\rm ideal}|$');_legend(a)
-    for place in ('output_only','intermediate'):
-        dd=sub[(sub.architecture=='coherent_request')&(sub.placement==place)].sort_values('b_repeats')
-        b.plot(dd.b_repeats,dd.algorithm_gates,marker=marks[place],linestyle=lines[place],
-               label=place,markersize=8)
-    _panel(b,'b','Algorithmic gate calls');_axis(b,r'Downstream block repetitions',r'Algorithmic gates / shot');_legend(b)
-    _panel(c,'c','Sampling variance');_axis(c,r'Downstream block repetitions',r'$v$ per shot')
-    _panel(e,'d','Signed normalization');_axis(e,r'Downstream block repetitions',r'$|\mathrm{Tr}(W)|$')
-    fig.suptitle(f'Matched placement, $M={M}$, $N={N}$, algorithm noise={p:.3f}',fontsize=22,y=1.01)
-    fig.tight_layout(pad=3.)
-    _save(fig,dest,'PQES_FigC_midcircuit_placement')
+    e2=.005 if np.isclose(d.eps2,.005).any() else float(d.eps2.iloc[0])
+    fams=list(dict.fromkeys(d.family))
+    fig,axes=plt.subplots(len(fams),4,figsize=(16,4.2*len(fams)),squeeze=False)
+    for i,fam in enumerate(fams):
+        sub=d[(d.family==fam)&np.isclose(d.eps2,e2)&(d.latency_profile=='fast')];gates={}
+        for prot in list(ARCH)+['vcp2_layerwise']:
+            cur=sub[(sub.protocol==prot)&((sub.N==4)|(sub.protocol=='vcp2_layerwise'))].sort_values('f_realized')
+            if prot=='derangement' and cur.empty:cur=sub[(sub.protocol==prot)&(sub.N==2)].sort_values('f_realized')
+            if cur.empty:continue
+            kw=_arch_kw(prot);x=cur.f_realized
+            axes[i,0].plot(x,cur.bias.abs(),**kw)
+            axes[i,1].plot(x,cur.variance_coeff,**kw)
+            ok=cur[_feasible(cur.feasible)];gates[prot]=ok.set_index('f_realized').total_cnot
+            axes[i,2].plot(ok.f_realized,ok.total_cnot,**kw)
+            # budget panel: line style encodes the budget only (arm = colour + marker)
+            for col,ls,lw in (('rmse_lead_C1000','--',.9),('rmse_lead_C10000','-',1.8),('rmse_lead_C100000',':',.9)):
+                axes[i,3].plot(x,cur[col],color=COLORS[prot],marker=MARKER[prot],ms=3 if lw<1 else 6,lw=lw,ls=ls)
+        axes[i,0].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
+        axes[i,3].axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8,ls='--')
+        notes=[]
+        v=gates.get('vcp2_layerwise',pd.Series(dtype=float))
+        if len(v) and (v==0).all() and (sub[sub.protocol=='vcp2_layerwise'].purified_layers==0).all():
+            notes.append('Layerwise VCP2: no layer has a two-qubit gate,\nso it is the unmitigated circuit: 0 two-qubit\n'
+                         'gates at every cut (not drawable on a log axis)')
+        w=gates.get('wide_cyclic',pd.Series(dtype=float));c=gates.get('coherent_request',pd.Series(dtype=float))
+        if len(w) and w.equals(gates.get('derangement')):
+            joins=[f for f in w.index if f in c.index and c[f]==w[f]]
+            notes.append('Wide cyclic and derangement coincide\nat every cut'
+                         +(f'; coherent streaming joins\nthem at cut/L={", ".join(f"{f:g}" for f in joins)}' if joins else ''))
+        if notes:axes[i,2].text(.02,.98,'\n'.join(notes),transform=axes[i,2].transAxes,fontsize=7,va='top')
+        L=int(sub.L.iloc[0])
+        _panel(axes[i,0],chr(97+4*i),f'{fam}: |bias| (L={L} layers)',logy=True);axes[i,0].set_ylabel(r'$|\mu_A-\mu_0|$')
+        _panel(axes[i,1],chr(98+4*i),f'{fam}: variance coefficient',logy=True);axes[i,1].set_ylabel('$v_A$')
+        _panel(axes[i,2],chr(99+4*i),f'{fam}: two-qubit gates to RMSE 0.03',logy=True);axes[i,2].set_ylabel('total two-qubit gates')
+        _panel(axes[i,3],chr(100+4*i),f'{fam}: RMSE at C=$10^3$ (dashed), $10^4$ (solid), $10^5$ (dotted)',logy=True);axes[i,3].set_ylabel('leading RMSE')
+        for ax in axes[i]:ax.set_xlabel('realized compression point cut$/L$')
+    h,l=axes[0,0].get_legend_handles_labels();fig.legend(h,l,loc='upper center',ncol=7,frameon=False,bbox_to_anchor=(.5,1.03))
+    fig.suptitle(f'Placement at fixed total depth: M=2, N=4 (derangement N=4), eps2={e2:g}, fast measurement. '
+                 'Missing points in (c,g): infeasible (|bias|>=0.03) or 0 two-qubit gates (noted in the panel). '
+                 'VCP2: purify layers before the cut.',y=1.06)
+    fig.tight_layout();_save(fig,dest,'PQES_FigC_compression_placement')
 
 
+# ------------------------------------------------------------------ Fig D
 def fig_twirling(data,dest):
-    """Difference between nonlinear averaging orders, not a 3^M counting plot."""
-    df=_load(data,'twirling')
-    if df is None:return
-    p=float(sorted(df.p.unique())[len(df.p.unique())//2]); d=df[np.isclose(df.p,p)]
-    fig,axes=plt.subplots(2,2,figsize=(13,10));a,b,c,e=axes.ravel()
-    exact=d[d['mode'].isin(['independent_exact','shared_exact'])]
-    for mode,style in [('independent_exact','o-'),('shared_exact','s--')]:
-        r=exact[exact['mode']==mode].sort_values('N')
-        a.plot(r.N,r.fidelity,style,markersize=8,label=mode.replace('_',' '))
-        e.plot(r.N,r.normalization,style,markersize=8,label=mode.replace('_',' '))
-    _panel(a,'a','Frame correlations alter power-state fidelity')
-    _axis(a,r'Power, $N$',r'Normalized fidelity');_legend(a)
-    fixed=d[d['mode']=='fixed_K_empirical'].copy()
-    for N in sorted(fixed.N.unique()):
-        g=fixed[fixed.N==N].groupby('K').abs_error_vs_independent.agg(['mean','std']).reset_index()
-        b.errorbar(g.K,g['mean'],yerr=g['std']/np.sqrt(fixed.trial.nunique()),
-                   marker='o',capsize=4,linewidth=2,label=f'$N={N}$')
-    _panel(b,'b','Empirical frame-set error',logx=True)
-    _axis(b,r'Empirical frame count, $K$',r'Mean $|F_K-F_{\rm tw}|$');_legend(b)
-    N=int(max(fixed.N.unique()))
-    Ks=sorted(fixed.K.unique())
-    selected=[Ks[0],Ks[-1]]
-    for K in selected:
-        u=fixed[(fixed.N==N)&(fixed.K==K)]
-        c.hist(u.fidelity,bins=15,density=True,alpha=.5,label=f'$K={K}$')
-    ref=float(exact[(exact.N==N)&(exact['mode']=='independent_exact')].fidelity.iloc[0])
-    c.axvline(ref,color='black',linestyle=':',label='Exact twirl')
-    _panel(c,'c',f'Finite frame-set dispersion ($N={N}$)');_axis(c,r'Virtual target fidelity',r'Density');_legend(c)
-    _panel(e,'d','Signed normalizations',logy=True)
-    _axis(e,r'Power, $N$',r'$\mathrm{Tr}(W_N)$');_legend(e)
-    fig.suptitle(rf'Z dephasing $p={p:.2f}$, $|+\rangle$ target; frame sampling',fontsize=22,y=1.02)
-    fig.tight_layout(pad=3.)
-    _save(fig,dest,'PQES_FigD_randomized_twirling')
+    tw=_load(data,'twirling');mc=_load(data,'twirl_mc');bud=_load(data,'twirl_budget')
+    if tw is None or mc is None or bud is None:return
+    fig,axes=plt.subplots(2,2,figsize=(13,9.5));a,b,c,e=axes.ravel()
+    p0=.45
+    for M,col in zip(sorted(tw.M.unique()),('#2E86AB','#F18F01','#7B3294')):
+        g=tw[(tw['mode']=='fixed_K_empirical')&(tw.M==M)&np.isclose(tw.theta,np.pi/2)&np.isclose(tw.p,p0)&(tw.N==4)&(tw.eps_clifford==0)]
+        agg=g.groupby('K').agg(m=('fidelity_minus_independent','mean'),se=('fidelity_minus_independent','sem'),
+                               td=('power_trace_distance','mean'),tdse=('power_trace_distance','sem')).reset_index()
+        a.errorbar(agg.K,agg.m.abs(),yerr=1.96*agg.se,color=col,marker='o',capsize=3,label=f'|mean $F_K-F_{{ind}}$|, M={M}')
+        a.errorbar(agg.K,agg.td,yerr=1.96*agg.tdse,color=col,marker='s',ls='--',capsize=3,label=f'power-state trace distance, M={M}')
+    _panel(a,'a',f'Fixed K-frame sets vs independent twirl (p={p0}, theta=pi/2, N=4)',logx=True,logy=True)
+    a.set_xlabel('frames in the fixed set $K$');a.set_ylabel('deviation (95% CI)');a.legend(fontsize=7)
+    for (N,th),ls in zip([(2,np.pi/3),(4,np.pi/3)],('-','--')):
+        g=mc[(mc.M==2)&np.isclose(mc.theta,th)&np.isclose(mc.p,p0)&(mc.N==N)&(mc.eps_clifford==.01)].sort_values('shots')
+        if g.empty:continue
+        b.errorbar(g.shots,g.mc_mean,yerr=g.mc_sd,color='#2E86AB' if N==2 else '#C73E1D',marker='o',ls=ls,capsize=3,
+                   label=f'per-copy random frames, N={N} (mean $\\pm$ sd)')
+        b.axhline(g.predicted_mu.iloc[0],color='#2E86AB' if N==2 else '#C73E1D',lw=.8)
+        b.axhline(g.shared_mu.iloc[0],color='#2E86AB' if N==2 else '#C73E1D',lw=.8,ls=':')
+        bad=g[g.St2<50]
+        b.scatter(bad.shots,bad.mc_mean,s=90,facecolors='none',edgecolors='k')
+    _panel(b,'b','Shot-level frame Monte Carlo, M=2, theta=pi/3, eps_C=0.01',logx=True)
+    b.set_xlabel('Shots $S$');b.set_ylabel('estimate');b.legend(fontsize=7)
+    b.text(.02,.03,'solid: Tr(P rhobar^N)/Tr(rhobar^N); dotted: shared-frame value;\ncircled: S t^2<50 (delta method not yet valid)',
+           transform=b.transAxes,fontsize=7)
+    for M,col in zip(sorted(tw.M.unique()),('#2E86AB','#F18F01','#7B3294')):
+        for mode,ls in (('independent_exact','-'),('shared_exact','--'),('untwirled',':')):
+            g=tw[(tw['mode']==mode)&(tw.M==M)&np.isclose(tw.theta,np.pi/2)&(tw.N==4)&(tw.eps_clifford==0)].sort_values('p')
+            c.plot(g.p,g.fidelity,color=col,ls=ls,marker='o',ms=4,label=f'M={M}, {mode.replace("_"," ")}')
+    c.axvline(.5,color='k',lw=.6);c.axvline(.75,color='k',lw=.6)
+    _panel(c,'c','Exact virtual fidelity, theta=pi/2, N=4');c.set_xlabel('dephasing $p$');c.set_ylabel('$F_N$');c.legend(fontsize=6,ncol=3)
+    for (th,p),col in zip([(np.pi/2,.45),(np.pi/3,.45),(np.pi/2,.7),(np.pi/3,.7)],('#2E86AB','#F18F01','#7B3294','#C73E1D')):
+        g=bud[(bud.M==2)&np.isclose(bud.theta,th)&np.isclose(bud.p,p)]
+        tws=g[g['mode']=='twirled_independent'];un=g[g['mode']=='untwirled']
+        best_t=tws.groupby('eps_clifford')['rmse_lead_C10000'].min()
+        e.plot(best_t.index,best_t.values,color=col,marker='o',label=f'twirled, theta={th:.2f}, p={p}')
+        e.axhline(un['rmse_lead_C10000'].min(),color=col,ls=':',lw=1)
+    _panel(e,'d','Best-N RMSE at C=$10^4$ copies, M=2 (dotted: untwirled)',logy=True)
+    e.set_xlabel('Clifford gate error $\\epsilon_C$');e.set_ylabel('leading RMSE');e.legend(fontsize=7)
+    fig.suptitle('Randomized Clifford frames: K-frame sets, per-copy frame sampling, frame correlations, noisy Cliffords')
+    fig.tight_layout();_save(fig,dest,'PQES_FigD_randomized_twirling')
 
 
+# ------------------------------------------------------------------ Fig E
 def fig_cycles(data,dest):
-    """Fidelity saturation vs rapidly vanishing signed-normalization signal."""
     d=_load(data,'cycles')
     if d is None:return
-    M=d.M.max();N=d.N.max();p=d.p.unique()[0]
-    s=d[(d.M==M)&(d.N==N)&np.isclose(d.p,p)].sort_values('cycle')
-    if s.empty:return
-    fig,axes=plt.subplots(2,2,figsize=(12,10));a,b,c,e=axes.ravel()
-    a.plot(s.cycle,s.ideal_virtual_fidelity,'o-',color='#2E86AB')
-    _panel(a,'a','Normalized virtual-state fidelity');_axis(a,r'Nested cycles, $t$',r'$F_t$')
-    b.plot(s.cycle,s.log10_signed_normalization,'s-',color='#F18F01')
-    _panel(b,'b','Vanishing signed signal');_axis(b,r'Nested cycles, $t$',r'$\log_{10}Z_t$')
-    c.plot(s.cycle,s.log10_copies,'^-',color='#00845A')
-    _panel(c,'c','Input copies per signed trajectory');_axis(c,r'Nested cycles, $t$',r'$\log_{10}(N^t)$')
-    e.plot(s.cycle,s.log10_conservative_sampling_factor,'D-',color='#7B3294')
-    _panel(e,'d','Inverse-signal sampling factor');_axis(e,r'Nested cycles, $t$',r'$\log_{10}(Z_t^{-2})$')
-    fig.suptitle(f'Ideal repeated normalized map ONLY: $M={M}$, $N={N}$, $p={p:.2f}$',fontsize=20,y=1.01)
-    fig.tight_layout(pad=3.)
-    _save(fig,dest,'PQES_FigE_repeated_cycle_operational_overhead')
+    p0=.15 if np.isclose(d.p,.15).any() else float(d.p.iloc[0])
+    fig,axes=plt.subplots(2,2,figsize=(12,9));a,b,c,e=axes.ravel()
+    for (chan,M),ls in zip([('local',2),('global',2)],('-','--')):
+        for N,col in zip(sorted(d.N.unique()),('#2E86AB','#F18F01','#7B3294')):
+            s=d[(d.channel==chan)&(d.M==M)&(d.N==N)&np.isclose(d.p,p0)].sort_values('cycle')
+            if s.empty:continue
+            lab=f'{chan}, D={2**M}, N={N}'
+            a.plot(s.cycle,s.ideal_virtual_fidelity,ls=ls,color=col,marker='o',ms=4,label=lab)
+            b.plot(s.cycle,s.log10_signed_normalization,ls=ls,color=col,marker='o',ms=4,label=lab)
+            c.plot(s.cycle,s.log10_copies_budget,ls=ls,color=col,marker='o',ms=4,label=lab)
+            e.plot(s.cycle,s.log10_swaps_budget,ls=ls,color=col,marker='o',ms=4,label=lab)
+    _panel(a,'a',f'Normalized virtual fidelity, p={p0}');a.set_ylabel('$F_t$')
+    _panel(b,'b','Signed normalization');b.set_ylabel(r'$\log_{10}Z_t$')
+    _panel(c,'c','Original copies for RMSE 0.03: $N^tS$');c.set_ylabel(r'$\log_{10}(N^t S)$')
+    _panel(e,'d','SWAP tests for RMSE 0.03: $(N^t-1)S$');e.set_ylabel(r'$\log_{10}[(N^t-1)S]$')
+    for ax in axes.ravel():ax.set_xlabel('nested cycles $t$')
+    a.legend(fontsize=7)
+    fig.suptitle('Repeated ideal virtual cycles: formal fidelity vs nested signed-ensemble cost (missing: |bias|>=0.03, RMSE unreachable)\n'
+                 'local: Pauli-form p, (1-p)rho+p/3 sum P rho P;  global: replacement-form p, (1-p)rho+p I/D (not the same channel at equal p)',fontsize=11)
+    fig.tight_layout();_save(fig,dest,'PQES_FigE_repeated_cycle_cost')
+
+
+# ------------------------------------------------------------------ Fig F
+def fig_channel_physical(data,dest):
+    d=_load(data,'channel_physical')
+    if d is None:return
+    sub=d[(d.M==2)&(d.family=='entangling')&(d.latency_profile=='fast')]
+    fig,axes=plt.subplots(2,2,figsize=(13,9.5));a,b,c,e=axes.ravel()
+    apps=[('physical','-'),('apparatus_gates_10x_better','--'),('ideal_apparatus',':')]
+    for prot in ('tree_parallel','tree_sequential','coherent_request','derangement','vcp2_layerwise'):
+        for app,ls in apps:
+            cur=sub[(sub.protocol==prot)&(sub.apparatus_case==app)&((sub.N==2)|(sub.protocol=='vcp2_layerwise'))].sort_values('eps2')
+            if cur.empty:continue
+            kw=dict(color=COLORS[prot],marker=MARKER[prot],ls=ls,label=f'{LABEL[prot]}, {app.replace("_"," ")}')
+            a.plot(cur.eps2,cur.bias.abs(),**kw);b.plot(cur.eps2,cur.variance_coeff,**kw)
+            ok=cur[_feasible(cur.feasible)];c.plot(ok.eps2,ok.total_cnot,**kw)
+    a.axhline(float(d.rmse_target.iloc[0]),color='k',lw=.8)
+    _panel(a,'a','|bias| (N=2; output-only state VD vs layerwise VCP2)',logx=True,logy=True);a.set_ylabel(r'$|\mu_A-\mu_0|$')
+    _panel(b,'b','variance coefficient',logx=True,logy=True);b.set_ylabel('$v_A$')
+    _panel(c,'c','two-qubit gates to reach RMSE 0.03 (feasible only)',logx=True,logy=True);c.set_ylabel('total two-qubit gates')
+    for ax in (a,b,c):ax.set_xlabel('$\\epsilon_2$')
+    a.legend(fontsize=6,ncol=1,loc='lower right')
+    row=sub[np.isclose(sub.eps2,.005)&(sub.apparatus_case=='physical')&((sub.N==2)|(sub.protocol=='vcp2_layerwise'))]
+    prots=[p for p in ('tree_sequential','coherent_request','derangement','vcp2_layerwise') if (row.protocol==p).any()]
+    keys=[('copies_per_shot','copies'),('cnot_per_shot','2q gates'),('ccx_per_shot','Toffolis'),('duration_per_shot','duration'),('width','width')]
+    x=np.arange(len(keys));w=.8/len(prots)
+    for k,p in enumerate(prots):
+        r=row[row.protocol==p].iloc[0]
+        vals=[r[key] for key,_ in keys]
+        e.bar(x+k*w,vals,w,color=COLORS[p],label=LABEL[p])
+        for xi,v in zip(x+k*w,vals):e.text(xi,v*1.05,f'{v:g}',ha='center',fontsize=6,rotation=90)
+    e.set_xticks(x+.4-w/2,[lab for _,lab in keys]);e.set_yscale('log')
+    _panel(e,'d','Per-shot resources at eps2=0.005 (physical, N=2)');e.legend(fontsize=7)
+    a.text(.02,.02,'At N=2 every state-VD arm except the derangement is the same circuit:\nparallel tree and measured accumulator lie under coherent streaming.',
+           transform=a.transAxes,fontsize=7)
+    fig.suptitle(f'Physical order-two channel purification (Liu-style, layers with a two-qubit gate, gate support) vs state VD; '
+                 f'M=2 entangling, L={int(sub.L.iloc[0])} layers, eps1=eps2/10, fast measurement')
+    fig.tight_layout();_save(fig,dest,'PQES_FigF_vcp2_vs_state_vd')
+
+
+# ------------------------------------------------------------------ Fig G
+def fig_global(data,dest):
+    d=_load(data,'global_depol');bnd=_load(data,'global_boundaries')
+    if d is None or bnd is None:return
+    fig,axes=plt.subplots(2,2,figsize=(12,9));a,b,c,e=axes.ravel()
+    cols={2:'#2E86AB',4:'#F18F01',8:'#7B3294'};lss={1:(0,(1,1)),2:'-',4:'--',8:':'}
+    for D in sorted(d.D.unique()):
+        for N in (2,4,8):
+            s=d[(d.D==D)&(d.N==N)].sort_values('p')
+            a.plot(s.p,s.repeated_stable_F,color=cols.get(D,'k'),ls=lss[N],label=f'D={D}, N={N}')
+            bb=bnd[(bnd.D==D)&(bnd.N==N)]
+            if len(bb):a.axvline(bb.p_SN_numeric.iloc[0],color=cols.get(D,'k'),ls=lss[N],lw=.6)
+        for N in (1,2,4,8):
+            s=d[(d.D==D)&(d.N==N)].sort_values('p')
+            b.plot(s.p,s.F_N,color=cols.get(D,'k'),ls=lss[N],label=f'D={D}, N={N}')
+            c.plot(s.p,s.T_N,color=cols.get(D,'k'),ls=lss[N],label=f'D={D}, N={N}')
+    _panel(a,'a','Repeated cycles from the pure target (vertical: $p_{SN}$)');a.set_ylabel('$F_\\infty$')
+    _panel(b,'b','One-shot power fidelity $F_N$');b.set_ylabel('$F_N$')
+    _panel(c,'c','Signed normalization $T_N$',logy=True);c.set_ylabel('$T_N$')
+    s=d[d.D==4]
+    for N in (1,2,4,8):
+        g=s[s.N==N].sort_values('p');e.plot(g.p,g['mse_lead_C10000'],ls=lss[N],color='#333333',label=f'N={N}')
+    best=s.loc[s.groupby('p')['mse_lead_C10000'].idxmin()]
+    e.scatter(best.p,best['mse_lead_C10000'],c=[cols.get(int(n),'k') if n in cols else '#999999' for n in best.N],s=12,zorder=3,label='optimal N: blue 2, orange 4, purple 8')
+    _panel(e,'d','Leading MSE at C=$10^4$ copies, D=4',logy=True);e.set_ylabel('MSE')
+    for ax in axes.ravel():ax.set_xlabel('global depolarizing $p$')
+    a.legend(fontsize=7,ncol=2);b.legend(fontsize=6,ncol=2);e.legend(fontsize=7)
+    txt='; '.join(f'D={r.D} N={r.N}: p_c={r.p_c:.3f}, p_SN={r.p_SN_numeric:.3f}' for r in bnd.itertuples() if r.N in (2,8))
+    fig.suptitle('Global depolarizing, replacement form (1-p)rho+p I/D: exact one-shot and repeated results\n'+txt,fontsize=10)
+    fig.tight_layout();_save(fig,dest,'PQES_FigG_global_depolarizing')
+
+
+# ------------------------------------------------------------------ Fig H
+def fig_local(data,dest):
+    d=_load(data,'local_resource')
+    if d is None:return
+    fig,axes=plt.subplots(2,2,figsize=(12,9));a,b,c,e=axes.ravel()
+    prod=d[d.target=='plus']
+    cols={1:'#2E86AB',2:'#F18F01',5:'#7B3294'};lss={.05:(0,(1,1)),.15:'-',.3:'--',.5:'-.',.7:':'}
+    for M in sorted(prod.M.unique()):
+        for p in (.15,.5,.7):
+            s=prod[(prod.M==M)&np.isclose(prod.p,p)].sort_values('N')
+            if s.empty:continue
+            a.plot(s.N,s.F_N,color=cols.get(M,'k'),ls=lss.get(p,'-'),label=f'M={M}, p={p}')
+            b.plot(s.N,s.T_N,color=cols.get(M,'k'),ls=lss.get(p,'-'),label=f'M={M}, p={p}')
+    _panel(a,'a','Virtual fidelity, product $|+\\rangle^{\\otimes M}$');a.set_ylabel('$F_N$')
+    _panel(b,'b','Signed normalization',logy=True);b.set_ylabel('$T_N$')
+    for M in sorted(prod.M.unique()):
+        s=prod[(prod.M==M)&np.isclose(prod.p,.3)].sort_values('N')
+        if s.empty:continue
+        c.plot(s.N,s['mse_lead_C10000'],color=cols.get(M,'k'),label=f'M={M} leading')
+        ok=s['St2_C10000']>=50
+        c.errorbar(s.N[ok],s['mse_sampled_C10000'][ok],yerr=1.96*s['mse_sampled_se_C10000'][ok],color=cols.get(M,'k'),fmt='o',ms=3,capsize=2,label=f'M={M} sampled')
+        c.scatter(s.N[~ok],s['mse_sampled_C10000'][~ok],s=14,facecolors='none',edgecolors=cols.get(M,'k'))
+        i=s['mse_lead_C10000'].idxmin();c.scatter([s.N[i]],[s['mse_lead_C10000'][i]],s=120,facecolors='none',edgecolors=cols.get(M,'k'))
+    _panel(c,'c','MSE at C=$10^4$ copies, p=0.3 (big circle: optimal N; hollow: S t$^2$<50)',logy=True);c.set_ylabel('MSE')
+    ent=d[d.target!='plus']
+    for p in sorted(ent.p.unique()):
+        s=ent[np.isclose(ent.p,p)].sort_values('N')
+        line,=e.plot(s.N,s.F_N,ls=lss.get(round(p,2),'-'),label=f'p={p}')
+        e.axhline(s.mismatch_floor.iloc[0],color=line.get_color(),lw=.7,ls=':')
+    _panel(e,'d','Entangled target cos(pi/8)|00>+sin(pi/8)|11> (dotted: mismatch floor)');e.set_ylabel('$F_N$')
+    for ax in axes.ravel():ax.set_xlabel('power $N$')
+    a.legend(fontsize=7,ncol=2);c.legend(fontsize=7,ncol=2);e.legend(fontsize=7)
+    fig.suptitle('Local depolarization, Pauli form (1-p)rho+p/3 sum P rho P: exact fidelity, normalization and fixed-copy-budget error')
+    fig.tight_layout();_save(fig,dest,'PQES_FigH_local_resource_tradeoff')
 
 
 def fig_channel(data,dest):
-    """Ideal VCP theoretical proxy shown SEPARATELY, never in cost ranking."""
     d=_load(data,'channel_proxy')
     if d is None:return
-    d=d[(d.M==d.M.max())]
-    fig,ax=plt.subplots(figsize=(9.2,5.8))
-    for (p,reps),dd in d.groupby(['algorithm_gate_p','b_repeats']):
-        dd=dd.sort_values('N')
-        ax.plot(dd.N,dd.ideal_layerwise_pauli_channel_fidelity,marker='o',
-                label=f'$p={p:g}$, downstream repeats={reps}')
-    _panel(ax,'a','Ideal layerwise Pauli-channel proxy (not a physical circuit)')
-    _axis(ax,r'Channel-purification power, $N$',r'Ideal output fidelity')
-    _legend(ax)
-    fig.tight_layout(pad=2.0)
-    _save(fig,dest,'PQES_App_IdealVCP_channel_proxy_ONLY')
-
-
-
-def fig_channel_physical(data,dest):
-    """ACTUAL order-two VCP instrument, not merely theoretical power weighting.
-
-    Physical VCP2 requires an aux I/d register and two controlled-SWAP passes
-    per Pauli-noise channel location. State VD2 needs one controlled-SWAP on
-    two completed noisy circuit outputs. They both use two channel instances
-    per noise location but different algorithm preparations/ancilla lifetimes.
-    The figure shows both observable performance and raw physical resources;
-    it does not pretend they are identical state/channel mitigation tasks.
-    """
-    d=_load(data,'channel_physical')
-    if d is None:return
-    M=int(d.M.max());reps=int(sorted(d.b_repeats.unique())[len(d.b_repeats.unique())//2])
-    sub=d[(d.M==M)&(d.b_repeats==reps)&(d.apparatus_case=='combined_physical_noise')]
-    protos=['stateVD2_tree_sequential','stateVD2_coherent_request','layerwise_physical_VCP2']
-    names={'stateVD2_tree_sequential':'State VD: measured accumulator',
-           'stateVD2_coherent_request':'State VD: coherent control',
-           'layerwise_physical_VCP2':'Layerwise VCP2 (physical)'}
-    col={'stateVD2_tree_sequential':'#F18F01','stateVD2_coherent_request':'#7B3294',
-         'layerwise_physical_VCP2':'#2E86AB'}
-    mark=['o','s','D']
-    fig,axes=plt.subplots(2,2,figsize=(13,10));a,b,c,e=axes.ravel()
-    for k,prot in enumerate(protos):
-        dd=sub[sub.protocol==prot].sort_values('p_channel')
-        if dd.empty:continue
-        a.plot(dd.p_channel,dd.bias.abs(),marker=mark[k],color=col[prot],label=names[prot])
-        b.plot(dd.p_channel,dd.variance_coeff,marker=mark[k],color=col[prot],label=names[prot])
-        c.plot(dd.p_channel,dd.normalization.abs(),marker=mark[k],color=col[prot],label=names[prot])
-    _panel(a,'a','Physical circuit estimator bias');_axis(a,r'Pauli noise probability, $p$',r'$|\mu-\mu_{\rm ideal}|$')
-    _legend(a)
-    _panel(b,'b','Physical circuit sampling variance');_axis(b,r'Pauli noise probability, $p$',r'Variance coefficient, $v$')
-    _panel(c,'c','Physical signed normalization');_axis(c,r'Pauli noise probability, $p$',r'$|\mathrm{Tr}W|$')
-    q=float(sorted(sub.p_channel.unique())[len(sub.p_channel.unique())//2])
-    bars=sub[np.isclose(sub.p_channel,q)].set_index('protocol')
-    x=np.arange(len(protos))
-    vals=[bars.loc[prot,'native_fredkins'] for prot in protos]
-    e.bar(x,vals,color=[col[prot] for prot in protos],width=.62)
-    e.set_xticks(x,['Measured\nstate VD','Coherent\nstate VD','Layerwise\nVCP2'],fontsize=15)
-    _panel(e,'d',f'Native Fredkins per shot ($p={q:g}$)')
-    _axis(e,y=r'Controlled Fredkins / trajectory')
-    for xi,v in zip(x,vals):e.text(xi,v+max(vals)*.025,str(int(v)),fontsize=14,ha='center')
-    fig.suptitle(f'Physical order-2 Pauli-channel VCP vs state VD: $M={M}$, downstream repetitions={reps}',
-                 fontsize=20,y=1.005)
-    fig.tight_layout(rect=(.01,.01,.99,.97),pad=3.)
-    _save(fig,dest,'PQES_FigF_physical_layerwise_VCP2_vs_stateVD2')
+    fig,ax=plt.subplots(figsize=(7,4.5))
+    for (M,fam,e2),dd in d.groupby(['M','family','eps2']):
+        if M!=2 or fam!='entangling':continue
+        dd=dd.sort_values('N');ax.plot(dd.N,dd.ideal_layerwise_channel_fidelity,marker='o',label=f'eps2={e2:g}')
+    _panel(ax,'a','Ideal layerwise channel-purification proxy (NOT a physical circuit), M=2')
+    ax.set_xlabel('channel-purification power $N$');ax.set_ylabel('ideal output fidelity');ax.legend()
+    fig.tight_layout();_save(fig,dest,'PQES_App_IdealVCP_channel_proxy_ONLY')
 
 
 def main():
     parser=argparse.ArgumentParser(description='CSV-only plotting for PQES numerics')
     parser.add_argument('--data-dir',type=Path,default=DATA_DEFAULT)
     parser.add_argument('--figures-dir',type=Path,default=FIG_DEFAULT)
-    parser.add_argument('--figure',choices=['all','readout','phase','placement','twirling','cycles','channel','vcp'],default='all')
+    funcs={'readout':fig_readout,'mechanisms':fig_mechanisms,'phase':fig_phase,'placement':fig_placement,
+           'twirling':fig_twirling,'cycles':fig_cycles,'vcp':fig_channel_physical,'global':fig_global,
+           'local':fig_local,'channel':fig_channel}
+    parser.add_argument('--figure',choices=['all']+list(funcs),default='all')
     args=parser.parse_args()
-    funcs={'readout':fig_readout,'phase':fig_phase,'placement':fig_placement,
-           'twirling':fig_twirling,'cycles':fig_cycles,'channel':fig_channel,
-           'vcp':fig_channel_physical}
-    for name in (funcs.keys() if args.figure=='all' else [args.figure]):
-        print('Plotting',name)
-        funcs[name](args.data_dir,args.figures_dir)
+    for name in (funcs if args.figure=='all' else [args.figure]):
+        print('Plotting',name);funcs[name](args.data_dir,args.figures_dir)
     print('Complete. Figures are constructed solely from saved CSV data.')
 
 

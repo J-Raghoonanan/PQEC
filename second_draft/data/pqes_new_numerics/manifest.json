@@ -1,31 +1,98 @@
 {
-  "simulator": "pqes_new_numerics_v1",
+  "simulator": "pqes_new_numerics_v2",
   "profile": "full",
   "seed": 31,
-  "rmse_target": 0.12,
-  "width_cap": 7,
-  "selected_tasks": [
-    "validation",
-    "readout",
-    "gate_noise",
-    "phase",
-    "placement",
-    "shots",
-    "twirling",
-    "cycles",
-    "channel_proxy",
-    "channel_physical"
+  "rmse_target": 0.03,
+  "width_budgets_reported": [
+    "5",
+    "7",
+    "9",
+    "unconstrained"
   ],
-  "implementation": "actual noisy measured instrument and coherent-control VD; VCP ideal proxy only",
+  "delta_method_guard_St2": 50,
+  "task_profiles": {
+    "validation": "full",
+    "readout": "full",
+    "shots": "full",
+    "mechanisms": "full",
+    "phase": "full",
+    "placement": "full",
+    "channel_physical": "full",
+    "channel_proxy": "full",
+    "twirling": "full",
+    "twirl_mc": "full",
+    "twirl_budget": "full",
+    "cycles": "full",
+    "global_depol": "full",
+    "local_resource": "full"
+  },
+  "task_runtimes_s": {
+    "validation": 0.2,
+    "readout": 1.0,
+    "shots": 0.4,
+    "mechanisms": 4.8,
+    "phase": 49.3,
+    "placement": 21.4,
+    "channel_physical": 8.4,
+    "channel_proxy": 0.1,
+    "twirling": 112.4,
+    "twirl_mc": 388.1,
+    "twirl_budget": 0.1,
+    "cycles": 0.0,
+    "global_depol": 0.7,
+    "local_resource": 0.5
+  },
+  "reference_hardware": {
+    "fast": {
+      "eps1": 0.0005,
+      "eps2": 0.005,
+      "eps3": 0.005,
+      "readout_q": 0.01,
+      "ancilla_reset_p": 0.005,
+      "data_reset_p": 0.005,
+      "idle_gamma": 0.0005,
+      "idle_phi": 0.0005,
+      "t_prep": 3,
+      "t_meas": 1,
+      "t_reset": 1
+    },
+    "slow": {
+      "eps1": 0.0005,
+      "eps2": 0.005,
+      "eps3": 0.005,
+      "readout_q": 0.01,
+      "ancilla_reset_p": 0.005,
+      "data_reset_p": 0.005,
+      "idle_gamma": 0.0005,
+      "idle_phi": 0.0005,
+      "t_prep": 3,
+      "t_meas": 10,
+      "t_reset": 5
+    }
+  },
+  "eps2_grid": [
+    0.002,
+    0.005,
+    0.01,
+    0.02
+  ],
+  "copy_budgets": [
+    1000.0,
+    10000.0,
+    100000.0
+  ],
   "specifications": {
-    "data_noise": "local stochastic Pauli channel",
-    "fredkin_noise": "native 3-qubit depolarizing AFTER each elementary Fredkin",
-    "control_noise": "stochastic control Z, optional extra idle for coherent ancilla",
-    "readout": "independent classical outcome flips",
-    "memory": "Markovian Z dephasing per idle step",
-    "reset": "mix fresh state with zero-state projector on reused registers",
-    "measurement": "ideal projective O, with finite-shot parity sampling for selected cases",
-    "unit_cost": "one register-level SWAP step; M native 3-qubit Fredkins",
-    "vcp": "physical order-2 Pauli superinstrument separately benchmarked; ideal Pauli power proxy retained"
+    "gate_noise": "replacement depolarizing D_eps after every gate (draft Eq. noisy_entangling_channel); eps1=eps2/10 in the reference; eps3=eps2",
+    "cswap": "compiled CNOT(b->a) layer, M Toffolis CCX(c,a->b), CNOT layer (M+2 units)",
+    "idle": "amplitude damping idle_gamma and Z flip idle_phi per unit on every waiting data and control qubit",
+    "clock": "gates 1 unit; t_prep/t_meas/t_reset; just-in-time preparation; no feed-forward; ancilla reuse waits for measure+reset+H",
+    "resets": "first use perfect; every actual mid-circuit reuse pays t_reset and the reset error",
+    "readout": "independent classical flip of each recorded ancilla outcome",
+    "source_noise": "Pauli-form local depolarizing source_pauli_p for abstract sources; algorithm circuits use the gate noise above",
+    "measurement": "ideal projective O on the measured register(s)",
+    "vcp": "order-2 Liu-style VCP on the gate support of every layer that contains a two-qubit gate (one-qubit-only layers unpurified, eps1=eps2/10); a fresh control (and auxiliary I/2^k) per purified layer from the smallest round-robin pool that keeps measurement/reset off the main register critical path",
+    "derangement": "wide controlled cyclic shift, O on all N registers averaged (Koczor cyclic derangement); each spent register read out mid-circuit right after its CSWAP (t_meas; observable readouts ideal as in every arm); dense, 1+MN<=9",
+    "study_circuits": "algorithm_blocks M=2: entangling L=12 (first 12 layers of U_B^2 U_A), product L=8 (U_B^3 U_A); M=1 entangling L=6",
+    "p_conventions": "pauli_form (1-p)rho+p/3 sum P rho P: sources, local depolarizing; replacement_form (1-p)rho+p I/D: global depolarizing, gate noise eps; z_flip (1-p)rho+p Z rho Z: dephasing"
   }
 }

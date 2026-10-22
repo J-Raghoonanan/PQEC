@@ -2,226 +2,148 @@
 """NUMERICAL STUDIES FOR THE REVISED PQES PAPER — A NARRATED EXECUTABLE METHODS SECTION.
 ====================================================================================
 
-Run from the parent directory that contains the user's OLD .py files:
-
     python pqes_new_numerics/run_simulations.py --profile quick
     python pqes_new_numerics/run_simulations.py --profile standard
     python pqes_new_numerics/run_simulations.py --profile full
     python pqes_new_numerics/run_simulations.py --task phase --profile standard
 
-Nothing in this folder imports or modifies the user's old simulation files.
 All CSV tables go to ../data/pqes_new_numerics (unless --data-dir overrides).
-Figures are NOT created here; use plot_results.py after CSV generation.
+Figures are made by plot_results.py from the CSVs only.
 
-====================================================================================
-I. WHAT THE ORIGINAL CODE COMPUTED, AND WHAT THIS CODE DOES DIFFERENTLY
-====================================================================================
+I. THE OBJECT SIMULATED
+-----------------------
+For N independently prepared copies of rho, every architecture A returns the
+unnormalized surviving-register operators grouped by REPORTED parity,
+tau_+, tau_-, and R=tau_++tau_-, W=tau_+-tau_-. Ideally R=rho, W=rho**N. The
+estimator is the ratio of signed sample means; its limiting value, delta-method
+variance coefficient and leading ratio bias are
 
-The user's old rho2_purification.py computes the matrix function
+  mu_A=Tr(O W)/t,  v_A=[m2-2 mu m1+mu^2]/t^2,  c_A=(mu-m1)/t^2,  t=Tr W,
 
-            P_N(rho) = rho**N / Tr(rho**N)
+with m1, m2 the unsigned first/second moments of the measured outcome (one
+register: Tr(O R), Tr(O^2 R); derangement: the register average). The MSE
+relative to the ideal target mu0 is b^2+(v+2bc)/S (draft Eq. full_mse_expansion).
 
-and feeds that normalized matrix into a new round of noise. Those are
-legitimate *ideal normalized virtual-state dynamics*, but do NOT describe a
-physical output state of non-postselected SWAP instrumentation. The old
-'P_success = 1.0' is a mathematical flag, not a demonstrated deterministic
-physical preparation of rho**N/Tr(rho**N). Similarly, calling copies_used
-'(t+1)*2**ell' for t nested cycles misses the N**t physical-tree cost.
+II. SIX ARCHITECTURES ON ONE HARDWARE MODEL AND ONE CLOCK (core.py)
+-------------------------------------------------------------------
+tree_parallel, tree_recycled, tree_sequential (measured SWAP trees: PQES),
+coherent_request (streaming one-control VD with resets), wide_cyclic (one
+control, all N registers, no resets), derangement (wide_cyclic circuit with O
+measured on all N registers, Koczor's cyclic-derangement estimator; each spent
+register is read out mid-circuit right after its CSWAP). Every
+controlled SWAP is compiled to CNOT-CCX-CNOT with the draft's two-qubit
+depolarizing channel; every waiting qubit gets the same idle channel; resets
+are charged per actual register reuse; the clock is shared (core docstring).
 
-Our new simulations explicitly implement the controlled-SWAP instrument,
-including the physical quantum control qubit, projected control readout,
-discard of the unused register, and outcome-weighted aggregation of branches.
-The normalized estimator is formed only when extracting an observable.
+III. PARAMETER CONVENTIONS (recorded in every CSV row)
+-----------------------------------------------------
+  source_pauli_p : local depolarizing of the abstract source state, Pauli form
+                   (1-p)rho+p/3 sum P rho P  (manuscript Eq. pauli-kraus).
+  eps1, eps2, eps3 : replacement depolarizing D_eps after 1-, 2-, 3-qubit gates
+                   (draft Eq. noisy_entangling_channel). One-qubit Pauli
+                   probability = 3 eps/4. eps3 defaults to eps2.
+  readout_q, ancilla_reset_p, data_reset_p, idle_gamma, idle_phi (per unit),
+  t_prep, t_meas, t_reset (units of one gate time).
+  noise_convention column where a bare p appears: pauli_form (local
+                   depolarizing), replacement_form (global depolarizing), z_flip.
+Reference hardware (two latency profiles; every conclusion is stated per
+profile, never from one guessed value): see REFERENCE below.
 
-For N independently prepared copies of rho, define the unnormalized physical
-operators conditioned on total reported parity Omega=+/-:
+IV. SHOT PLANNING
+-----------------
+Target RMSE EPS=0.03. S=ceil((v+2bc)/(EPS^2-b^2)), infeasible if b^2>=EPS^2,
+and S*t^2>=50 is enforced (core.plan_shots). Monte Carlo of the raw ratio
+estimator at the planned S gives the achieved RMSE with a 95% CI.
 
-  tau_+, tau_-.
+V. STUDIES -> CSV
+-----------------
+  validation  ideal equivalence of all six arms (any nonzero residual = bug)
+  readout     assignment-error visibility and the (1-2q)^(-2(N-2)) penalty
+  shots       direct Monte Carlo of the estimator along the q sweep
+  mechanisms  one-at-a-time sweeps from zero of every apparatus mechanism
+  phase       architecture cost map at fixed RMSE, several cost metrics, with
+              no width constraint (primary) and at width budgets 5, 7, 9;
+              labelled slices of eps2 and latency
+  placement   fixed total depth L (12 entangling, 8 product), compression after
+              exactly f*L layers, f in {0,1/4,1/2,3/4,1},
+              for every VD arm and for VCP2 at the same cut
+  channel_physical  layerwise VCP2 vs output-only state VD at fixed RMSE
+  channel_proxy     ideal channel-purification reference (never ranked)
+  twirling / twirl_mc / twirl_budget   K-frame sets, per-copy per-shot frame
+              Monte Carlo, noisy Cliffords, fixed-budget error before/after
+  cycles      repeated virtual cycles: F_t, Z_t, nested copy budget N^t S
+  global_depol / global_boundaries  exact global-depolarizing results with
+              p_c(N) and p_SN(D,N)
+  local_resource  local depolarization: F_N, T_N, leading and sampled MSE at
+              fixed copy budget, optimal N, entangled mismatch floor
 
-We save the ordinary and weighted operators:
-
-  R = tau_+ + tau_-,          W = tau_+ - tau_-.
-
-If the apparatus is perfect, regardless of balanced/sequential tree shape:
-
-  R = rho,                   W = rho**N.
-
-For a noisy implementation A, the limiting measured observable is
-
-  mu_A = Tr(O W_A)/t_A,      t_A = Tr(W_A).
-
-This need not equal Tr(O rho**N)/Tr(rho**N). The physical output remains R_A.
-The ratio estimator's single-shot delta-method variance coefficient is
-
-  v_A = [Tr(O**2 R_A)-2 mu_A Tr(O R_A)+mu_A**2] / t_A**2,
-
-and its leading finite-sample bias coefficient is
-
-  b_ratio = [mu_A-Tr(O R_A)]/t_A**2.
-
-The mean-squared estimation error relative to the known IDEAL target mu0 is
-
-  MSE ~ (mu_A-mu0)**2 + [v_A +2(mu_A-mu0)*b_ratio]/S
-
-for large shots S (provided the random denominator is stable). We save both
-coefficients, plus exact quantum-resource counts and a conservative v-only
-shot-target estimate. We NEVER infer advantage from rho**N fidelity alone.
-
-====================================================================================
-II. FOUR MATCHED VD INSTRUMENTS
-====================================================================================
-
-All implementations consume N input copies and N-1 REGISTER controlled-SWAP
-operations, each decomposed into M identical native 3-qubit Fredkin gates.
-They all report a signed parity and a surviving M-qubit output. They differ
-in coherent width, schedule, and the number/lifetime of ancilla readouts.
-
-1. tree_parallel: balanced SWAP tree; each level measured/discarded before
-   proceeding, with enough live registers for an entire layer. No left-side
-   waiting while a sibling subtree is prepared.
-
-2. tree_recycled: balanced tree evaluated depth-first, recycling registers
-   that have been measured/discarded. The left subtree's surviving quantum
-   state must wait while the right subtree is prepared; we dephase it once
-   per waiting unit. This is the model for a log-width PQES schedule.
-
-3. tree_sequential: accumulator plus a freshly prepared rho, measured after
-   every swap; constant coherent width 2M+1, N-1 ancilla readouts.
-
-4. coherent_request: a REQUEST-like coherent-control VD streaming circuit;
-   ONE ancilla persists coherently across the N-1 swaps and is measured ONCE
-   at the end. Each spent B data register is discarded before a fresh rho is
-   prepared. Same 2M+1 peak width, different control-lifetime/noise exposure.
-
-These are concrete realizations. We do not claim the coherent variant
-implements all REQUEST optimizations or compares all possible hardware
-compilations. Our native-Fredkin noise model and timestep assumptions must
-be stated with any plotted result.
-
-====================================================================================
-III. SOURCES OF ERROR (all independently configurable)
-====================================================================================
-
-  input_p: local Pauli depolarization of each source rho; target depends on
-           plus/product/Bell/entangled state family.
-  gate_p: 3-qubit depolarizing noise on (control,A_j,B_j) after each Fredkin.
-  control_z_p: stochastic control-Z after every Fredkin. This reduces
-               visibility without requiring postselection.
-  readout_q: classical parity readout bit flip per reported SWAP measurement.
-             There are N-1 such readouts in the tree and one in coherent VD.
-  memory_z_p: dephasing of stored data qubits per scheduled waiting unit.
-  control_idle_p: extra control-qubit dephasing between coherent-control
-                  sequential SWAP modules, not during measured/reinitialized
-                  modules; an explicit *hardware-different* model.
-  reset_p: phenomenological imperfect data register re-preparation after
-           recycling (mixes fresh rho with |0..0><0..0|). Not used by
-           fully parallel tree, whose copies are all prepared separately.
-
-Caution: noise strengths correspond to these DEFINITIONS, not to randomized
-benchmarking infidelities or device physical error rates unless calibrated.
-
-====================================================================================
-IV. NUMERICAL FIGURES AND THE HYPOTHESES THEY TEST
-====================================================================================
-
-  validation.csv: Ideal equivalence & measured sign-flip analytics. Any
-      nonzero discrepancy is a coding bug; NO plotted novelty claim.
-
-  readout.csv: Compare independent readout errors. Analytically tree
-      normalization attenuation c=(1-2q)**(N-1), coherent c=1-2q. Ratio
-      cancels the bias but variance grows ~1/c**2. In this model PQES
-      must be WORSE for N>2; important counterexample, not inconvenient data.
-
-  gate_noise.csv: Control, Fredkin and memory errors separately; systematic
-      bias, effective signed normalization and shot coefficient, four arms.
-
-  phase.csv: A 2D sweep over ancilla readout q and extra coherent-control
-      idle error p_idle, using a fixed target and SWAP-gate model. At a FIXED
-      RMSE target eps, record whether it can be reached, then estimate total
-      native-Fredkin budget S*M*(N-1), plus width/depth. Avoid 'winner'
-      comparisons of errors before accounting for variance and bias.
-
-  placement.csv: Divide a known, entangling algorithm U=U_B U_A into blocks.
-      Compare end-only: N x (U_A+U_B), VD; versus mid: N x U_A, VD, 1 x U_B.
-      Both measured and coherent baselines are allowed to use the SAME
-      compression point. Includes gate counts, placement, exact finite-power
-      observable, noisy bias and variance. Ensures no PQES-only free lunch.
-
-  shot_check.csv: Sample ACTUAL parity and final observable outcomes (not
-      conditional branch means) to verify the expected estimator variance.
-
-  twirling.csv: Test independent versus shared frames across copies, and
-      finite empirical K-frame channel approximation. A subset is not the
-      same thing as a Monte Carlo implementation of exact channel twirling.
-
-  cycles.csv: Ideal repeated normalized noise + power dynamics, but track
-      log10 Z_t and N**t input copies needed for nested signed trajectories.
-      This is NOT a circuit-level memory experiment.
-
-  channel_physical.csv: ACTUAL order-two layerwise VCP with auxiliary
-      maximally mixed state and two controlled-SWAP passes per Pauli-noise
-      location. Compare full signed moments, bias, variance and resources
-      to output-only physical state VD2. Does not conflate channel and state
-      purification: VCP may perform more controlled gates but fewer ideal
-      state preparations. Restricted to stochastic Pauli channels.
-
-  channel_proxy.csv: Ideal layerwise Pauli-channel powering, as a limited
-      VCP-inspired theoretical comparator. DOES NOT include physical VCP
-      measurements, ancillas, its sampling overhead or native compilation;
-      is NEVER ranked in the matched hardware phase diagram.
-
-====================================================================================
-V. METHODS, UNCERTAINTY AND VALIDATION
-====================================================================================
-
-All quantum operators through M=2 data qubits are simulated exactly using
-NumPy density matrices, including the control and both input data registers
-(maximum 1+2M qubits per SWAP step). No exponential N-copy density matrix
-is allocated. The simulator keeps parity-resolved unnormalized density
-operators and contracts them exactly. The coherent cyclic streaming arm
-keeps the control--data density matrix across swaps.
-
-These are EXACT probabilities within the stated Markovian noise model, NOT
-Monte Carlo noisy-gate trajectories. CSV 'variance_coeff' is the analytical
-per-shot CLT coefficient. 'shot_check' separately draws physical outcomes.
-
-Parameters and a reproducible seed are saved in manifest.json. Each task
-writes its CSV afresh, never silently appends/repeats an old sweep. This
-avoids mixing results with distinct simulator versions.
-
-The absence of real-device gate calibrations means that any regime favoring
-PQES is conditional on the stated hypothetical model. No 'hardware advantage'
-may be announced until sensitivity and fair compilation are evaluated.
+All operators are exact density matrices within the stated Markovian model.
+No figure is produced here; no 'hardware advantage' is asserted anywhere.
 """
 from __future__ import annotations
 import argparse
 import json
+import math
+import time
+import zlib
 from pathlib import Path
-from dataclasses import asdict
+from dataclasses import replace
 import numpy as np
 import pandas as pd
-from core import (Noise,simulate,noisy_input,pure_dm,metrics,resources,
-                  spectral_power,sample_ratio,phase_flip,dag,PLUS_DM,PLUS,X,Y,Z)
-from circuits import (fixed_circuit_case,apply_downstream,vcp_pauli_proxy)
-from vcp_physical import compare_vcp2_statevd
+from core import (Hardware,Ledger,ARCH,MEASURED,simulate,simulate_moments,noisy_input,pure_dm,metrics,
+                  moments_metrics,resources,plan_shots,outcome_table,mc_rmse,spectral_power,
+                  partial_trace,dag,PLUS_DM,X,Y,Z,H,S_GATE,I2,depolarize_subset,
+                  derangement_moments,derangement_table)
+import circuits
+from circuits import cut_case,run_layers,apply_layer,study_layers,ideal_output,count_gates,vcp_pauli_proxy
+import vcp_physical as vp
 
-ARCH=('tree_parallel','tree_recycled','tree_sequential','coherent_request')
 ROOT=Path(__file__).resolve().parent.parent
 DEFAULT_DATA=ROOT/'data'/'pqes_new_numerics'
+EPS=0.03
+BUDGETS=(1e3,1e4,1e5)
+EPS2_GRID=(0.002,0.005,0.01,0.02)
 
 
-def _row(rho,N,arch,model,O,ideal,target=None,extra=None):
-    R,W=simulate(rho,N,arch,model)
-    m=metrics(R,W,O,ideal)
-    res=resources(int(round(np.log2(rho.shape[0]))),N,arch,model)
-    record=dict(architecture=arch,M=int(round(np.log2(rho.shape[0]))),N=N,
-                input_p=extra.get('input_p',np.nan) if extra else np.nan,
-                **asdict(model),**res,**m)
-    if target is not None:
-        record['input_target_fidelity']=float(np.trace(rho@target).real)
-        record['ideal_power_target_fidelity']=float(np.trace(spectral_power(rho,N)@target).real)
-    if extra:record.update(extra)
-    return record,R,W
+def seed_for(*keys):
+    """SeedSequence entropy from an explicit key tuple (study, arm, N, shots, ...)."""
+    return [zlib.crc32(repr(k).encode()) for k in keys]
+
+
+def reference(profile='fast',eps2=.005,**kw):
+    """Reference hardware. eps1=eps2/10; latency profiles: fast (t_meas=t_reset=1)
+    and slow (t_meas=10, t_reset=5) mid-circuit measurement/reset."""
+    lat={'fast':dict(t_meas=1,t_reset=1),'slow':dict(t_meas=10,t_reset=5)}[profile]
+    base=dict(eps1=eps2/10,eps2=eps2,readout_q=.01,ancilla_reset_p=.005,data_reset_p=.005,
+              idle_gamma=5e-4,idle_phi=5e-4,t_prep=3,**lat)
+    base.update(kw)
+    return Hardware(**base)
+
+
+def hw_cols(hw):return {('eps3' if k=='eps3' else k):v for k,v in hw.record().items()}
+
+
+def cost_record(led,mom_row,plan,copies=None):
+    """Per-shot and total resource vector; totals use the planned shots."""
+    copies=led.preparations if copies is None else copies
+    per=dict(copies_per_shot=copies,cnot_per_shot=led.cnot,ccx_per_shot=led.ccx,
+             gates1_per_shot=led.gates1,duration_per_shot=led.duration,
+             width=led.peak_qubits,spacetime_per_shot=led.peak_qubits*led.duration)
+    S=plan['shots']
+    tot={('total_'+k[:-9] if k.endswith('_per_shot') else 'total_'+k):(S*v if plan['feasible'] else np.nan)
+         for k,v in per.items() if k!='width'}
+    out=dict(per);out.update(tot)
+    for C in BUDGETS:out[f'rmse_lead_C{int(C)}']=leading_rmse(mom_row,math.floor(C/copies))
+    return out
+
+
+def leading_rmse(row,S,guard=50.):
+    """sqrt(b^2+(v+2bc)/S), reported only where the delta method holds (S t^2>=guard).
+    An exact zero (b=v=c=0, noiseless pure input) is 0; a negative expansion is NaN."""
+    b,v,c,t=row['bias'],row['variance_coeff'],row['ratio_bias_coeff'],row['normalization']
+    if S<1 or not np.isfinite(v) or S*t*t<guard:return np.nan
+    m=b*b+(v+2*b*c)/S
+    return math.sqrt(m) if m>=0 else np.nan
 
 
 def write_csv(data,output):
@@ -232,378 +154,659 @@ def write_csv(data,output):
     return df
 
 
+def arm_eval(rho,N,arch,hw,O,mu0,t_prep=None,post=None,M=None,alg_hw=None,source=None):
+    """Run one VD arm (optionally followed by an unpurified downstream block
+    `post` on every measured register). `source` is the ledger of one run of
+    the circuit that prepared rho; every copy is charged its gates and idle
+    units. Returns (metrics row, ledger, table)."""
+    M=int(round(math.log2(rho.shape[0]))) if M is None else M
+    alg_hw=hw if alg_hw is None else alg_hw
+    post=post or []
+    mom,led,obj=simulate_moments(rho,N,arch,hw,O,t_prep)
+    if source is not None:
+        led.data_idle+=N*source.data_idle;led.cnot+=N*source.cnot;led.gates1+=N*source.gates1
+    if arch=='derangement':
+        if post:
+            Rf,Wf=obj['Rfull'],obj['Wfull'];n=M*N
+            for layer in post:
+                for i in range(N):   # count each register's post-layer gates and idle once
+                    Rf=apply_layer(Rf,layer,M,alg_hw,offset=M*i,n=n,ledger=led)
+                    Wf=apply_layer(Wf,layer,M,alg_hw,offset=M*i,n=n)
+            obj=dict(obj,Rfull=Rf,Wfull=Wf)
+            mom=derangement_moments(Rf,Wf,O,M,N)
+            led.duration+=len(post)
+        table=derangement_table(obj['Rfull'],obj['Wfull'],O,M,N)
+    else:
+        R,W=obj
+        if post:
+            R=run_layers(R,post,M,alg_hw,ledger=led);W=run_layers(W,post,M,alg_hw);led.duration+=len(post)
+            mom=dict(t=float(np.trace(W).real),num=float(np.trace(O@W).real),m1=float(np.trace(O@R).real),
+                     m2=float(np.trace(O@O@R).real),trR=float(np.trace(R).real))
+        table=outcome_table(R,W,O)
+    return moments_metrics(mom,mu0),led,table
+
+
+def mc_validate(table,mu0,shots,reps,seed):
+    sg,vals,probs=table
+    return mc_rmse(sg,vals,probs,mu0,shots,reps,seed)
+
+
+def derangement_ok(M,N):return 1+M*N<=9
+
+
+# =========================================================================== studies
 def ideal_validation(profile):
-    """Algebraic contract tests; fail loudly on any incorrect probability."""
     rows=[]
     cases=[(1,'plus',.11),(1,'tilted',.25),(2,'bell_tilted',.18),(2,'entangled',.09)]
     for M,kind,p in cases:
         rho,target=noisy_input(M,kind,p)
         for N in ((2,4) if profile=='quick' else (2,4,8)):
+            P=np.linalg.matrix_power(rho,N)
             for arch in ARCH:
-                R,W=simulate(rho,N,arch,Noise())
-                r_err=np.linalg.norm(R-rho)
-                w_err=np.linalg.norm(W-np.linalg.matrix_power(rho,N))
-                if max(r_err,w_err)>1e-9:
-                    raise AssertionError(f'IDEAL INSTRUMENT ERROR: {M,kind,N,arch,r_err,w_err}')
-                rec,_,_=_row(rho,N,arch,Noise(),target,1,target,
-                             dict(target=kind,p_input=p))
-                rec.update(r_err=r_err,w_err=w_err,expected_normalization=float(np.trace(np.linalg.matrix_power(rho,N)).real))
-                rows.append(rec)
+                if arch=='derangement':
+                    if not derangement_ok(M,N):continue
+                    mom,led,full=simulate_moments(rho,N,arch,Hardware(),target)
+                    r_err=abs(mom['m1']-np.trace(target@rho).real)
+                    w_err=max(abs(mom['t']-np.trace(P).real),abs(mom['num']-np.trace(target@P).real))
+                    norm=mom['t']
+                else:
+                    R,W=simulate(rho,N,arch,Hardware())
+                    r_err=float(np.linalg.norm(R-rho));w_err=float(np.linalg.norm(W-P));norm=float(np.trace(W).real)
+                if max(r_err,w_err)>1e-9:raise AssertionError(f'IDEAL INSTRUMENT ERROR: {M,kind,N,arch,r_err,w_err}')
+                rows.append(dict(architecture=arch,M=M,N=N,target=kind,source_pauli_p=p,r_err=r_err,w_err=w_err,
+                                 normalization=norm,expected_normalization=float(np.trace(P).real),
+                                 **resources(M,N,arch)))
     return rows
 
 
 def readout_study(profile):
-    """Prove a NEGATIVE hardware result: independent sign flips penalize trees."""
     rows=[]
     qvals=[0,.02,.07] if profile=='quick' else [0,.002,.005,.01,.02,.035,.05,.08,.12]
-    Mvals=[1] if profile=='quick' else [1,2]
-    Nvals=[2,4] if profile=='quick' else [2,4,8]
-    for M in Mvals:
-        kind='tilted' if M==1 else 'bell_tilted'
-        rho,target=noisy_input(M,kind,.18)
-        for N in Nvals:
+    for M in ([1] if profile=='quick' else [1,2]):
+        kind='tilted' if M==1 else 'bell_tilted';p=.18
+        rho,target=noisy_input(M,kind,p)
+        for N in ([2,4] if profile=='quick' else [2,4,8]):
             purity=float(np.trace(np.linalg.matrix_power(rho,N)).real)
             for q in qvals:
-                model=Noise(readout_q=q)
+                hw=Hardware(readout_q=q)
                 for arch in ARCH:
-                    rec,_,_=_row(rho,N,arch,model,target,1,target,dict(target=kind,p_input=.18))
-                    attenuation=(1-2*q)**(N-1 if arch!='coherent_request' else 1)
-                    rec['predicted_normalization']=attenuation*purity
-                    rec['predicted_visibility']=attenuation
-                    if abs(rec['normalization']-rec['predicted_normalization'])>2e-8:
-                        raise AssertionError('Readout attenuation mismatch')
-                    rows.append(rec)
-    return rows
-
-
-def gates_study(profile):
-    """Separate noises to identify *why* tree shape or coherent control matters."""
-    rows=[]
-    M=2;rho,target=noisy_input(M,'bell_tilted',.13)
-    Nlist=[4] if profile=='quick' else [2,4,8]
-    settings=[('ideal',Noise()),
-              ('fredkin_0p01',Noise(gate_p=.01)),
-              ('ancilla_z_0p02',Noise(control_z_p=.02)),
-              ('readout_0p02',Noise(readout_q=.02)),
-              ('memory_0p02',Noise(memory_z_p=.02)),
-              ('coherent_idle_0p05',Noise(control_idle_p=.05)),
-              ('reset_0p025',Noise(reset_p=.025)),
-              ('combined',Noise(gate_p=.008,control_z_p=.008,readout_q=.012,
-                                memory_z_p=.012,control_idle_p=.025,reset_p=.01))]
-    for N in Nlist:
-        for label,model in settings:
-            for arch in ARCH:
-                rec,_,_=_row(rho,N,arch,model,target,1,target,dict(target='bell_tilted',noise_case=label))
-                rows.append(rec)
-    return rows
-
-
-def phase_study(profile,eps,width_cap):
-    """Total-cost architecture map. Invalid biased estimators cannot 'win'.
-
-    Hardware hypothesis: shared control requires extra between-module coherent
-    idle time; local readout can be noisy. The color of the map changes with
-    either parameter. Under a different device gate/noise model it may invert.
-    """
-    rows=[];M=2;N=4
-    rho,target=noisy_input(M,'bell_tilted',.14)
-    qvals=[0,.03,.08] if profile=='quick' else np.linspace(0,.10,7 if profile=='standard' else 9)
-    idlevals=[0,.025,.08] if profile=='quick' else np.linspace(0,.12,7 if profile=='standard' else 9)
-    gates=[.004] if profile=='quick' else ([.006] if profile=='standard' else [.0,.006,.02])
-    memoryvals=[.008] if profile=='quick' else ([.01] if profile=='standard' else [0,.015])
-    for gate in gates:
-        for memory in memoryvals:
-            for q in qvals:
-                for idle in idlevals:
-                    model=Noise(gate_p=float(gate),readout_q=float(q),
-                                memory_z_p=float(memory),control_idle_p=float(idle),
-                                control_z_p=.003,reset_p=.006)
-                    for arch in ARCH:
-                        rec,_,_=_row(rho,N,arch,model,target,1,target,dict(target='bell_tilted',rmse_target=eps))
-                        b=rec['bias'];v=rec['variance_coeff'];k=rec['ratio_bias_coeff']
-                        feasible=bool(np.isfinite(v) and b*b<eps*eps and rec['peak_qubits']<=width_cap)
-                        # v-only planning estimate, explicitly *not* full MSE.
-                        S=max(1,int(np.ceil(v/(eps*eps-b*b)))) if feasible else None
-                        # More accurate leading MSE includes ratio finite-shot bias:
-                        v_mse=v+2*b*k if feasible else np.nan
-                        S_corrected=(max(1,int(np.ceil(max(v_mse,0)/(eps*eps-b*b))))
-                                     if feasible and v_mse>=0 else None)
-                        rec.update(width_cap=width_cap,feasible=feasible,shots_asymptotic=S,
-                                   shots_mse_leading=S_corrected,
-                                   total_fredkins=(S*rec['native_fredkins'] if S is not None else np.nan),
-                                   total_preparations=(S*N if S is not None else np.nan),
-                                   total_swap_depth=(S*rec['critical_swap_stages'] if S is not None else np.nan))
-                        rows.append(rec)
-    return rows
-
-
-def placement_study(profile):
-    """Fair mid-vs-end comparisons permit BOTH VD architectures to move.
-
-    Here known U_A prepares noisy rho_A, U_B implements subsequent ideal gates
-    with separate per-gate CPTP noise. Output-only distills Lambda_B(rho_A),
-    whereas mid-circuit processing distills rho_A first and applies Lambda_B
-    ONCE to R and W. No nonlinear operator is fed physically forward.
-    """
-    rows=[]
-    Mvals=[1,2] if profile!='quick' else [2]
-    powvals=[2,4] if profile!='quick' else [2,4]
-    circuits=[0,1,2,4] if profile!='quick' else [0,2]
-    per_gate=[.0,.01,.04] if profile!='quick' else [.025]
-    model=Noise(gate_p=.008,control_z_p=.004,readout_q=.01,
-                control_idle_p=.018,memory_z_p=.005,reset_p=.004)
-    for M in Mvals:
-        for repeats in circuits:
-            for p in per_gate:
-                case=fixed_circuit_case(M,repeats,p)
-                O=case['ideal'];target=float(np.trace(O@O).real)
-                rhoA=case['input_A'];rhoOut=case['noisy_output']
-                for N in powvals:
-                    for arch in ARCH:
-                        for mode in ('output_only','intermediate'):
-                            source=rhoOut if mode=='output_only' else rhoA
-                            R,W=simulate(source,N,arch,model)
-                            if mode=='intermediate':
-                                R=apply_downstream(R,case)
-                                W=apply_downstream(W,case)
-                            stat=metrics(R,W,O,target)
-                            res=resources(M,N,arch,model)
-                            record=dict(architecture=arch,M=M,N=N,placement=mode,
-                                        b_repeats=repeats,algorithm_gate_p=p,
-                                        gates_A=len(case['A']),gates_B=len(case['B']),
-                                        algorithm_gates=(N*(len(case['A'])+len(case['B']))
-                                                         if mode=='output_only' else N*len(case['A'])+len(case['B'])),
-                                        input_fidelity=float(np.trace(source@O).real),
-                                        **asdict(model),**res,**stat)
-                            rows.append(record)
+                    if arch=='derangement' and not derangement_ok(M,N):continue
+                    met,led,_=arm_eval(rho,N,arch,hw,target,1.)
+                    att=(1-2*q)**(N-1 if arch in MEASURED else 1)
+                    if abs(met['normalization']-att*purity)>2e-8:raise AssertionError('Readout attenuation mismatch')
+                    rows.append(dict(architecture=arch,M=M,N=N,target=kind,source_pauli_p=p,**hw_cols(hw),**met,
+                                     predicted_normalization=att*purity,predicted_visibility=att,**led.record('clock_')))
     return rows
 
 
 def shots_study(profile,seed):
-    """Check actual finite-shot estimator distributions against delta method."""
-    rho,O=noisy_input(1,'tilted',.15)
-    model=Noise(gate_p=.004,readout_q=.015,control_idle_p=.03)
+    """Direct Monte Carlo of the ratio estimator along the readout sweep."""
+    rho,O=noisy_input(1,'tilted',.15);p=.15
     rows=[]
-    trials=12 if profile=='quick' else 100
-    shotlist=[128,512,2048] if profile=='quick' else [256,1024,4096,16384]
+    trials=40 if profile=='quick' else (200 if profile=='standard' else 400)
+    shotlist=[256,2048] if profile=='quick' else [256,1024,4096,16384]
+    qlist=[0,.05] if profile=='quick' else [0,.02,.05,.1]
     for arch in ('tree_sequential','coherent_request'):
         for N in (2,4):
-            R,W=simulate(rho,N,arch,model)
-            base=metrics(R,W,O,1.)
-            for shots in shotlist:
-                for trial in range(trials):
-                    draw=sample_ratio(R,W,O,shots,seed=seed+3000*trial+101*N+11*len(arch))
-                    rows.append(dict(architecture=arch,N=N,trial=trial,M=1,
-                                     **asdict(model),**base,**draw))
+            for q in qlist:
+                hw=Hardware(eps2=.005,eps1=.0005,readout_q=q)
+                met,led,(sg,vals,probs)=arm_eval(rho,N,arch,hw,O,1.)
+                for S in shotlist:
+                    rng=np.random.default_rng(seed_for(seed,'shots',arch,N,q,S))
+                    c=rng.multinomial(S,probs,size=trials);num=c@(sg*vals);den=c@sg
+                    for trial in range(trials):
+                        rows.append(dict(architecture=arch,N=N,M=1,source_pauli_p=p,readout_q=q,eps2=hw.eps2,eps1=hw.eps1,
+                                         shots=S,trial=trial,**met,
+                                         empirical=(float(num[trial]/den[trial]) if den[trial]!=0 else np.nan),
+                                         signed_normalization=float(den[trial]/S),zero_denominator=bool(den[trial]==0)))
     return rows
 
 
-def twirling_study(profile,seed):
-    """Physically distinct random-frame protocols, and the K-frame estimator.
+MECHANISMS={'eps2':[0,.002,.005,.01,.02],'eps1':[0,.001,.002,.005],'readout_q':[0,.01,.02,.05],
+            'ancilla_reset_p':[0,.01,.02,.05],'data_reset_p':[0,.01,.02,.05],
+            'idle_phi':[0,5e-4,1e-3,2e-3,5e-3],'idle_gamma':[0,5e-4,1e-3,2e-3,5e-3],
+            't_meas':[1,2,5,10,20],'t_prep':[1,3,10,30]}
 
-    A fixed |+> input subject to Z-dephasing p becomes, under conjugations
-    mapping Z to X/Y/Z, states rho_X, rho_Y, rho_Z. The exact channel twirl
-    is bar_rho=(rho_X+rho_Y+rho_Z)/3.
 
-    Independent frame choice on each incoming copy -> (bar_rho)**N.
-    ONE frame shared across all copies              -> avg_f(rho_f**N).
-    Fixed empirical K-frame channel                 -> (avg_K rho_f)**N.
-
-    These are NOT equal, even though the same three Cliffords are available.
-    No fictitious 3**M enumeration cost is counted for randomization.
-    """
-    rows=[];M=1
-    ps=[.1,.3,.45] if profile!='quick' else [.3]
-    powers=[2,4,8] if profile!='quick' else [2,4]
-    Kvals=[1,2,4,8,16,32,64,128] if profile!='quick' else [1,4,16]
-    trials=80 if profile!='quick' else 15
-    for p in ps:
-        project=PLUS_DM
-        options=[]
-        for error in (X,Y,Z):
-            options.append((1-p)*project+p*error@project@error)
-        avg=sum(options)/3
-        for N in powers:
-            indep_mat=np.linalg.matrix_power(avg,N)
-            shared_mat=sum(np.linalg.matrix_power(x,N) for x in options)/3
-            for mode,mat in [('independent_exact',indep_mat),('shared_exact',shared_mat)]:
-                norm=float(np.trace(mat).real)
-                fid=float(np.trace(project@mat).real/norm)
-                rows.append(dict(mode=mode,p=p,N=N,M=M,K=0,trial=-1,
-                                 fidelity=fid,normalization=norm,
-                                 normalization_log10=np.log10(norm),
-                                 abs_error_vs_independent=abs(fid-float(np.trace(project@indep_mat).real/np.trace(indep_mat).real))))
-            for K in Kvals:
-                for trial in range(trials):
-                    rng=np.random.default_rng(seed+317*trial+29*K+int(1000*p)+N)
-                    samples=rng.integers(0,3,size=K)
-                    empirical=sum(options[int(i)] for i in samples)/K
-                    mat=np.linalg.matrix_power(empirical,N)
-                    norm=float(np.trace(mat).real)
-                    fid=float(np.trace(project@mat).real/norm)
-                    targetfid=float(np.trace(project@indep_mat).real/np.trace(indep_mat).real)
-                    rows.append(dict(mode='fixed_K_empirical',p=p,N=N,M=M,K=K,trial=trial,
-                                     fidelity=fid,normalization=norm,
-                                     normalization_log10=np.log10(norm),
-                                     abs_error_vs_independent=abs(fid-targetfid)))
+def mechanisms_study(profile):
+    """One mechanism at a time from zero (latency/prep sweeps at fixed idle 1e-3)."""
+    rows=[];M=2;p=.13
+    rho,target=noisy_input(M,'bell_tilted',p)
+    Ns=[4] if profile=='quick' else [4,8]
+    mechs=MECHANISMS if profile!='quick' else {k:v[:3] for k,v in MECHANISMS.items()}
+    for N in Ns:
+        for mech,vals in mechs.items():
+            for val in vals:
+                base=dict(idle_gamma=1e-3,idle_phi=1e-3) if mech in ('t_meas','t_prep') else {}
+                hw=Hardware(**{**base,mech:val})
+                for arch in ARCH:
+                    if arch=='derangement' and not derangement_ok(M,N):continue
+                    met,led,_=arm_eval(rho,N,arch,hw,target,1.)
+                    rows.append(dict(architecture=arch,M=M,N=N,target='bell_tilted',source_pauli_p=p,
+                                     mechanism=mech,value=val,**hw_cols(hw),**met,**led.record('clock_')))
     return rows
 
 
-def repeated_cycles_study(profile):
-    """Spectral fidelity IS NOT a physical repeated recovery process.
+def phase_study(profile,seed,eps=EPS):
+    """Cost map at fixed RMSE for every arm. Axes: readout q and idle rate r
+    (idle_gamma=idle_phi=r); slices: eps2 and the latency profile. Every row
+    carries the arm's width; plot_results ranks for four cost metrics with no
+    width constraint (the primary result) and at the WIDTH_BUDGETS."""
+    rows=[];M=2;N=4;p=.14
+    rho,target=noisy_input(M,'bell_tilted',p)
+    if profile=='quick':
+        qvals=[0,.03];rvals=[0,2e-3];slices=[(.005,'fast')]
+    elif profile=='standard':
+        qvals=np.linspace(0,.05,4);rvals=[0,5e-4,1e-3,2e-3];slices=[(.005,'fast'),(.005,'slow')]
+    else:
+        qvals=np.linspace(0,.05,6);rvals=[0,2.5e-4,5e-4,1e-3,2e-3,4e-3]
+        slices=[(e,lp) for e in EPS2_GRID for lp in ('fast','slow')]
+    mc_reps=200 if profile=='quick' else 2000
+    for e2,lp in slices:
+        for q in qvals:
+            for r in rvals:
+                hw=reference(lp,e2,readout_q=float(q),idle_gamma=float(r),idle_phi=float(r))
+                for arch in ARCH:
+                    met,led,table=arm_eval(rho,N,arch,hw,target,1.)
+                    plan=plan_shots(met,eps)
+                    rec=dict(architecture=arch,M=M,N=N,target='bell_tilted',source_pauli_p=p,latency_profile=lp,
+                             idle_rate=float(r),rmse_target=eps,**hw_cols(hw),**met,
+                             feasible=plan['feasible'],shots=plan['shots'],shots_delta=plan['shots_delta'],
+                             guard_binding=plan['guard_binding'],
+                             **led.record('clock_'),**cost_record(led,met,plan))
+                    if plan['feasible']:
+                        rec.update(mc_validate(table,1.,plan['shots'],mc_reps,seed_for(seed,'phase',arch,e2,lp,float(q),float(r))))
+                    rows.append(rec)
+    return rows
 
-    One ideal normalized noise-filter recurrence:
-       s_{t+1}=P_N(E(s_t)); q_t=Tr[E(s_t)**N].
-    The signed physical realization must nest all earlier branch signs:
-       Z_{t+1}=Z_t**N * q_t ; cost_per_trajectory=N**t copies.
-    Track log10 Z_t to avoid numerical underflow. No tomography claimed.
-    """
+
+def placement_study(profile,seed,eps=EPS):
+    """Fixed total depth L of the study circuit (circuits.study_layers: L=12
+    entangling, L=8 product), cut after exactly f*L layers. VD arms compress rho_A and the remaining layers act
+    once on the surviving register (on every register for derangement); VCP2
+    purifies the layers before the cut that contain a two-qubit gate and leaves
+    the rest unpurified. f=1 is output-only VD / full layerwise VCP2. f=0 is
+    unmitigated for VCP2; the VD arms at f=0 compress the ideal initial state
+    with a noisy apparatus and then run the whole circuit."""
+    rows=[];M=2
+    fams=['entangling','product']
+    fs=[0,.5,1] if profile=='quick' else [0,.25,.5,.75,1]
+    e2s=[.005] if profile=='quick' else (list(EPS2_GRID) if profile=='full' else [.005,.02])
+    profiles=['fast'] if profile=='quick' else ['fast','slow']
+    Ns=[2,4]
+    for fam in fams:
+        for e2 in e2s:
+            for lp in profiles:
+                hw=reference(lp,e2)
+                for f in fs:
+                    case=cut_case(M,fam,f,hw);O=case['target'];L=case['L']
+                    g1A,g2A=case['gates_pre'];g1B,g2B=case['gates_post']
+                    common=dict(M=M,family=fam,f=f,L=L,cut=case['cut'],f_realized=case['cut']/L,latency_profile=lp,
+                                rmse_target=eps,**hw_cols(hw))
+                    for N in Ns:
+                        for arch in ARCH:
+                            if arch=='derangement' and not derangement_ok(M,N):continue
+                            met,led,table=arm_eval(case['rho_A'],N,arch,hw,O,1.,t_prep=case['cut'],post=case['post'],M=M,
+                                                   source=case['source'])
+                            plan=plan_shots(met,eps)
+                            post_copies=N if arch=='derangement' else 1
+                            rec=dict(common,protocol=arch,N=N,**met,feasible=plan['feasible'],shots=plan['shots'],
+                                     guard_binding=plan['guard_binding'],
+                                     algorithm_gates=N*(g1A+g2A)+post_copies*(g1B+g2B),
+                                     **led.record('clock_'),
+                                     **cost_record(led,met,plan))
+                            rows.append(rec)
+                    led=Ledger()
+                    R,W=vp.simulate_layerwise_vcp2(M,case['pre'],case['post'],hw,ledger=led)
+                    met=metrics(R,W,O,1.);plan=plan_shots(met,eps)
+                    acc=vp.vcp_accounting(case['pre'],case['post'])
+                    rec=dict(common,protocol='vcp2_layerwise',N=2,**met,feasible=plan['feasible'],shots=plan['shots'],
+                             guard_binding=plan['guard_binding'],algorithm_gates=acc['noisy_gate_executions'],
+                             vcp_control_pool=vp.vcp_pool_size(case['pre'],hw),
+                             **acc,**led.record('clock_'),**cost_record(led,met,plan,copies=1))
+                    rows.append(rec)
+    return rows
+
+
+def physical_vcp_study(profile,seed,eps=EPS):
+    """Full layerwise VCP2 vs output-only state VD (all arms, N=2,4) at fixed RMSE.
+
+    'ideal_apparatus': algorithm gates noisy, everything else perfect;
+    'apparatus_gates_10x_better': gadget/control gate errors eps/10, readout,
+    resets and idle unchanged; 'physical': the same hardware for both. Columns
+    without a prefix record the algorithm/source hardware; app_* columns record
+    the apparatus actually used. Every resource type is reported separately;
+    there is no single scalar cost."""
     rows=[]
-    powers=[2,4] if profile!='quick' else [2]
-    p_list=[.08,.25,.4] if profile!='quick' else [.2]
-    for M,kind in [(1,'plus'),(2,'bell_tilted')]:
-        target=pure_dm(PLUS.reshape(-1)) if M==1 else None
-        if M==2:
-            _,target=noisy_input(M,kind,0)
-        initial=target
-        for p in p_list:
-            for N in powers:
-                s=initial.copy();log10Z=0.
-                for t in range(1,(7 if profile=='quick' else 10)):
-                    # Local stochastic Pauli depolarization and power filter.
-                    # E_p applied to current normalized virtual state.
-                    noisy=s.copy()
-                    for q in range(M):
-                        from core import embed_pauli
-                        update=(1-p)*noisy
-                        for pauli in 'xyz':
-                            U=embed_pauli(pauli,q,M)
-                            update+=p/3*(U@noisy@U)
-                        noisy=update
-                    evals,evecs=np.linalg.eigh(noisy)
-                    powvals=np.clip(evals,0,None)**N
-                    q_norm=float(powvals.sum())
-                    log10Z=N*log10Z+np.log10(q_norm)
-                    s=(evecs*powvals)@dag(evecs)/q_norm
-                    fidelity=float(np.trace(s@target).real)
-                    rows.append(dict(M=M,target=kind,p=p,N=N,cycle=t,
-                                     ideal_virtual_fidelity=fidelity,
-                                     log10_signed_normalization=log10Z,
-                                     log10_conservative_sampling_factor=-2*log10Z,
-                                     trajectory_copies=N**t,trajectory_swaps=N**t-1,
-                                     log10_copies=np.log10(N)*t))
+    cases=[(1,'entangling'),(2,'entangling'),(2,'product')] if profile!='quick' else [(2,'entangling')]
+    e2s=list(EPS2_GRID) if profile!='quick' else [.005,.02]
+    profiles=['fast','slow'] if profile!='quick' else ['fast']
+    mc_reps=200 if profile=='quick' else 2000
+    for M,fam in cases:
+        layers=study_layers(M,fam);O=ideal_output(layers,M);g1,g2=count_gates(layers)
+        for e2 in e2s:
+            for lp in profiles:
+                hwp=reference(lp,e2)
+                for app in ('ideal_apparatus','apparatus_gates_10x_better','physical'):
+                    hw={'ideal_apparatus':Hardware(t_prep=hwp.t_prep,t_meas=hwp.t_meas,t_reset=hwp.t_reset),
+                        'apparatus_gates_10x_better':replace(hwp,eps1=hwp.eps1/10,eps2=hwp.eps2/10,eps3=hwp.e3/10),
+                        'physical':hwp}[app]
+                    src=Ledger();rho=run_layers(circuits.ground(M),layers,M,hwp,ledger=src)
+                    common=dict(M=M,family=fam,L=len(layers),latency_profile=lp,apparatus_case=app,rmse_target=eps,
+                                **hw_cols(hwp),**{'app_'+k:v for k,v in hw_cols(hw).items()})
+                    for N in (2,4):
+                        for arch in ARCH:
+                            if arch=='derangement' and not derangement_ok(M,N):continue
+                            met,led,table=arm_eval(rho,N,arch,hw,O,1.,t_prep=len(layers),M=M,source=src)
+                            plan=plan_shots(met,eps)
+                            rec=dict(common,protocol=arch,N=N,**met,feasible=plan['feasible'],shots=plan['shots'],
+                                     guard_binding=plan['guard_binding'],noisy_gate_executions=N*(g1+g2),
+                                     main_preparations=N,aux_preparations=0,**led.record('clock_'),
+                                     **cost_record(led,met,plan))
+                            if plan['feasible']:rec.update(mc_validate(table,1.,plan['shots'],mc_reps,seed_for(seed,'vcp',M,fam,e2,lp,app,arch,N)))
+                            rows.append(rec)
+                    led=Ledger()
+                    R,W=vp.simulate_layerwise_vcp2(M,layers,[],hw,ledger=led,alg_hw=hwp)
+                    met=metrics(R,W,O,1.);plan=plan_shots(met,eps);acc=vp.vcp_accounting(layers,[])
+                    rec=dict(common,protocol='vcp2_layerwise',N=2,**met,feasible=plan['feasible'],shots=plan['shots'],
+                             guard_binding=plan['guard_binding'],vcp_control_pool=vp.vcp_pool_size(layers,hw),
+                             **acc,**led.record('clock_'),**cost_record(led,met,plan,copies=1))
+                    if plan['feasible']:
+                        rec.update(mc_validate(outcome_table(R,W,O),1.,plan['shots'],mc_reps,seed_for(seed,'vcp',M,fam,e2,lp,app,'vcp')))
+                    rows.append(rec)
     return rows
 
 
 def vcp_proxy_study(profile):
-    """Ideal channel-level VCP diagnostic, deliberately NOT ranked with circuits."""
     rows=[]
-    for M in ([2] if profile=='quick' else [1,2]):
-        for p in ([.02] if profile=='quick' else [.005,.02,.06,.12]):
-            for repeats in ([1,2] if profile=='quick' else [1,2,4]):
-                for N in ([1,2,4] if profile=='quick' else [1,2,4,8]):
-                    rows.append(dict(M=M,algorithm_gate_p=p,b_repeats=repeats,N=N,
-                        ideal_layerwise_pauli_channel_fidelity=
-                                    vcp_pauli_proxy(M,repeats,p,power=N),
-                        operational_sampling_modeled=False,
-                        hardware_implementation='IDEAL_CHANNEL_ONLY_NOT_PHYSICAL_VCP'))
+    for M,fam in ([(2,'entangling')] if profile=='quick' else [(1,'entangling'),(2,'entangling'),(2,'product')]):
+        for e2 in EPS2_GRID:
+            for N in (1,2,3,4,8):
+                rows.append(dict(M=M,family=fam,eps2=e2,eps1=e2/10,N=N,
+                                 ideal_layerwise_channel_fidelity=vcp_pauli_proxy(M,None,e2,N,fam,eps1=e2/10),
+                                 operational_sampling_modeled=False,hardware_implementation='IDEAL_CHANNEL_ONLY_NOT_PHYSICAL_VCP'))
     return rows
 
 
+# --------------------------------------------------------------------------- twirling
+def _bloch_dm(theta,phi=np.pi/4):
+    n=(np.sin(theta)*np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta))
+    return .5*(I2+n[0]*X+n[1]*Y+n[2]*Z)
 
-def physical_vcp_study(profile,eps):
-    """Order-two VCP PHYSICAL SUPERINSTRUMENT versus output-only state VD2.
 
-    This implements the actual two-swap Pauli-channel VCP with a maximally
-    mixed auxiliary input, not just the algebraic p_i^2 result. The same
-    channel E acts on both registers, once each. Apparatus noise is added to
-    every native Fredkin and ancilla readout in BOTH protocol families.
+FRAMES=(I2,H,H@S_GATE)   # U in {I,H,HS}: U^dag Z_p(U . U^dag) U maps the Z error to Z, X, Y
 
-    Fair comparison requirements:
-      - same ideal algorithm and stochastic Pauli channel per gate;
-      - each state VD2 trajectory calls each channel twice on two complete
-        state preparations, while VCP2 consumes two channel copies per gate;
-      - VCP2 uses 2M Fredkins PER noise location; stateVD2 M total;
-      - VCP2 uses one target-state preparation, stateVD2 uses two;
-      - we show all resource counts separately; one cannot collapse them
-        into a single scalar 'cost' without device-specific time prices.
 
-    Benchmark projectors are known and measured ideally. At zero apparatus
-    noise the VCP2 signed estimator equals ideal layerwise Pauli power.
-    """
+def frame_states(theta,p,eps_c):
+    """Per-qubit frame-conditioned noisy states rho_f (f=0,1,2), with noisy
+    Clifford gates: each nontrivial U and U^dag is followed by D_eps_c."""
+    tgt=_bloch_dm(theta);out=[]
+    for k,U in enumerate(FRAMES):
+        r=U@tgt@dag(U)
+        if k and eps_c:r=(1-eps_c)*r+eps_c*I2/2
+        r=(1-p)*r+p*Z@r@Z
+        r=dag(U)@r@U
+        if k and eps_c:r=(1-eps_c)*r+eps_c*I2/2
+        out.append(r)
+    return tgt,out
+
+
+def _kron_all(ms):
+    out=np.array([[1.]],complex)
+    for m in ms:out=np.kron(out,m)
+    return out
+
+
+def _F(P,W):return float(np.trace(P@W).real/np.trace(W).real)
+
+
+def twirling_study(profile,seed):
+    """Exact independent/shared frames and fixed empirical K-frame sets."""
     rows=[]
-    if profile=='quick':
-        Ms=[1,2]; ps=[.03]; repetitions=[1,2]
-    elif profile=='standard':
-        Ms=[1,2]; ps=[.01,.03,.08]; repetitions=[1,2]
-    else:
-        Ms=[1,2]; ps=[.005,.01,.03,.06,.12]; repetitions=[1,2,4]
-    settings=[('ideal_apparatus',Noise()),
-              ('native_fredkin_noise',Noise(gate_p=.008)),
-              ('combined_physical_noise',Noise(gate_p=.008,control_z_p=.005,readout_q=.012))]
+    Ms=[1,2] if profile=='quick' else [1,2,5]
+    ps=[.45,.7] if profile=='quick' else [.45,.55,.7,.8]
+    Ks=[1,3,9,27] if profile=='quick' else [1,3,9,27,81,243]
+    trials=10 if profile=='quick' else (40 if profile=='standard' else 100)
     for M in Ms:
-        for p in ps:
-            for r in repetitions:
-                for label,model in settings:
-                    for rec in compare_vcp2_statevd(M,p,r,model):
-                        rec.update(apparatus_case=label,rmse_target=eps,**asdict(model))
-                        b=rec['bias'];v=rec['variance_coeff']
-                        feasible=np.isfinite(v) and b*b<eps*eps
-                        nshots=int(np.ceil(v/(eps*eps-b*b))) if feasible else None
-                        rec.update(feasible=feasible,shots_asymptotic=nshots,
-                                   total_native_fredkins=(nshots*rec['native_fredkins'] if nshots else np.nan),
-                                   total_channel_calls=(nshots*rec['noisy_channel_calls'] if nshots else np.nan),
-                                   total_target_preps=(nshots*rec['source_state_preparations'] if nshots else np.nan))
-                        rows.append(rec)
+        for theta in (np.pi/2,np.pi/3):
+            for p in ps:
+                for eps_c in (0.,.01):
+                    tgt,fs=frame_states(theta,p,eps_c);P=_kron_all([tgt]*M)
+                    bar1=sum(fs)/3;bar=_kron_all([bar1]*M)
+                    deph=_kron_all([fs[0]]*M)
+                    for N in (2,4):
+                        ind=np.linalg.matrix_power(bar,N)
+                        sh=_kron_all([sum(np.linalg.matrix_power(f,N) for f in fs)/3]*M)
+                        dp=np.linalg.matrix_power(deph,N)
+                        Find=_F(P,ind)
+                        common=dict(M=M,theta=theta,p=p,noise_convention='z_flip',eps_clifford=eps_c,N=N)
+                        for mode,mat in (('independent_exact',ind),('shared_exact',sh),('untwirled',dp)):
+                            rows.append(dict(common,mode=mode,K=0,trial=-1,fidelity=_F(P,mat),normalization=float(np.trace(mat).real),
+                                             fidelity_minus_independent=_F(P,mat)-Find,state_trace_distance=np.nan,power_trace_distance=np.nan))
+                        Pind=ind/np.trace(ind)
+                        for K in Ks:
+                            rng=np.random.default_rng(seed_for(seed,'twirl',M,theta,p,eps_c,N,K))
+                            for trial in range(trials):
+                                fr=rng.integers(0,3,size=(K,M))
+                                rk=sum(_kron_all([fs[i] for i in row]) for row in fr)/K
+                                mat=np.linalg.matrix_power(rk,N)
+                                rows.append(dict(common,mode='fixed_K_empirical',K=K,trial=trial,fidelity=_F(P,mat),
+                                                 normalization=float(np.trace(mat).real),fidelity_minus_independent=_F(P,mat)-Find,
+                                                 state_trace_distance=.5*np.abs(np.linalg.eigvalsh(rk-bar)).sum(),
+                                                 power_trace_distance=.5*np.abs(np.linalg.eigvalsh(mat/np.trace(mat)-Pind)).sum()))
     return rows
+
+
+def _seq_words(N):
+    """Jordan-tree expansion of the sequential accumulator: list of index words
+    (weight 1/2^(N-1) each) and the unsigned leaf weights."""
+    words=[(0,)]
+    for k in range(1,N):words=[w+(k,) for w in words]+[(k,)+w for w in words]
+    wR=[2.**-(N-1),2.**-(N-1)]+[2.**-(N-k) for k in range(2,N)]
+    return words,np.array(wR[:N])
+
+
+def _per_qubit_tables(tgt,fs,N,words):
+    """For every frame tuple of one qubit across the N copies: <psi|word|psi>,
+    Tr(word) for each word, and <psi|rho_f|psi> per copy."""
+    tuples=list(np.ndindex(*(3,)*N))
+    Tw=np.zeros((len(tuples),len(words)),complex);Tt=np.zeros_like(Tw)   # complex: words are not Hermitian
+    for ti,tu in enumerate(tuples):
+        for wi,w in enumerate(words):
+            m=np.eye(2,dtype=complex)
+            for j in w:m=m@fs[tu[j]]
+            Tw[ti,wi]=np.trace(tgt@m);Tt[ti,wi]=np.trace(m)
+    Fq=np.array([np.trace(tgt@f).real for f in fs])
+    return Tw,Tt,Fq
+
+
+def twirl_mc_study(profile,seed):
+    """Fresh independent frames for EVERY copy and EVERY shot (ideal SWAP tree,
+    sequential accumulator). Product targets factorize per qubit, so M=5 is
+    exact and cheap. Compares with Tr(P rhobar^N)/Tr(rhobar^N) and its v."""
+    rows=[]
+    Ms=[1,2] if profile=='quick' else [1,2,5]
+    ps=[.45,.7]
+    shotlist=[100,1000] if profile=='quick' else ([100,1000,10000] if profile=='standard' else [100,1000,10000,100000])
+    reps=30 if profile=='quick' else (100 if profile=='standard' else 200)
+    for M in Ms:
+        for theta in (np.pi/2,np.pi/3):
+            for p in ps:
+                for eps_c in (0.,.01):
+                    tgt,fs=frame_states(theta,p,eps_c)
+                    bar1=sum(fs)/3
+                    for N in (2,4):
+                        words,wR=_seq_words(N);Tw,Tt,Fq=_per_qubit_tables(tgt,fs,N,words)
+                        P=_kron_all([tgt]*M);bar=_kron_all([bar1]*M);Wb=np.linalg.matrix_power(bar,N)
+                        met=metrics(bar,Wb,P,1.)
+                        pw=3**np.arange(N)[::-1]
+                        for S in shotlist:
+                            rng=np.random.default_rng(seed_for(seed,'twirl_mc',M,theta,p,eps_c,N,S))
+                            est=[];den=[];numr=[]
+                            for _ in range(reps):
+                                fr=rng.integers(0,3,size=(S,M,N))
+                                tix=fr@pw                                       # (S,M) tuple index per qubit
+                                b=(Tw[tix].prod(axis=1)).sum(axis=1).real/2**(N-1)   # <psi|W_f|psi>
+                                t=(Tt[tix].prod(axis=1)).sum(axis=1).real/2**(N-1)   # Tr W_f
+                                a=(np.prod(Fq[fr],axis=1)*wR).sum(axis=1)       # <psi|R_f|psi>
+                                pr=np.stack([(a+b)/2,(a-b)/2,((1-a)+(t-b))/2,((1-a)-(t-b))/2],axis=1)
+                                pr=np.clip(pr,0,None);pr/=pr.sum(axis=1,keepdims=True)
+                                u=rng.random(S)[:,None];k=(u>np.cumsum(pr,axis=1)).sum(axis=1)
+                                sg=np.array([1,-1,1,-1])[k];o=np.array([1,1,0,0])[k]
+                                D=sg.sum();A=(sg*o).sum();est.append(A/D if D!=0 else np.nan);den.append(D/S);numr.append(A/S)
+                            est=np.array(est);ok=np.isfinite(est)
+                            rows.append(dict(M=M,theta=theta,p=p,noise_convention='z_flip',eps_clifford=eps_c,N=N,shots=S,reps=reps,
+                                             mc_mean=float(np.nanmean(est)),mc_sd=float(np.nanstd(est,ddof=1)),
+                                             mc_mean_se=float(np.nanstd(est,ddof=1)/np.sqrt(ok.sum())),
+                                             mc_t=float(np.mean(den)),mc_t_se=float(np.std(den,ddof=1)/np.sqrt(reps)),
+                                             mc_A=float(np.mean(numr)),mc_A_se=float(np.std(numr,ddof=1)/np.sqrt(reps)),
+                                             predicted_A=float(met['estimate']*met['normalization']),St2=float(S*met['normalization']**2),
+                                             zero_denominators=int((~ok).sum()),
+                                             predicted_mu=met['estimate'],predicted_t=met['normalization'],
+                                             predicted_sd=float(np.sqrt(met['variance_coeff']/S)),
+                                             predicted_ratio_bias=float(met['ratio_bias_coeff']/S),
+                                             shared_mu=_F(P,_kron_all([sum(np.linalg.matrix_power(f,N) for f in fs)/3]*M))))
+    return rows
+
+
+def twirl_budget_study(profile):
+    """Fixed-copy-budget MSE before (dephasing) and after (independent frames,
+    noisy Cliffords) twirling, from the exact moments; target fidelity estimate."""
+    rows=[]
+    Ms=[1,2] if profile=='quick' else [1,2,5]
+    for M in Ms:
+        for theta in (np.pi/2,np.pi/3):
+            for p in ([.45,.7] if profile=='quick' else [.3,.45,.55,.7,.8]):
+                for eps_c in (0.,.005,.01,.02):
+                    tgt,fs=frame_states(theta,p,eps_c);P=_kron_all([tgt]*M)
+                    for mode,rho1 in (('untwirled',fs[0]),('twirled_independent',sum(fs)/3)):
+                        if mode=='untwirled' and eps_c:continue
+                        rho=_kron_all([rho1]*M)
+                        for N in (1,2,4,8):
+                            met=metrics(rho,np.linalg.matrix_power(rho,N),P,1.)
+                            rec=dict(M=M,theta=theta,p=p,noise_convention='z_flip',eps_clifford=eps_c,mode=mode,N=N,**met)
+                            for C in BUDGETS:rec[f'rmse_lead_C{int(C)}']=leading_rmse(met,math.floor(C/N))
+                            rows.append(rec)
+    return rows
+
+
+# --------------------------------------------------------------------------- cycles and global/local closed forms
+def _local_depol(rho,M,p):
+    for q in range(M):
+        out=(1-p)*rho
+        for P in (X,Y,Z):
+            from core import site_unitary
+            U=site_unitary(P,(q,),M);out=out+p/3*U@rho@U
+        rho=out
+    return rho
+
+
+def repeated_cycles_study(profile,eps=EPS):
+    """Nested signed-ensemble cycles W_{t+1}=[E(W_t)]^N (local and global
+    depolarizing). The unsigned physical ensemble output after t cycles is
+    E^t(P0) (tree averages are unbiased), which sets Tr(O R_t) in v_t."""
+    rows=[]
+    powers=[2,4] if profile=='quick' else [2,4,8]
+    plist=[.2] if profile=='quick' else [.05,.15,.3,.45]
+    cases=[('local',1,'plus'),('local',2,'bell_tilted'),('global',2,'global_D4'),('global',4,'global_D16')]
+    for chan,M,kind in cases:
+        D=2**M
+        if kind in ('plus','bell_tilted'):_,P0=noisy_input(M,kind,0)
+        else:P0=np.zeros((D,D),complex);P0[0,0]=1
+        for p in plist:
+            E=(lambda r:_local_depol(r,M,p)) if chan=='local' else (lambda r:(1-p)*r+p*np.eye(D)/D*np.trace(r))
+            for N in powers:
+                s=P0.copy();Rt=P0.copy();log10Z=0.
+                for t in range(1,(6 if profile=='quick' else 11)):
+                    e=E(s);Rt=E(Rt)
+                    ev,U=np.linalg.eigh(e);pv=np.clip(ev,0,None)**N;q=float(pv.sum())
+                    log10Z=N*log10Z+np.log10(q);s=(U*pv)@dag(U)/q
+                    F=float(np.trace(s@P0).real);a=float(np.trace(P0@Rt).real)
+                    num=a-2*F*a+F*F;b=F-1.
+                    log10v=np.log10(max(num,1e-300))-2*log10Z
+                    # plan_shots' rule in log space: infeasible if b^2>=eps^2, else
+                    # S=(v+2bc)/(eps^2-b^2) with c=(F-a)/Z^2, and S*Z^2>=50
+                    if b*b>=eps*eps:log10S=np.nan
+                    else:
+                        n2=num+2*b*(F-a)
+                        lead=(np.log10(n2)-2*log10Z-np.log10(eps*eps-b*b)) if n2>0 else -np.inf
+                        log10S=max(lead,np.log10(50)-2*log10Z)
+                    rows.append(dict(channel=chan,noise_convention=('pauli_form' if chan=='local' else 'replacement_form'),
+                                     M=M,D=D,target=kind,p=p,N=N,cycle=t,ideal_virtual_fidelity=F,bias=b,
+                                     feasible_at_eps=bool(np.isfinite(log10S)),
+                                     one_cycle_infidelity=(1-F) if t==1 else np.nan,
+                                     log10_signed_normalization=log10Z,log10_variance_coeff=log10v,
+                                     log10_shots_for_eps=log10S,log10_copies_budget=t*np.log10(N)+log10S,
+                                     log10_swaps_budget=np.log10(float(N)**t-1)+log10S,
+                                     trajectory_copies=float(N)**t,rmse_target=eps))
+    return rows
+
+
+def global_closed_forms(D,N,p):
+    a=1-p+p/D;b=p/D
+    T=a**N+(D-1)*b**N;F=a**N/T
+    v=(a-2*a*F+F*F)/T**2
+    return F,T,v,a
+
+
+def global_map(F,p,D,N):
+    f=(1-p)*F+p/D
+    return f**N/(f**N+(1-f)**N/(D-1)**(N-1))
+
+
+def global_fixed_points(p,D,N,grid=20001):
+    """Stable nontrivial fixed points of the global repeated map (F>1/D)."""
+    Fs=np.linspace(1/D+1e-9,1-1e-12,grid);g=global_map(Fs,p,D,N)-Fs
+    roots=[]
+    for i in np.nonzero(np.sign(g[:-1])!=np.sign(g[1:]))[0]:
+        lo,hi=Fs[i],Fs[i+1]
+        for _ in range(60):
+            mid=(lo+hi)/2
+            if np.sign(global_map(mid,p,D,N)-mid)==np.sign(global_map(lo,p,D,N)-lo):lo=mid
+            else:hi=mid
+        roots.append((lo+hi)/2)
+    return roots
+
+
+def p_saddle_node(D,N):
+    lo,hi=0.,1.
+    for _ in range(50):
+        mid=(lo+hi)/2
+        (lo,hi)=(mid,hi) if global_fixed_points(mid,D,N,4001) else (lo,mid)
+    return lo
+
+
+def global_depol_study(profile):
+    rows=[];bnd=[]
+    Ds=[2,4] if profile=='quick' else [2,4,8]
+    pgrid=np.linspace(0,.98,25 if profile=='quick' else 99)
+    for D in Ds:
+        for N in (1,2,4,8):
+            Fit=np.ones_like(pgrid)            # repeated map iterated from the pure target
+            for _ in range(20000):
+                nxt=global_map(Fit,pgrid,D,N) if N>1 else (1-pgrid)*Fit+pgrid/D
+                if np.max(np.abs(nxt-Fit))<1e-14:Fit=nxt;break
+                Fit=nxt
+            for p,Fi in zip(pgrid,Fit):
+                F,T,v,a=global_closed_forms(D,N,p)
+                fps=global_fixed_points(p,D,N,4001) if N>1 else []
+                rec=dict(D=D,N=N,p=p,noise_convention='replacement_form',F_N=F,T_N=T,variance_coeff=v,input_fidelity=a,
+                         repeated_stable_F=float(Fi),repeated_n_fixed_points_interior=len(fps),
+                         mixed_point_stable=bool(N*(1-p)<1))
+                mom=dict(bias=F-1,variance_coeff=v,ratio_bias_coeff=(F-a)/T**2,normalization=T)
+                for C in BUDGETS:   # b^2+(v+2bc)/S at S=floor(C/N) (draft Eq. full_mse_expansion)
+                    r_=leading_rmse(mom,math.floor(C/N))
+                    rec[f'mse_lead_C{int(C)}']=r_**2 if np.isfinite(r_) else np.nan
+                rows.append(rec)
+            if N>1:
+                bnd.append(dict(D=D,N=N,p_c=1-1/N,p_SN_numeric=p_saddle_node(D,N),
+                                p_SN_formula=(D/(D+2*np.sqrt(D-1)) if N==2 else np.nan)))
+    return rows,bnd
+
+
+def local_resource_study(profile,seed):
+    """Local depolarization, |+>^M (closed forms) and an entangled M=2 target
+    cos(t)|00>+sin(t)|11>, t=pi/8 (mismatch floor). Leading MSE at copy budget
+    C=N*S and directly sampled MSE of the raw ratio estimator."""
+    rows=[]
+    Ms=[1,2] if profile=='quick' else [1,2,5]
+    Nmax=8 if profile=='quick' else 16
+    ps=[.05,.3,.7] if profile=='quick' else [.05,.15,.3,.5,.7]
+    reps=300 if profile=='quick' else 2000
+    targets=[('plus',M) for M in Ms]+[('entangled_pi8',2)]
+    for kind,M in targets:
+        for p in ps:
+            if kind=='plus':
+                a=1-2*p/3;b=2*p/3;Fin=a**M;floor=1.
+            else:
+                th=np.pi/8;psi=np.array([np.cos(th),0,0,np.sin(th)],complex);P0=np.outer(psi,psi.conj())
+                rho=_local_depol(P0,2,p);Fin=float(np.trace(P0@rho).real)
+                ev,U=np.linalg.eigh(rho);floor=float(abs(U[:,-1].conj()@psi)**2)
+            for N in range(1,Nmax+1):
+                if kind=='plus':
+                    T=(a**N+b**N)**M;F=(1+(b/a)**N)**(-M)
+                else:
+                    W=np.linalg.matrix_power(rho,N);T=float(np.trace(W).real);F=float(np.trace(P0@W).real/T)
+                v=(Fin-2*Fin*F+F*F)/T**2;c=(F-Fin)/T**2;bias=F-1
+                probs=np.array([(Fin+T*F)/2,(Fin-T*F)/2,((1-Fin)+T*(1-F))/2,((1-Fin)-T*(1-F))/2])
+                probs=np.clip(probs,0,None);probs/=probs.sum()
+                sg=np.array([1,-1,1,-1.]);o=np.array([1,1,0,0.])
+                rec=dict(target=kind,M=M,p=p,noise_convention='pauli_form',N=N,F_N=F,T_N=T,input_fidelity=Fin,variance_coeff=v,ratio_bias_coeff=c,
+                         **{f'St2_C{int(C)}':math.floor(C/N)*T**2 for C in BUDGETS},
+                         bias=bias,mismatch_floor=floor,
+                         small_p_floor_prediction=(1-p*p*np.sin(4*np.pi/8)**2/9 if kind!='plus' else 1.))
+                for C in BUDGETS:
+                    S=math.floor(C/N)
+                    r_=leading_rmse(dict(bias=bias,variance_coeff=v,ratio_bias_coeff=c,normalization=T),S)
+                    rec[f'mse_lead_C{int(C)}']=r_**2 if np.isfinite(r_) else np.nan
+                    rng=np.random.default_rng(seed_for(seed,'local',kind,M,p,N,C))
+                    cnt=rng.multinomial(S,probs,size=reps);num=cnt@(sg*o);den=cnt@sg
+                    ok=den!=0;e=num[ok]/den[ok]
+                    rec[f'mse_sampled_C{int(C)}']=float(np.mean((e-1)**2)) if ok.any() else np.nan
+                    rec[f'mse_sampled_se_C{int(C)}']=float(np.std((e-1)**2,ddof=1)/np.sqrt(ok.sum())) if ok.sum()>1 else np.nan
+                    rec[f'zero_den_frac_C{int(C)}']=float(1-ok.mean())
+                rows.append(rec)
+    return rows
+
+
+# =========================================================================== main
+TASKS=['validation','readout','shots','mechanisms','phase','placement','channel_physical','channel_proxy',
+       'twirling','twirl_mc','twirl_budget','cycles','global_depol','local_resource']
 
 
 def main():
     parser=argparse.ArgumentParser(description='Self-contained PQES noisy-VD numerics')
     parser.add_argument('--profile',choices=['quick','standard','full'],default='quick')
-    parser.add_argument('--task',choices=['all','validation','readout','gate_noise','phase',
-                                           'placement','shots','twirling','cycles','channel_proxy','channel_physical'],default='all')
+    parser.add_argument('--task',choices=['all']+TASKS,default='all')
     parser.add_argument('--seed',type=int,default=31)
-    parser.add_argument('--rmse',type=float,default=.12,
-                        help='Target RMSE used for planning cost (not a rigorous finite-shot CI)')
+    parser.add_argument('--rmse',type=float,default=EPS,help='Target RMSE for shot planning')
     parser.add_argument('--data-dir',type=Path,default=DEFAULT_DATA)
-    parser.add_argument('--width-cap',type=int,default=7,
-                        help='Maximum available coherent qubits for phase diagram; M=2,N=4 uses default 7')
     args=parser.parse_args()
     args.data_dir.mkdir(parents=True,exist_ok=True)
     if not 0<args.rmse<1:raise ValueError('rmse must be in (0,1)')
-    tasks={'validation':lambda:ideal_validation(args.profile),
-           'readout':lambda:readout_study(args.profile),
-           'gate_noise':lambda:gates_study(args.profile),
-           'phase':lambda:phase_study(args.profile,args.rmse,args.width_cap),
-           'placement':lambda:placement_study(args.profile),
-           'shots':lambda:shots_study(args.profile,args.seed),
-           'twirling':lambda:twirling_study(args.profile,args.seed),
-           'cycles':lambda:repeated_cycles_study(args.profile),
-           'channel_proxy':lambda:vcp_proxy_study(args.profile),
-           'channel_physical':lambda:physical_vcp_study(args.profile,args.rmse)}
-    selected=tasks.keys() if args.task=='all' else [args.task]
-    manifest=dict(simulator='pqes_new_numerics_v1',profile=args.profile,seed=args.seed,
-                  rmse_target=args.rmse,width_cap=args.width_cap,selected_tasks=list(selected),
-                  implementation='actual noisy measured instrument and coherent-control VD; VCP ideal proxy only',
-                  specifications={
-                     'data_noise':'local stochastic Pauli channel',
-                     'fredkin_noise':'native 3-qubit depolarizing AFTER each elementary Fredkin',
-                     'control_noise':'stochastic control Z, optional extra idle for coherent ancilla',
-                     'readout':'independent classical outcome flips',
-                     'memory':'Markovian Z dephasing per idle step',
-                     'reset':'mix fresh state with zero-state projector on reused registers',
-                     'measurement':'ideal projective O, with finite-shot parity sampling for selected cases',
-                     'unit_cost':'one register-level SWAP step; M native 3-qubit Fredkins',
-                     'vcp':'physical order-2 Pauli superinstrument separately benchmarked; ideal Pauli power proxy retained'})
-    (args.data_dir/'manifest.json').write_text(json.dumps(manifest,indent=2))
-    print('='*75)
-    print('PQES NEW NUMERICS — EXACT PHYSICAL INSTRUMENT COMPARISONS')
-    print(f'profile={args.profile} task={args.task} data={args.data_dir}')
-    print('='*75)
+    P=args.profile
+    tasks={'validation':lambda:ideal_validation(P),'readout':lambda:readout_study(P),
+           'shots':lambda:shots_study(P,args.seed),'mechanisms':lambda:mechanisms_study(P),
+           'phase':lambda:phase_study(P,args.seed,args.rmse),
+           'placement':lambda:placement_study(P,args.seed,args.rmse),
+           'channel_physical':lambda:physical_vcp_study(P,args.seed,args.rmse),
+           'channel_proxy':lambda:vcp_proxy_study(P),'twirling':lambda:twirling_study(P,args.seed),
+           'twirl_mc':lambda:twirl_mc_study(P,args.seed),'twirl_budget':lambda:twirl_budget_study(P),
+           'cycles':lambda:repeated_cycles_study(P,args.rmse),'global_depol':lambda:global_depol_study(P),
+           'local_resource':lambda:local_resource_study(P,args.seed)}
+    selected=TASKS if args.task=='all' else [args.task]
+    print('='*75);print('PQES NEW NUMERICS — COMPILED-GATE NOISY INSTRUMENTS ON ONE CLOCK')
+    print(f'profile={P} task={args.task} data={args.data_dir}');print('='*75)
+    runtimes={}
     for title in selected:
-        print(f'Running {title} ...',flush=True)
-        write_csv(tasks[title](),args.data_dir/f'{title}.csv')
+        print(f'Running {title} ...',flush=True);t0=time.time()
+        out=tasks[title]()
+        if title=='global_depol':
+            write_csv(out[0],args.data_dir/'global_depol.csv');write_csv(out[1],args.data_dir/'global_boundaries.csv')
+        else:write_csv(out,args.data_dir/f'{title}.csv')
+        runtimes[title]=round(time.time()-t0,1);print(f'  {title}: {runtimes[title]} s')
+    mpath=args.data_dir/'manifest.json'
+    old=json.loads(mpath.read_text()) if mpath.exists() and args.task!='all' else {}
+    manifest=dict(simulator='pqes_new_numerics_v2',profile=P,seed=args.seed,rmse_target=args.rmse,
+                  width_budgets_reported=['5','7','9','unconstrained'],delta_method_guard_St2=50,
+                  task_profiles={**old.get('task_profiles',{}),**{t:P for t in selected}},
+                  task_runtimes_s={**old.get('task_runtimes_s',{}),**runtimes},
+                  reference_hardware={lp:reference(lp).record() for lp in ('fast','slow')},
+                  eps2_grid=list(EPS2_GRID),copy_budgets=list(BUDGETS),
+                  specifications={
+                     'gate_noise':'replacement depolarizing D_eps after every gate (draft Eq. noisy_entangling_channel); eps1=eps2/10 in the reference; eps3=eps2',
+                     'cswap':'compiled CNOT(b->a) layer, M Toffolis CCX(c,a->b), CNOT layer (M+2 units)',
+                     'idle':'amplitude damping idle_gamma and Z flip idle_phi per unit on every waiting data and control qubit',
+                     'clock':'gates 1 unit; t_prep/t_meas/t_reset; just-in-time preparation; no feed-forward; ancilla reuse waits for measure+reset+H',
+                     'resets':'first use perfect; every actual mid-circuit reuse pays t_reset and the reset error',
+                     'readout':'independent classical flip of each recorded ancilla outcome',
+                     'source_noise':'Pauli-form local depolarizing source_pauli_p for abstract sources; algorithm circuits use the gate noise above',
+                     'measurement':'ideal projective O on the measured register(s)',
+                     'vcp':'order-2 Liu-style VCP on the gate support of every layer that contains a two-qubit gate (one-qubit-only layers unpurified, eps1=eps2/10); a fresh control (and auxiliary I/2^k) per purified layer from the smallest round-robin pool that keeps measurement/reset off the main register critical path',
+                     'derangement':'wide controlled cyclic shift, O on all N registers averaged (Koczor cyclic derangement); each spent register read out mid-circuit right after its CSWAP (t_meas; observable readouts ideal as in every arm); dense, 1+MN<=9',
+                     'study_circuits':'algorithm_blocks M=2: entangling L=12 (first 12 layers of U_B^2 U_A), product L=8 (U_B^3 U_A); M=1 entangling L=6',
+                     'p_conventions':'pauli_form (1-p)rho+p/3 sum P rho P: sources, local depolarizing; replacement_form (1-p)rho+p I/D: global depolarizing, gate noise eps; z_flip (1-p)rho+p Z rho Z: dephasing'})
+    mpath.write_text(json.dumps(manifest,indent=2))
     print('Done. Plot from CSV with: python pqes_new_numerics/plot_results.py')
 
 
