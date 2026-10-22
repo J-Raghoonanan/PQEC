@@ -142,7 +142,7 @@ def leading_rmse(row,S,guard=50.):
     b,v,c,t=row['bias'],row['variance_coeff'],row['ratio_bias_coeff'],row['normalization']
     if S<1 or not np.isfinite(v) or S*t*t<guard:return np.nan
     m=b*b+(v+2*b*c)/S
-    return math.sqrt(m) if m>0 else np.nan
+    return math.sqrt(m) if m>=0 else np.nan
 
 
 def write_csv(data,output):

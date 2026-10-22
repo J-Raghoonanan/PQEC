@@ -16,7 +16,7 @@ These are **generic toy-hardware results**, not a device calibration. Each state
 ## Validation
 
 - **Tests and oracle:**
-  - 96 tests pass, including the independent oracle and a regression test for every audit and review defect.
+  - 97 tests pass, including the independent oracle and a regression test for every audit and review defect.
   - The oracle is a brute-force simulator with explicit Kraus sums, every register kept, every outcome string enumerated, and hand-derived clock waits.
   - Agreement is 10⁻¹³ under all noise mechanisms at once.
 - **Ideal identities:** all six arms give R = ρ and W = ρᴺ to ≤ 2.7×10⁻¹⁵ (70 cases; M = 1, 2; N = 2, 4, 8).

@@ -39,7 +39,7 @@
     "twirl_mc": 388.1,
     "twirl_budget": 0.1,
     "cycles": 0.0,
-    "global_depol": 0.8,
+    "global_depol": 0.7,
     "local_resource": 0.5
   },
   "reference_hardware": {

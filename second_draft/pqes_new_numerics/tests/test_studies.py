@@ -33,7 +33,7 @@ def test_global_leading_mse_includes_ratio_bias_cross_term():
         for C in rs.BUDGETS:
             ref=rs.leading_rmse(m,math.floor(C/N))**2;got=r[f'mse_lead_C{int(C)}']
             assert np.isnan(got)==np.isnan(ref)
-            assert np.isnan(ref) or abs(got/ref-1)<1e-9
+            assert np.isnan(ref) or abs(got-ref)<=1e-9*ref
 
 
 @pytest.mark.parametrize('D',[2,3,4,8])
@@ -105,6 +105,16 @@ def test_leading_rmse_undefined_outside_delta_method_regime():
     assert np.isfinite(rs.leading_rmse(row,10**6))         # S t^2 = 900
     rows=rs.local_resource_study('quick',3)
     assert all(not np.isfinite(r['mse_lead_C1000']) or r['mse_lead_C1000']>0 for r in rows)
+
+
+def test_leading_rmse_is_zero_for_an_exact_zero_mse():
+    """Regression: a noiseless pure input (b=v=c=0) has leading MSE exactly 0, not
+    undefined; only m<0 or a failed S t^2 guard is undefined."""
+    assert rs.leading_rmse(dict(bias=0.,variance_coeff=0.,ratio_bias_coeff=0.,normalization=1.),1000)==0.
+    assert np.isnan(rs.leading_rmse(dict(bias=-.01,variance_coeff=1.,ratio_bias_coeff=1e3,normalization=1.),1000))
+    rows,_=rs.global_depol_study('quick')
+    zero=[r for r in rows if r['p']==0]
+    assert zero and all(r[f'mse_lead_C{int(C)}']==0 for r in zero for C in rs.BUDGETS)
 
 
 def test_cycle_budgets_are_undefined_when_bias_exceeds_target():

@@ -405,7 +405,7 @@ def fig_global(data,dest):
     s=d[d.D==4]
     for N in (1,2,4,8):
         g=s[s.N==N].sort_values('p');e.plot(g.p,g['mse_lead_C10000'],ls=lss[N],color='#333333',label=f'N={N}')
-    best=s.loc[s.dropna(subset=['mse_lead_C10000']).groupby('p')['mse_lead_C10000'].idxmin()]
+    best=s.loc[s.groupby('p')['mse_lead_C10000'].idxmin()]
     e.scatter(best.p,best['mse_lead_C10000'],c=[cols.get(int(n),'k') if n in cols else '#999999' for n in best.N],s=12,zorder=3,label='optimal N: blue 2, orange 4, purple 8')
     _panel(e,'d','Leading MSE at C=$10^4$ copies, D=4',logy=True);e.set_ylabel('MSE')
     for ax in axes.ravel():ax.set_xlabel('global depolarizing $p$')
