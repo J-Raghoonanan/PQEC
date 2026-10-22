@@ -169,7 +169,8 @@ VCP2 counts 2G_purified + G_unpurified noisy-gate executions, and one auxiliary 
 
 **(c)** T_N.
 
-**(d)** Leading MSE (draft Eq. `global_resource_mse`) at C = 10⁴ copies for D = 4 and N = 1, 2, 4, 8, with the optimal N marked. It is drawn only where S·t² ≥ 50.
+**(d)** Leading MSE b² + (v+2bc)/S at S = ⌊C/N⌋, C = 10⁴ copies, for D = 4 and N = 1, 2, 4, 8, with the optimal N marked. It is drawn only where S·t² ≥ 50.
+- It includes the 2bc/S ratio-bias cross term from the draft's Appendix Eq. `full_mse_expansion`, the same leading MSE as every other study; the draft's main-text Eq. `global_resource_mse` omits that term.
 
 ## Figure H — Local depolarizing: resource trade-off
 `PQES_FigH_local_resource_tradeoff.pdf`

@@ -16,10 +16,9 @@ These are **generic toy-hardware results**, not a device calibration. Each state
 ## Validation
 
 - **Tests and oracle:**
-  - 95 tests pass, including the independent oracle and a regression test for every audit and review defect.
+  - 96 tests pass, including the independent oracle and a regression test for every audit and review defect.
   - The oracle is a brute-force simulator with explicit Kraus sums, every register kept, every outcome string enumerated, and hand-derived clock waits.
   - Agreement is 10⁻¹³ under all noise mechanisms at once.
-  - The perturbations tested (a one-unit wait error, a missing reset error, a missing ε₂ term) each give disagreements of about 10⁻³.
 - **Ideal identities:** all six arms give R = ρ and W = ρᴺ to ≤ 2.7×10⁻¹⁵ (70 cases; M = 1, 2; N = 2, 4, 8).
 - **Shot planning at RMSE 0.03:**
   - The Monte Carlo RMSE at the planned shot count is 0.961–1.071 times the target over all 1152 feasible phase-map cells.
@@ -182,7 +181,7 @@ Order-two, Liu-style channel purification on the gate support of each layer that
 
 **Physical apparatus (the same compiled gates):**
 - VCP2 bias is −0.035 (ε₂ = 0.002) to −0.218 (ε₂ = 0.02), worse than the unmitigated circuit (−0.009 to −0.072) and infeasible at every ε₂.
-- State VD (N = 2) is feasible for ε₂ ≤ 0.01, with bias −0.0048, −0.0099 and −0.0185.
+- State VD (N = 2) is feasible for ε₂ ≤ 0.01, with bias −0.0048, −0.0099 and −0.0185 for the single-register arms and −0.0050, −0.0100 and −0.0186 for the derangement arm.
 
 This result is specific to order two, this compilation, and gate-support auxiliaries prepared ideally.
 

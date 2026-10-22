@@ -156,7 +156,7 @@ With an ideal apparatus and no idle noise, VCP2 equals ideal channel purificatio
 | `channel_proxy` | App. | ideal channel purification with no apparatus (never ranked) |
 | `twirling`, `twirl_mc`, `twirl_budget` | Fig D | fixed K-frame sets (K = 1, 3, …, 243); fresh random frames per copy and per shot; noisy Cliffords; fixed-budget error before and after twirling |
 | `cycles` | Fig E | repeated virtual cycles (local and global, N = 2, 4, 8): F_t, Z_t, and the copy budget N^t·S for RMSE 0.03 |
-| `global_depol`, `global_boundaries` | Fig G | exact one-shot F_N, T_N and MSE; repeated fixed points; p_c(N) = 1−1/N; numerical p_SN(D,N) |
+| `global_depol`, `global_boundaries` | Fig G | exact one-shot F_N, T_N and leading MSE `mse_lead_C*` = b²+(v+2bc)/S at S = ⌊C/N⌋ (it includes the 2bc/S ratio-bias cross term from the draft's Appendix Eq. `full_mse_expansion`, which the main-text Eq. `global_resource_mse` omits); repeated fixed points; p_c(N) = 1−1/N; numerical p_SN(D,N) |
 | `local_resource` | Fig H | F_N, T_N, leading and sampled MSE at copy budgets 10³, 10⁴, 10⁵; the optimal N; the entangled mismatch floor |
 
 ## Assumptions and limitations

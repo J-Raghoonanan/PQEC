@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import itertools
+import math
 import numpy as np
 import pytest
 import run_simulations as rs
@@ -19,6 +20,20 @@ def test_global_closed_forms_match_matrices(D,N):
         m=metrics(rho.astype(complex),W.astype(complex),P,1.)
         assert abs(F-W[0,0]/np.trace(W))<1e-12 and abs(T-np.trace(W))<1e-12
         assert abs(v/m['variance_coeff']-1)<1e-9
+
+
+def test_global_leading_mse_includes_ratio_bias_cross_term():
+    """Regression: global_depol mse_lead_C* must be the suite's leading MSE
+    b^2+(v+2bc)/S at S=floor(C/N), with b, v, c from brute-force matrices."""
+    rows,_=rs.global_depol_study('quick')
+    for r in rows:
+        D,N,p=r['D'],r['N'],r['p']
+        P=np.zeros((D,D));P[0,0]=1;rho=(1-p)*P+p*np.eye(D)/D
+        m=metrics(rho.astype(complex),np.linalg.matrix_power(rho,N).astype(complex),P,1.)
+        for C in rs.BUDGETS:
+            ref=rs.leading_rmse(m,math.floor(C/N))**2;got=r[f'mse_lead_C{int(C)}']
+            assert np.isnan(got)==np.isnan(ref)
+            assert np.isnan(ref) or abs(got/ref-1)<1e-9
 
 
 @pytest.mark.parametrize('D',[2,3,4,8])

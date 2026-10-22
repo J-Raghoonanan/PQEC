@@ -692,8 +692,10 @@ def global_depol_study(profile):
                 rec=dict(D=D,N=N,p=p,noise_convention='replacement_form',F_N=F,T_N=T,variance_coeff=v,input_fidelity=a,
                          repeated_stable_F=float(Fi),repeated_n_fixed_points_interior=len(fps),
                          mixed_point_stable=bool(N*(1-p)<1))
-                for C in BUDGETS:   # draft Eq. global_resource_mse, only where S t^2>=50
-                    rec[f'mse_lead_C{int(C)}']=(1-F)**2+N*v/C if math.floor(C/N)*T*T>=50 else np.nan
+                mom=dict(bias=F-1,variance_coeff=v,ratio_bias_coeff=(F-a)/T**2,normalization=T)
+                for C in BUDGETS:   # b^2+(v+2bc)/S at S=floor(C/N) (draft Eq. full_mse_expansion)
+                    r_=leading_rmse(mom,math.floor(C/N))
+                    rec[f'mse_lead_C{int(C)}']=r_**2 if np.isfinite(r_) else np.nan
                 rows.append(rec)
             if N>1:
                 bnd.append(dict(D=D,N=N,p_c=1-1/N,p_SN_numeric=p_saddle_node(D,N),
