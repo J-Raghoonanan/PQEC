@@ -138,7 +138,8 @@ def cost_record(led,mom_row,plan,copies=None):
 
 
 def leading_rmse(row,S,guard=50.):
-    """sqrt(b^2+(v+2bc)/S), reported only where the delta method holds (S t^2>=guard)."""
+    """sqrt(b^2+(v+2bc)/S), reported only where the delta method holds (S t^2>=guard).
+    An exact zero (b=v=c=0, noiseless pure input) is 0; a negative expansion is NaN."""
     b,v,c,t=row['bias'],row['variance_coeff'],row['ratio_bias_coeff'],row['normalization']
     if S<1 or not np.isfinite(v) or S*t*t<guard:return np.nan
     m=b*b+(v+2*b*c)/S
