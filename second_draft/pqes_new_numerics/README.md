@@ -22,7 +22,10 @@ python pqes_new_numerics/run_simulations.py --profile quick      # ~6 s, smoke t
 python pqes_new_numerics/run_simulations.py --profile standard   # ~2 min
 python pqes_new_numerics/run_simulations.py --profile full --seed 31 --rmse 0.03
 python pqes_new_numerics/plot_results.py
+python pqes_new_numerics/run_simulations.py --profile full --seed 31 --rmse 0.03 --task readout_rule   # ~4 min
 ```
+
+`--task all` runs the published studies only. `--task readout_rule` runs the uniform observable-readout rule and the unmitigated baseline (below). It writes only its own CSVs and `manifest_readout_rule.json`.
 
 The committed data in `../data/pqes_new_numerics/` come from the `full` profile, with the arguments shown above. `manifest.json` records:
 - the profile and per-task runtimes;
@@ -41,10 +44,12 @@ The committed data were generated with NumPy 2.5.4 (x86_64 wheel). Seeds are fix
 | `core.py` | Hardware model, compiled CSWAP gadget, shared clock, the six architectures, estimator moments, shot planning, Monte Carlo helpers |
 | `circuits.py` | Algorithm families (entangling and product), ASAP layering, noisy layers, fixed-depth cuts, ideal channel-purification proxy |
 | `vcp_physical.py` | Physical order-two virtual channel purification (Liu et al.), per layer on the gate support |
+| `readout.py` | Observable-readout rule: compiled basis change, flips of the O bits and their correction, applied the same way to every arm and to the unmitigated baseline |
 | `run_simulations.py` | One function per study, one CSV per study; its docstring is the methods section |
 | `plot_results.py` | Figures from the CSVs only |
 | `tests/oracle.py` | Independent brute-force simulator: explicit Kraus sums, all registers kept, all outcome strings enumerated |
 | `tests/test_validation.py`, `tests/test_studies.py` | Ideal identities, oracle comparisons, hand-derived clock checks, one regression test per audit defect, and study formulas against brute force |
+| `tests/test_readout_rule.py` | Readout rule and baseline: published defaults, analytic flip and baseline cases, `end` = `mid` at zero idle, `end` against the oracle |
 | `RESULTS_OVERVIEW.md` | What the full-profile data show, favourable and unfavourable |
 | `FIGURE_CAPTIONS.md` | Draft captions describing exactly what each figure plots |
 
@@ -158,6 +163,31 @@ With an ideal apparatus and no idle noise, VCP2 equals ideal channel purificatio
 | `cycles` | Fig E | repeated virtual cycles (local and global, N = 2, 4, 8): F_t, Z_t, and the copy budget N^t·S for RMSE 0.03 |
 | `global_depol`, `global_boundaries` | Fig G | exact one-shot F_N, T_N and leading MSE `mse_lead_C*` = b²+(v+2bc)/S at S = ⌊C/N⌋ (it includes the 2bc/S ratio-bias cross term from the draft's Appendix Eq. `full_mse_expansion`, which the main-text Eq. `global_resource_mse` omits); repeated fixed points; p_c(N) = 1−1/N; numerical p_SN(D,N) |
 | `local_resource` | Fig H | F_N, T_N, leading and sampled MSE at copy budgets 10³, 10⁴, 10⁵; the optimal N; the entangled mismatch floor |
+| `phase_uniform`, `phase_uniform_uncorrected` | — | the `phase` grid under the uniform readout rule, with the O bits corrected (primary) or not (sensitivity); rows with `derangement_readout` `mid` and `end` each hold all six arms |
+| `phase_baseline` | — | unmitigated baseline on the `phase` grid; `readout_rule` is `published`, `uniform` or `uniform_uncorrected` |
+| `placement_baseline`, `channel_physical_baseline` | — | unmitigated baseline of those studies, published rule (one row per family or case, ε₂ and latency profile) |
+
+**Observable-readout rule** (`readout.py`; `Hardware` fields recorded in the new CSVs only).
+
+Published rule, the defaults:
+- `obs_readout_q=0`;
+- `obs_basis_change=False`;
+- `obs_flip_correction=False`;
+- `derangement_readout='mid'`.
+
+The uniform rule (`run_simulations.uniform_rule`) applies to every readout of O: every arm's final readout, every spent derangement register and the baseline. It sets:
+- **One flip probability for every bit:** `obs_readout_q=readout_q`, an independent flip of each measured data-qubit bit, simulated exactly as an X error before an ideal Z measurement.
+- **A compiled basis change** before the readout of O. For the `bell_tilted` target it is CNOT(0→1), then Ry(−π/3) on qubit 0:
+  - its gates carry ε₂ and ε₁;
+  - qubit 1 idles in the second layer;
+  - it adds 2 units to the makespan;
+  - it costs 1 CNOT, 1 one-qubit gate and 1 idle unit per register read.
+- **Inverse-confusion correction** of the O bits (`obs_flip_correction`). It is exactly unbiased, and its variance enters v and the shot plan.
+- **`derangement_readout='end'`:** every register is read at the end with the control, so spent register B_k first idles (N−1−k)(M+2) units.
+
+**Unmitigated baseline** (`architecture`/`protocol` `unmitigated`, N=1): one noisy source copy, or one run of the algorithm circuit; O is read with the run's readout rule; there is no control.
+- Its duration is the preparation (or circuit depth) plus `t_meas`, and its width is M.
+- It is planned with `plan_shots` like every arm. With t = 1, the S·t² ≥ 50 guard usually sets its shot count (`guard_binding`).
 
 ## Assumptions and limitations
 
@@ -166,7 +196,11 @@ With an ideal apparatus and no idle noise, VCP2 equals ideal channel purificatio
    - Toffolis are native three-qubit gates with ε₃ = ε₂;
    - there is no connectivity or routing model;
    - all gates take one unit.
-2. **Observable readouts are ideal in all arms.** The observable is the known ideal target projector, measured perfectly on every measured register, including the derangement arm's mid-circuit readouts; its uncomputation cost is not included. Readout error `readout_q` acts only on recorded sign and control bits (tree ancillas, the coherent control, VCP2 controls).
+2. **Observable readouts are ideal in all arms in the published studies.**
+   - The observable is the known ideal target projector, measured perfectly on every measured register, including the derangement arm's mid-circuit readouts.
+   - Its uncomputation cost is not included.
+   - Readout error `readout_q` acts only on recorded sign and control bits (tree ancillas, the coherent control, VCP2 controls).
+   - The `readout_rule` tasks replace this with the uniform rule above, for the phase study only. Basis-change compilations exist for the `bell_tilted` (M=2) and `tilted` (M=1) targets.
 3. **Data reset error** is phenomenological (|0…0⟩ substitution).
 4. **VCP2 auxiliary:**
    - the I/2ᵏ auxiliary is prepared ideally;
@@ -208,4 +242,10 @@ The suite covers:
   - leading MSE undefined outside the delta-method regime;
 - **noise structure:** compiled two-qubit noise on the data pair biasing the estimator and separating the trees;
 - **estimator checks:** delta-method and derangement moments against sampling, and shot planning reaching the target RMSE;
-- **study formulas** against brute force.
+- **study formulas** against brute force;
+- **readout rule and baseline** (`tests/test_readout_rule.py`):
+  - the published defaults reproduce the reference cell;
+  - the flip of the O bits matches (1−2q)μ + q for one register;
+  - the correction is unbiased;
+  - `end` = `mid` at zero idle, and `end` matches the oracle;
+  - the baseline matches the analytic F and F(1−F).

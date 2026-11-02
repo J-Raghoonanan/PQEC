@@ -6,7 +6,7 @@
 - compiled CNOT–Toffoli–CNOT SWAP gadgets with the draft's two-qubit depolarizing channel;
 - one shared clock, with idle noise on every waiting qubit;
 - resets charged per actual reuse;
-- ideal observable readouts in every arm (readout error acts only on recorded sign and control bits);
+- ideal observable readouts in every arm (readout error acts only on recorded sign and control bits); Section 9 replaces this with one uniform readout rule;
 - spent derangement registers read out mid-circuit as soon as their CSWAP ends;
 - VCP2 purifying only layers that contain a two-qubit gate, each with a fresh control;
 - the reference hardware in `README.md` (ε₁ = ε₂/10).
@@ -16,7 +16,7 @@ These are **generic toy-hardware results**, not a device calibration. Each state
 ## Validation
 
 - **Tests and oracle:**
-  - 97 tests pass, including the independent oracle and a regression test for every audit and review defect.
+  - 114 tests pass, including the independent oracle and a regression test for every audit and review defect (17 of them check the readout rule of Section 9).
   - The oracle is a brute-force simulator with explicit Kraus sums, every register kept, every outcome string enumerated, and hand-derived clock waits.
   - Agreement is 10⁻¹³ under all noise mechanisms at once.
 - **Ideal identities:** all six arms give R = ρ and W = ρᴺ to ≤ 2.7×10⁻¹⁵ (70 cases; M = 1, 2; N = 2, 4, 8).
@@ -253,6 +253,45 @@ Local depolarizing (M = 2), p = 0.15: the virtual fidelity itself falls below 0.
 - Over all `local_resource.csv` rows at C = 10⁴ with S·t² ≥ 50, sampled and leading MSE agree to a median 1.8% (90th percentile 5.6%).
 - For M = 5 at p ≥ 0.5 the delta-method optimum is **N = 1**, i.e. no distillation (unfavourable).
 - The entangled target cos(π/8)|00⟩ + sin(π/8)|11⟩ saturates at its eigenvector-mismatch floor (F_16 = 0.9851 at p = 0.3, equal to the floor). The small-p prediction 1 − p²/9 holds at small p.
+
+## 9. Uniform observable-readout rule and unmitigated baseline (`--task readout_rule`)
+
+The rule is described in `README.md` and `readout.py`. It puts one q on every recorded bit, a compiled noisy basis change before every readout of O, the O bits inverse-confusion corrected, and spent derangement registers read `mid` or `end`. The phase study is re-run on the same grid and profile.
+
+**Reference cell** (ε₂ = 0.005, fast, q = 0.01, idle 5×10⁻⁴), shots at RMSE 0.03:
+
+| Rule | Derangement | Wide cyclic |
+|---|---|---|
+| Published | 1355 | 3649 |
+| Uniform, `mid` | 1573 (bias −0.0143) | 4756 (bias −0.0183) |
+| Uniform, `end` | 1768 (bias −0.0171) | 4756 |
+
+The basis change adds about −0.004 bias to every arm, and the corrected flips add only variance.
+
+**Ranking (unconstrained and width ≤ 9).**
+- **`mid`:** derangement is cheapest in every feasible cell for every metric.
+- **Feasibility falls for every arm**, because of the basis-change CNOT:
+  - ε₂ = 0.01: 30 of 36 cells;
+  - ε₂ = 0.02: no feasible cell.
+- **`end`:** wide cyclic VD wins the highest-idle rows:
+  - ε₂ = 0.002: 6 of 36 cells;
+  - ε₂ = 0.005: 12 of 36 cells.
+
+  At ε₂ = 0.01, derangement read at the end is feasible, and wins, in 18 cells.
+
+**Width budgets.** The basis change also shrinks the narrow-width maps at ε₂ = 0.01:
+- width ≤ 5: no feasible cell;
+- width ≤ 7: 6 cells, all won by the recycled tree.
+
+**Uncorrected flips** (sensitivity, `phase_uniform_uncorrected.csv`): every arm takes a common bias of about −2q.
+- No arm is feasible at the reference cell.
+- Each slice keeps 0–10 feasible cells, which derangement wins with `mid` timing.
+
+**Unmitigated baseline:**
+- **Phase study:** infeasible in every cell, under every rule. The fixed source noise 0.14 gives bias −0.235.
+- **Placement:** feasible in 12 of 16 cells, where it is cheapest on every resource: 50 shots set by the guard, 200 CNOTs on the entangling circuit, width 2. These are entangling at ε₂ ≤ 0.005 and product at every ε₂.
+- **Channel purification:** feasible in 18 of 24 cells, where it is also cheapest on every resource.
+- **Infeasible cells in both studies:** the entangling M = 2 circuit at ε₂ ≥ 0.01.
 
 ## Claim boundaries
 
