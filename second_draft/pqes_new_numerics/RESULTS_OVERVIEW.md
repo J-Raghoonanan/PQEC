@@ -275,7 +275,7 @@ The basis change adds about −0.004 bias to every arm, and the corrected flips 
   - ε₂ = 0.02: no feasible cell.
 - **`end`:** wide cyclic VD wins the highest-idle rows:
   - ε₂ = 0.002: 6 of 36 cells;
-  - ε₂ = 0.005: 12 of 36 cells.
+  - ε₂ = 0.005: 12 of 36 cells, except in the fast-profile unconstrained duration map. There wide cyclic VD wins 11 cells and the parallel tree 1 (q = 0, idle 2×10⁻³: 111503 vs 111690 gate units, a 0.2% near-tie).
 
   At ε₂ = 0.01, derangement read at the end is feasible, and wins, in 18 cells.
 

@@ -124,7 +124,7 @@ There are two latency profiles: **fast** (`t_meas` = `t_reset` = 1) and **slow**
 
 **Shot planning.** The target RMSE is ε = 0.03.
 - The shot count is S = ⌈(v+2bc)/(ε²−b²)⌉, and a point is infeasible if b² ≥ ε².
-- S·t² ≥ 50 is enforced, because below it the delta method fails.
+- S·t² ≥ 50 is enforced, because below it the delta method fails. The unmitigated baseline is the exception: it has no random denominator, so it is planned at its exact shot count (below).
 - At the planned S, a direct Monte Carlo of the raw ratio estimator reports the achieved RMSE with a 95% CI.
 - Totals are reported as a vector, never a single scalar: shots, copies, two-qubit gates, Toffolis, duration and space-time volume (width × duration).
 
@@ -187,7 +187,7 @@ The uniform rule (`run_simulations.uniform_rule`) applies to every readout of O:
 
 **Unmitigated baseline** (`architecture`/`protocol` `unmitigated`, N=1): one noisy source copy, or one run of the algorithm circuit; O is read with the run's readout rule; there is no control.
 - Its duration is the preparation (or circuit depth) plus `t_meas`, and its width is M.
-- It is planned with `plan_shots` like every arm. With t = 1, the S·t² ≥ 50 guard usually sets its shot count (`guard_binding`).
+- With no control, Ω ≡ 1, so t = 1 and c = 0 exactly, and b² + v/S is its exact MSE. It is planned at that exact count, S = max(1, ⌈v/(ε²−b²)⌉), infeasible if b² ≥ ε², without the S·t² ≥ 50 guard that the VD arms' ratio estimator needs (`run_simulations.baseline_plan`). So `shots` = `shots_delta` and `guard_binding` is False in every baseline row.
 
 ## Assumptions and limitations
 
@@ -248,4 +248,4 @@ The suite covers:
   - the flip of the O bits matches (1−2q)μ + q for one register;
   - the correction is unbiased;
   - `end` = `mid` at zero idle, and `end` matches the oracle;
-  - the baseline matches the analytic F and F(1−F).
+  - the baseline matches the analytic F and F(1−F), and every baseline study plans its exact shot count.

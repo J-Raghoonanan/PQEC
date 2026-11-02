@@ -7,13 +7,15 @@ import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0,str(Path(__file__).resolve().parent))
+import math
 from dataclasses import replace
 import numpy as np
 import pytest
 from core import (Hardware,Ledger,ARCH,READOUT_FIELDS,noisy_input,simulate,simulate_moments,moments_metrics,
                   plan_shots,dag,pure_dm,prep_target)
 from readout import target_readout,read_out,BASIS_CHANGE
-from run_simulations import arm_eval,reference,uniform_rule,hw_cols
+from run_simulations import (arm_eval,reference,uniform_rule,hw_cols,baseline_plan,phase_baseline_study,
+                             placement_baseline_study,channel_physical_baseline_study)
 import oracle
 from test_validation import _hw,_ohw
 
@@ -135,8 +137,37 @@ def test_unmitigated_baseline_matches_analytic_fidelity(p):
     hw=reference('slow',.005)
     met,led,(sg,vals,probs)=arm_eval(rho,1,'unmitigated',hw,O,1.)
     assert abs(met['estimate']-F)<1e-14 and abs(met['bias']-(F-1))<1e-14
-    assert abs(met['variance_coeff']-F*(1-F))<1e-14 and abs(met['ratio_bias_coeff'])<1e-14 and abs(met['normalization']-1)<1e-14
+    assert abs(met['variance_coeff']-F*(1-F))<1e-14 and met['ratio_bias_coeff']==0 and met['normalization']==1
     assert (led.duration,led.peak_qubits,led.preparations,led.cnot,led.ccx,led.measurements)==(hw.t_prep+hw.t_meas,2,1,0,0,0)
     assert np.all(sg[probs>0]==1)
-    plan=plan_shots(met,.03)
+    plan=baseline_plan(met,.03)
     assert plan['feasible']==((1-F)**2<.03**2)
+    if plan['feasible']:
+        assert plan['shots']==plan['shots_delta']==max(1,math.ceil(F*(1-F)/(.03**2-(1-F)**2)))
+
+
+def _exact_baseline_shots(r,eps=.03):
+    b,v=r['bias'],r['variance_coeff']
+    return max(1,math.ceil(v/(eps*eps-b*b))) if b*b<eps*eps else None
+
+
+@pytest.mark.parametrize('study',['phase','placement','channel_physical'])
+def test_baseline_studies_plan_the_exact_shot_count(study):
+    """Regression: the baseline was planned with the S t^2>=50 guard (50 shots,
+    or 51 where Tr(rho) rounded below 1) instead of its exact shot count."""
+    rows={'phase':lambda:phase_baseline_study('quick',31),'placement':lambda:placement_baseline_study('full'),
+          'channel_physical':lambda:channel_physical_baseline_study('full',31)}[study]()
+    for r in rows:
+        assert r['normalization']==1 and r['ratio_bias_coeff']==0
+        S=_exact_baseline_shots(r)
+        assert r['feasible']==(S is not None) and not r['guard_binding']
+        if S is None:assert np.isnan(r['shots']) and np.isnan(r['shots_delta'])
+        else:assert r['shots']==r['shots_delta']==S and r['total_copies']==S
+
+
+def test_baseline_shots_below_the_guard():
+    """Cells that the guard used to set to 50 (or 51) shots."""
+    place={(r['family'],r['eps2'],r['latency_profile']):r for r in placement_baseline_study('full')}
+    chan={(r['M'],r['family'],r['eps2'],r['latency_profile']):r for r in channel_physical_baseline_study('full',31)}
+    assert place[('product',.002,'fast')]['shots']==2 and place[('entangling',.005,'fast')]['shots']==41
+    assert chan[(1,'entangling',.01,'fast')]['shots']==4 and chan[(1,'entangling',.01,'slow')]['shots']==4
