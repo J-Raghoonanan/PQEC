@@ -289,8 +289,10 @@ The basis change adds about −0.004 bias to every arm, and the corrected flips 
 
 **Unmitigated baseline:**
 - **Phase study:** infeasible in every cell, under every rule. The fixed source noise 0.14 gives bias −0.235.
-- **Placement:** feasible in 12 of 16 cells, where it is cheapest on every resource: 50 shots set by the guard, 200 CNOTs on the entangling circuit, width 2. These are entangling at ε₂ ≤ 0.005 and product at every ε₂.
-- **Channel purification:** feasible in 18 of 24 cells, where it is also cheapest on every resource.
+- **Placement:** feasible in 12 of 16 cells (entangling at ε₂ ≤ 0.005, product at every ε₂).
+- **Channel purification:** feasible in 20 of 24 cells.
+- **Where feasible (both studies):** it is at or below every VD arm on every resource. It needs 50 shots, set by the guard, 200 CNOTs on the entangling circuit, and width 2.
+- **VCP2 rows that purify no layer:** these are the same circuit. They show a lower duration only because `vcp_physical` charges no final `t_meas` when no gadget runs.
 - **Infeasible cells in both studies:** the entangling M = 2 circuit at ε₂ ≥ 0.01.
 
 ## Claim boundaries
