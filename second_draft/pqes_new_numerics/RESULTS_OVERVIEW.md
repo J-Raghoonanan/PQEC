@@ -291,8 +291,14 @@ The basis change adds about −0.004 bias to every arm, and the corrected flips 
 - **Phase study:** infeasible in every cell, under every rule. The fixed source noise 0.14 gives bias −0.235.
 - **Placement:** feasible in 12 of 16 cells (entangling at ε₂ ≤ 0.005, product at every ε₂).
 - **Channel purification:** feasible in 20 of 24 cells.
-- **Where feasible (both studies):** it is at or below every VD arm on every resource. It needs 50 shots, set by the guard, 200 CNOTs on the entangling circuit, and width 2.
-- **VCP2 rows that purify no layer:** these are the same circuit. They show a lower duration only because `vcp_physical` charges no final `t_meas` when no gadget runs.
+- **Where feasible (both studies):** it has no random denominator, so it is planned at its exact shot count, without the S·t² ≥ 50 guard. Its width is M.
+  - Entangling M = 2: 12 shots at ε₂ = 0.002 and 41 at ε₂ = 0.005, so 48 and 164 CNOTs.
+  - Product M = 2: 2, 5, 10 and 24 shots across ε₂, with no CNOT.
+  - M = 1 (channel study): 1, 2, 4 and 7 shots, with no CNOT.
+  - It is at or below every VD arm on every resource, except the VCP2 rows below.
+- **VCP2 rows that purify no layer:** these are the same circuit, but `vcp_physical` charges no final `t_meas` when no gadget runs, so they are shorter per shot. They keep the guard (50 or 51 shots), so their totals are at or above the baseline's, except at slow latency in two cases. There their total duration and space-time stay lower:
+  - placement, 6 rows: entangling at ε₂ = 0.005 and L_A/L = 0 (600 vs 902 units), and product at ε₂ = 0.02 at every cut (400 vs 432);
+  - channel purification, 3 rows: product at ε₂ = 0.02, under every apparatus (400 vs 432).
 - **Infeasible cells in both studies:** the entangling M = 2 circuit at ε₂ ≥ 0.01.
 
 ## Claim boundaries
