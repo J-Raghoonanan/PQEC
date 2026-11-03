@@ -19,6 +19,7 @@ SIX ARCHITECTURES, ONE HARDWARE MODEL, ONE CLOCK
                     averaged (cyclic-derangement estimator, Koczor 2021). Each
                     spent register is read out mid-circuit right after its
                     CSWAP (t_meas); observable readouts are ideal in all arms
+                    (published rule; readout.py applies the uniform rule)
 
 Every register-level controlled SWAP is COMPILED: CSWAP(c;a,b) =
 CNOT(b->a) CCX(c,a->b) CNOT(b->a). For a register of M pairs the CNOTs of
@@ -269,6 +270,12 @@ class Hardware:
     t_prep:int=3              # duration of one abstract source preparation
     t_meas:int=1              # mid-circuit measurement duration
     t_reset:int=1             # mid-circuit reset duration
+    # Observable-readout rule (readout.py). The defaults are the published rule:
+    # O read ideally, no basis change, spent derangement registers read at once.
+    obs_readout_q:float=0.0         # independent flip of each measured data-qubit bit in every readout of O
+    obs_basis_change:bool=False     # compiled, noisy basis change before every readout of O (clock + ledger)
+    obs_flip_correction:bool=False  # invert the known per-bit flip matrix in the reported O value
+    derangement_readout:str='mid'   # 'mid': spent register read after its CSWAP; 'end': idles until the end
 
     def __post_init__(self):
         for key in ('eps1','eps2','readout_q','ancilla_reset_p','data_reset_p','idle_gamma','idle_phi'):
@@ -277,12 +284,28 @@ class Hardware:
         if self.eps3 is not None and not 0<=self.eps3<=.5:raise ValueError('eps3')
         for key in ('t_prep','t_meas','t_reset'):
             if int(getattr(self,key))!=getattr(self,key) or getattr(self,key)<0:raise ValueError(key)
+        if not 0<=self.obs_readout_q<.5:raise ValueError('obs_readout_q must be in [0, 0.5)')
+        if self.derangement_readout not in ('mid','end'):raise ValueError('derangement_readout')
 
     @property
     def e3(self):return self.eps2 if self.eps3 is None else self.eps3
 
-    def record(self):
-        d=asdict(self);d['eps3']=self.e3;return d
+    @property
+    def readout_rule_active(self):
+        """False exactly when every observable-readout field has its published default."""
+        return bool(self.obs_readout_q or self.obs_basis_change or self.obs_flip_correction
+                    or self.derangement_readout!='mid')
+
+    def record(self,readout=False):
+        """Hardware columns. The readout-rule fields are recorded only on request,
+        so every published CSV keeps exactly its columns."""
+        d=asdict(self);d['eps3']=self.e3
+        if not readout:
+            for key in READOUT_FIELDS:d.pop(key)
+        return d
+
+
+READOUT_FIELDS=('obs_readout_q','obs_basis_change','obs_flip_correction','derangement_readout')
 
 
 @dataclass
@@ -530,9 +553,10 @@ def run_coherent(rho,N:int,model:Hardware,t_prep=None,ledger=None,wide=False):
 def derangement_moments(Rf,Wf,O,M,N):
     """Register-averaged estimator moments of the cyclic-derangement arm.
 
-    Like every arm's final observable readout, each register's O readout is
-    ideal (spent registers are read mid-circuit, charged t_meas only); only
-    the sign/control readout carries readout_q.
+    O is the reported-value operator of one register's readout. In the
+    published rule it is the ideal O (spent registers are read mid-circuit,
+    charged t_meas only) and only the sign/control readout carries readout_q;
+    under the uniform rule readout.read_out has already acted on Rf, Wf.
     """
     n=M*N;regs=[tuple(range(M*i,M*(i+1))) for i in range(N)]
     R1=[partial_trace(Rf,r,n) for r in regs]
@@ -563,11 +587,14 @@ def derangement_table(Rf,Wf,O,M,N):
 def run_derangement(rho,N:int,model:Hardware,O,t_prep=None,ledger=None):
     """Cyclic-derangement estimator: wide_cyclic circuit, then O on ALL N registers.
 
-    The per-shot numerator is Omega*(1/N)sum_i o_i. Each spent register B_k is
-    measured as soon as its CSWAP ends (no later gate touches it), charged a
-    mid-circuit measurement duration t_meas (off the critical path). As in
-    every arm, observable readouts are ideal; readout_q acts on the control's
-    sign readout only. Dense joint simulation: 1+MN<=11 qubits.
+    The per-shot numerator is Omega*(1/N)sum_i o_i. With derangement_readout
+    'mid' (default) each spent register B_k is measured as soon as its CSWAP
+    ends (no later gate touches it), charged a mid-circuit measurement duration
+    t_meas (off the critical path). With 'end' every register is read at the
+    end together with the control, so B_k idles (N-1-k)(M+2) units first. In
+    the published rule observable readouts are ideal; readout_q acts on the
+    control's sign readout only (readout.py applies the uniform rule).
+    Dense joint simulation: 1+MN<=11 qubits.
     Returns dict with t, the signed and unsigned moments needed by metrics().
     """
     hw=model;tp=hw.t_prep if t_prep is None else int(t_prep)
@@ -581,6 +608,10 @@ def run_derangement(rho,N:int,model:Hardware,O,t_prep=None,ledger=None):
         nq=1+M*(k+1)
         state=np.kron(state,rho.astype(complex))
         state,_=cswap_gadget(state,nq,0,list(range(1,1+M)),list(range(1+M*k,1+M*(k+1))),hw,led)
+    if hw.derangement_readout=='end':   # B_k waits from its CSWAP's end to the last CSWAP's end
+        for k in range(1,N):
+            wait=(N-1-k)*Tc
+            state=apply_idle(state,range(1+M*k,1+M*(k+1)),1+M*N,wait,hw);led.data_idle+=M*wait
     T=tp+(N-1)*Tc if N>1 else tp
     led.duration=T+hw.t_meas if N>1 else tp
     led.measurements+=(1+(N-1)) if N>1 else 0     # the control plus every spent register
@@ -594,8 +625,24 @@ def run_derangement(rho,N:int,model:Hardware,O,t_prep=None,ledger=None):
     return dict(mom,R1=partial_trace(Rf,regs[0],M*N),W1=partial_trace(Wf,regs[0],M*N),Rfull=Rf,Wfull=Wf)
 
 
+def run_unmitigated(rho,model:Hardware,t_prep=None,ledger=None):
+    """Unmitigated baseline: one noisy source copy, O read directly; no control.
+
+    R=W=rho, so t=1, mu=Tr(O rho) and v=Tr(O^2 rho)-mu^2 (F(1-F) for a
+    projector). The duration is the preparation plus the final measurement,
+    as every arm's makespan includes its final measurement.
+    """
+    hw=model;tp=hw.t_prep if t_prep is None else int(t_prep)
+    led=ledger if ledger is not None else Ledger()
+    led.peak_qubits=int(round(math.log2(rho.shape[0])));led.preparations=1;led.duration=tp+hw.t_meas
+    return _herm(rho.astype(complex)),_herm(rho.astype(complex))
+
+
 def simulate(rho,N,architecture,model,t_prep=None,ledger=None):
-    """(R,W) for every single-register-readout architecture."""
+    """(R,W) for every single-register-readout architecture (and the N=1 baseline)."""
+    if architecture=='unmitigated':
+        if N!=1:raise ValueError('the unmitigated baseline uses N=1')
+        return run_unmitigated(rho,model,t_prep,ledger)
     if architecture=='coherent_request':return run_coherent(rho,N,model,t_prep,ledger,wide=False)
     if architecture=='wide_cyclic':return run_coherent(rho,N,model,t_prep,ledger,wide=True)
     if architecture=='derangement':raise ValueError('use simulate_moments for derangement')

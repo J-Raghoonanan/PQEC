@@ -52,8 +52,12 @@ profile, never from one guessed value): see REFERENCE below.
 IV. SHOT PLANNING
 -----------------
 Target RMSE EPS=0.03. S=ceil((v+2bc)/(EPS^2-b^2)), infeasible if b^2>=EPS^2,
-and S*t^2>=50 is enforced (core.plan_shots). Monte Carlo of the raw ratio
-estimator at the planned S gives the achieved RMSE with a 95% CI.
+and S*t^2>=50 is enforced (core.plan_shots). The unmitigated baseline has no
+random denominator (t=1, c=0) and is planned at its exact S, without the guard
+(baseline_plan). Monte Carlo of the VD arms' raw ratio estimator at the planned
+S gives the achieved RMSE with a 95% CI. b^2+v/S is the baseline's exact MSE, so
+it reports rmse_exact=sqrt(b^2+v/S) instead, with the Monte Carlo columns NaN
+(baseline_rmse).
 
 V. STUDIES -> CSV
 -----------------
@@ -76,6 +80,12 @@ V. STUDIES -> CSV
               p_c(N) and p_SN(D,N)
   local_resource  local depolarization: F_N, T_N, leading and sampled MSE at
               fixed copy budget, optimal N, entangled mismatch floor
+  readout_rule (--task readout_rule; readout.py; their own manifest)
+    phase_uniform[_uncorrected]  the phase study under the uniform observable-
+              readout rule (one q on every recorded bit, compiled basis change,
+              O bits corrected / uncorrected), derangement read 'mid' and 'end'
+    phase_baseline, placement_baseline, channel_physical_baseline
+              unmitigated execution (N=1, no control) at the same target RMSE
 
 All operators are exact density matrices within the stated Markovian model.
 No figure is produced here; no 'hardware advantage' is asserted anywhere.
@@ -97,6 +107,7 @@ from core import (Hardware,Ledger,ARCH,MEASURED,simulate,simulate_moments,noisy_
 import circuits
 from circuits import cut_case,run_layers,apply_layer,study_layers,ideal_output,count_gates,vcp_pauli_proxy
 import vcp_physical as vp
+from readout import target_readout,uses_readout,read_out
 
 ROOT=Path(__file__).resolve().parent.parent
 DEFAULT_DATA=ROOT/'data'/'pqes_new_numerics'
@@ -120,7 +131,7 @@ def reference(profile='fast',eps2=.005,**kw):
     return Hardware(**base)
 
 
-def hw_cols(hw):return {('eps3' if k=='eps3' else k):v for k,v in hw.record().items()}
+def hw_cols(hw,readout=False):return {('eps3' if k=='eps3' else k):v for k,v in hw.record(readout).items()}
 
 
 def cost_record(led,mom_row,plan,copies=None):
@@ -154,11 +165,14 @@ def write_csv(data,output):
     return df
 
 
-def arm_eval(rho,N,arch,hw,O,mu0,t_prep=None,post=None,M=None,alg_hw=None,source=None):
-    """Run one VD arm (optionally followed by an unpurified downstream block
-    `post` on every measured register). `source` is the ledger of one run of
-    the circuit that prepared rho; every copy is charged its gates and idle
-    units. Returns (metrics row, ledger, table)."""
+def arm_eval(rho,N,arch,hw,O,mu0,t_prep=None,post=None,M=None,alg_hw=None,source=None,ro=None):
+    """Run one VD arm, or the N=1 'unmitigated' baseline (no control, so t=1
+    exactly; optionally followed by an unpurified downstream block `post` on
+    every measured register). `source` is the ledger of one run of the circuit
+    that prepared rho; every copy is charged its gates and idle units. `ro` is
+    O's compiled readout (readout.ObservableReadout), used whenever hw sets the
+    uniform readout rule; every measured register is then read through it.
+    Returns (metrics row, ledger, table)."""
     M=int(round(math.log2(rho.shape[0]))) if M is None else M
     alg_hw=hw if alg_hw is None else alg_hw
     post=post or []
@@ -175,15 +189,30 @@ def arm_eval(rho,N,arch,hw,O,mu0,t_prep=None,post=None,M=None,alg_hw=None,source
             obj=dict(obj,Rfull=Rf,Wfull=Wf)
             mom=derangement_moments(Rf,Wf,O,M,N)
             led.duration+=len(post)
-        table=derangement_table(obj['Rfull'],obj['Wfull'],O,M,N)
+        Ob=O
+        if uses_readout(hw):
+            (Rf,Wf),Ob=read_out([obj['Rfull'],obj['Wfull']],_need_ro(ro),M*N,[M*i for i in range(N)],hw,led)
+            obj=dict(obj,Rfull=Rf,Wfull=Wf);mom=derangement_moments(Rf,Wf,Ob,M,N)
+        table=derangement_table(obj['Rfull'],obj['Wfull'],Ob,M,N)
     else:
         R,W=obj
         if post:
             R=run_layers(R,post,M,alg_hw,ledger=led);W=run_layers(W,post,M,alg_hw);led.duration+=len(post)
             mom=dict(t=float(np.trace(W).real),num=float(np.trace(O@W).real),m1=float(np.trace(O@R).real),
                      m2=float(np.trace(O@O@R).real),trR=float(np.trace(R).real))
-        table=outcome_table(R,W,O)
+        Ob=O
+        if uses_readout(hw):
+            (R,W),Ob=read_out([R,W],_need_ro(ro),M,[0],hw,led)
+            mom=dict(t=float(np.trace(W).real),num=float(np.trace(Ob@W).real),m1=float(np.trace(Ob@R).real),
+                     m2=float(np.trace(Ob@Ob@R).real),trR=float(np.trace(R).real))
+        table=outcome_table(R,W,Ob)
+        if arch=='unmitigated':mom=dict(mom,t=1.)
     return moments_metrics(mom,mu0),led,table
+
+
+def _need_ro(ro):
+    if ro is None:raise ValueError('the uniform readout rule needs the compiled readout of O (ro=)')
+    return ro
 
 
 def mc_validate(table,mu0,shots,reps,seed):
@@ -287,13 +316,8 @@ def mechanisms_study(profile):
     return rows
 
 
-def phase_study(profile,seed,eps=EPS):
-    """Cost map at fixed RMSE for every arm. Axes: readout q and idle rate r
-    (idle_gamma=idle_phi=r); slices: eps2 and the latency profile. Every row
-    carries the arm's width; plot_results ranks for four cost metrics with no
-    width constraint (the primary result) and at the WIDTH_BUDGETS."""
-    rows=[];M=2;N=4;p=.14
-    rho,target=noisy_input(M,'bell_tilted',p)
+def _phase_grid(profile):
+    """(readout q values, idle rates, (eps2, latency) slices, Monte Carlo reps)."""
     if profile=='quick':
         qvals=[0,.03];rvals=[0,2e-3];slices=[(.005,'fast')]
     elif profile=='standard':
@@ -301,7 +325,17 @@ def phase_study(profile,seed,eps=EPS):
     else:
         qvals=np.linspace(0,.05,6);rvals=[0,2.5e-4,5e-4,1e-3,2e-3,4e-3]
         slices=[(e,lp) for e in EPS2_GRID for lp in ('fast','slow')]
-    mc_reps=200 if profile=='quick' else 2000
+    return qvals,rvals,slices,(200 if profile=='quick' else 2000)
+
+
+def phase_study(profile,seed,eps=EPS):
+    """Cost map at fixed RMSE for every arm. Axes: readout q and idle rate r
+    (idle_gamma=idle_phi=r); slices: eps2 and the latency profile. Every row
+    carries the arm's width; plot_results ranks for four cost metrics with no
+    width constraint (the primary result) and at the WIDTH_BUDGETS."""
+    rows=[];M=2;N=4;p=.14
+    rho,target=noisy_input(M,'bell_tilted',p)
+    qvals,rvals,slices,mc_reps=_phase_grid(profile)
     for e2,lp in slices:
         for q in qvals:
             for r in rvals:
@@ -320,6 +354,13 @@ def phase_study(profile,seed,eps=EPS):
     return rows
 
 
+def _placement_grid(profile):
+    """(circuit families, cut fractions, eps2 values, latency profiles)."""
+    fs=[0,.5,1] if profile=='quick' else [0,.25,.5,.75,1]
+    e2s=[.005] if profile=='quick' else (list(EPS2_GRID) if profile=='full' else [.005,.02])
+    return ['entangling','product'],fs,e2s,(['fast'] if profile=='quick' else ['fast','slow'])
+
+
 def placement_study(profile,seed,eps=EPS):
     """Fixed total depth L of the study circuit (circuits.study_layers: L=12
     entangling, L=8 product), cut after exactly f*L layers. VD arms compress rho_A and the remaining layers act
@@ -329,10 +370,7 @@ def placement_study(profile,seed,eps=EPS):
     unmitigated for VCP2; the VD arms at f=0 compress the ideal initial state
     with a noisy apparatus and then run the whole circuit."""
     rows=[];M=2
-    fams=['entangling','product']
-    fs=[0,.5,1] if profile=='quick' else [0,.25,.5,.75,1]
-    e2s=[.005] if profile=='quick' else (list(EPS2_GRID) if profile=='full' else [.005,.02])
-    profiles=['fast'] if profile=='quick' else ['fast','slow']
+    fams,fs,e2s,profiles=_placement_grid(profile)
     Ns=[2,4]
     for fam in fams:
         for e2 in e2s:
@@ -368,6 +406,12 @@ def placement_study(profile,seed,eps=EPS):
     return rows
 
 
+def _vcp_grid(profile):
+    """((M, circuit family) cases, eps2 values, latency profiles, Monte Carlo reps)."""
+    if profile=='quick':return [(2,'entangling')],[.005,.02],['fast'],200
+    return [(1,'entangling'),(2,'entangling'),(2,'product')],list(EPS2_GRID),['fast','slow'],2000
+
+
 def physical_vcp_study(profile,seed,eps=EPS):
     """Full layerwise VCP2 vs output-only state VD (all arms, N=2,4) at fixed RMSE.
 
@@ -378,10 +422,7 @@ def physical_vcp_study(profile,seed,eps=EPS):
     the apparatus actually used. Every resource type is reported separately;
     there is no single scalar cost."""
     rows=[]
-    cases=[(1,'entangling'),(2,'entangling'),(2,'product')] if profile!='quick' else [(2,'entangling')]
-    e2s=list(EPS2_GRID) if profile!='quick' else [.005,.02]
-    profiles=['fast','slow'] if profile!='quick' else ['fast']
-    mc_reps=200 if profile=='quick' else 2000
+    cases,e2s,profiles,mc_reps=_vcp_grid(profile)
     for M,fam in cases:
         layers=study_layers(M,fam);O=ideal_output(layers,M);g1,g2=count_gates(layers)
         for e2 in e2s:
@@ -414,6 +455,137 @@ def physical_vcp_study(profile,seed,eps=EPS):
                     if plan['feasible']:
                         rec.update(mc_validate(outcome_table(R,W,O),1.,plan['shots'],mc_reps,seed_for(seed,'vcp',M,fam,e2,lp,app,'vcp')))
                     rows.append(rec)
+    return rows
+
+
+# --------------------------------------------------------------------------- uniform readout rule and the unmitigated baseline
+def uniform_rule(hw,timing='mid',correct=True):
+    """The uniform observable-readout rule on top of hw (readout.py): one flip
+    probability for every recorded bit (obs_readout_q=readout_q), a compiled
+    noisy basis change before every readout of O, the inverse-confusion
+    correction of the O bits (correct=True, primary) or none (sensitivity), and
+    the derangement readout timing."""
+    return replace(hw,obs_readout_q=hw.readout_q,obs_basis_change=True,obs_flip_correction=correct,
+                   derangement_readout=timing)
+
+
+def baseline_plan(met,eps):
+    """Shot plan of the unmitigated baseline. It has no random denominator
+    (t=1, c=0), so b^2+v/S is its exact MSE: S=max(1,ceil(v/(eps^2-b^2))),
+    infeasible if b^2>=eps^2, without the S t^2 guard of the ratio estimator."""
+    return plan_shots(met,eps,guard=0.)
+
+
+MC_COLUMNS=('rmse','rmse_lo','rmse_hi','p_zero_den','mc_bias','mc_reps')
+
+
+def baseline_rmse(met,plan):
+    """RMSE columns of a baseline row. b^2+v/S is its exact MSE (c=0), so
+    rmse_exact=sqrt(b^2+v/S) at the planned shots (NaN if infeasible) replaces
+    the Monte Carlo, which would validate nothing; the Monte Carlo columns are NaN."""
+    exact=leading_rmse(met,plan['shots'],guard=0.) if plan['feasible'] else np.nan
+    return dict(rmse_exact=exact,**dict.fromkeys(MC_COLUMNS,np.nan))
+
+
+def _rule_name(hw):
+    if not hw.readout_rule_active:return 'published'
+    return 'uniform' if hw.obs_flip_correction else 'uniform_uncorrected'
+
+
+def phase_uniform_study(profile,seed,eps=EPS,correct=True):
+    """The phase study (same source, grid and slices) under the uniform readout
+    rule, with both derangement timings: rows with derangement_readout 'mid'
+    and 'end' each hold all six arms, so either block ranks like phase.csv.
+    The five single-register arms do not depend on the timing."""
+    rows=[];M=2;N=4;p=.14
+    rho,target=noisy_input(M,'bell_tilted',p);ro=target_readout('bell_tilted',M,target)
+    qvals,rvals,slices,mc_reps=_phase_grid(profile)
+    for timing in ('mid','end'):
+        for e2,lp in slices:
+            for q in qvals:
+                for r in rvals:
+                    hw=uniform_rule(reference(lp,e2,readout_q=float(q),idle_gamma=float(r),idle_phi=float(r)),timing,correct)
+                    for arch in ARCH:
+                        met,led,table=arm_eval(rho,N,arch,hw,target,1.,ro=ro)
+                        plan=plan_shots(met,eps)
+                        rec=dict(architecture=arch,readout_rule=_rule_name(hw),M=M,N=N,target='bell_tilted',source_pauli_p=p,
+                                 latency_profile=lp,idle_rate=float(r),rmse_target=eps,**hw_cols(hw,readout=True),**met,
+                                 feasible=plan['feasible'],shots=plan['shots'],shots_delta=plan['shots_delta'],
+                                 guard_binding=plan['guard_binding'],
+                                 **led.record('clock_'),**cost_record(led,met,plan))
+                        if plan['feasible']:
+                            key=(arch,timing) if arch=='derangement' else (arch,)
+                            rec.update(mc_validate(table,1.,plan['shots'],mc_reps,
+                                                   seed_for(seed,'phase_uniform',correct,*key,e2,lp,float(q),float(r))))
+                        rows.append(rec)
+    return rows
+
+
+def phase_baseline_study(profile,eps=EPS):
+    """Unmitigated baseline (N=1: one noisy source copy, O read directly, no
+    control) on the phase grid, under the published rule and both uniform rules."""
+    rows=[];M=2;p=.14
+    rho,target=noisy_input(M,'bell_tilted',p);ro=target_readout('bell_tilted',M,target)
+    qvals,rvals,slices,_=_phase_grid(profile)
+    for rule in ('published','uniform','uniform_uncorrected'):
+        for e2,lp in slices:
+            for q in qvals:
+                for r in rvals:
+                    hw=reference(lp,e2,readout_q=float(q),idle_gamma=float(r),idle_phi=float(r))
+                    if rule!='published':hw=uniform_rule(hw,'mid',rule=='uniform')
+                    met,led,_=arm_eval(rho,1,'unmitigated',hw,target,1.,ro=ro)
+                    plan=baseline_plan(met,eps)
+                    rec=dict(architecture='unmitigated',readout_rule=rule,M=M,N=1,target='bell_tilted',source_pauli_p=p,
+                             latency_profile=lp,idle_rate=float(r),rmse_target=eps,**hw_cols(hw,readout=True),**met,
+                             feasible=plan['feasible'],shots=plan['shots'],shots_delta=plan['shots_delta'],
+                             guard_binding=plan['guard_binding'],
+                             **led.record('clock_'),**cost_record(led,met,plan),**baseline_rmse(met,plan))
+                    rows.append(rec)
+    return rows
+
+
+def placement_baseline_study(profile,eps=EPS):
+    """Unmitigated baseline of the placement study: the whole study circuit
+    (L layers) on one copy, O read directly (published readout rule). It does
+    not depend on the cut; one row per family, eps2 and latency profile."""
+    rows=[];M=2
+    fams,_,e2s,profiles=_placement_grid(profile)
+    for fam in fams:
+        for e2 in e2s:
+            for lp in profiles:
+                hw=reference(lp,e2)
+                case=cut_case(M,fam,1.,hw);O=case['target'];g1,g2=case['gates_pre']
+                met,led,_=arm_eval(case['rho_A'],1,'unmitigated',hw,O,1.,t_prep=case['cut'],M=M,source=case['source'])
+                plan=baseline_plan(met,eps)
+                rows.append(dict(M=M,family=fam,L=case['L'],latency_profile=lp,rmse_target=eps,**hw_cols(hw,readout=True),
+                                 protocol='unmitigated',readout_rule=_rule_name(hw),N=1,**met,feasible=plan['feasible'],
+                                 shots=plan['shots'],shots_delta=plan['shots_delta'],guard_binding=plan['guard_binding'],
+                                 algorithm_gates=g1+g2,
+                                 **led.record('clock_'),**cost_record(led,met,plan),**baseline_rmse(met,plan)))
+    return rows
+
+
+def channel_physical_baseline_study(profile,eps=EPS):
+    """Unmitigated baseline of the channel-purification study: the algorithm
+    circuit on one copy with the algorithm hardware, O read directly
+    (published readout rule). There is no apparatus, so one row per case,
+    eps2 and latency profile."""
+    rows=[]
+    cases,e2s,profiles,_=_vcp_grid(profile)
+    for M,fam in cases:
+        layers=study_layers(M,fam);O=ideal_output(layers,M);g1,g2=count_gates(layers)
+        for e2 in e2s:
+            for lp in profiles:
+                hwp=reference(lp,e2)
+                src=Ledger();rho=run_layers(circuits.ground(M),layers,M,hwp,ledger=src)
+                met,led,_=arm_eval(rho,1,'unmitigated',hwp,O,1.,t_prep=len(layers),M=M,source=src)
+                plan=baseline_plan(met,eps)
+                rows.append(dict(M=M,family=fam,L=len(layers),latency_profile=lp,rmse_target=eps,**hw_cols(hwp,readout=True),
+                                 protocol='unmitigated',readout_rule=_rule_name(hwp),N=1,**met,feasible=plan['feasible'],
+                                 shots=plan['shots'],shots_delta=plan['shots_delta'],guard_binding=plan['guard_binding'],
+                                 noisy_gate_executions=g1+g2,
+                                 main_preparations=1,aux_preparations=0,**led.record('clock_'),**cost_record(led,met,plan),
+                                 **baseline_rmse(met,plan)))
     return rows
 
 
@@ -752,12 +924,16 @@ def local_resource_study(profile,seed):
 # =========================================================================== main
 TASKS=['validation','readout','shots','mechanisms','phase','placement','channel_physical','channel_proxy',
        'twirling','twirl_mc','twirl_budget','cycles','global_depol','local_resource']
+# Uniform observable-readout rule and unmitigated baseline (--task readout_rule runs
+# them all). They write only their own CSVs and manifest_readout_rule.json.
+READOUT_TASKS=['phase_uniform','phase_uniform_uncorrected','phase_baseline','placement_baseline',
+               'channel_physical_baseline']
 
 
 def main():
     parser=argparse.ArgumentParser(description='Self-contained PQES noisy-VD numerics')
     parser.add_argument('--profile',choices=['quick','standard','full'],default='quick')
-    parser.add_argument('--task',choices=['all']+TASKS,default='all')
+    parser.add_argument('--task',choices=['all','readout_rule']+TASKS+READOUT_TASKS,default='all')
     parser.add_argument('--seed',type=int,default=31)
     parser.add_argument('--rmse',type=float,default=EPS,help='Target RMSE for shot planning')
     parser.add_argument('--data-dir',type=Path,default=DEFAULT_DATA)
@@ -773,8 +949,13 @@ def main():
            'channel_proxy':lambda:vcp_proxy_study(P),'twirling':lambda:twirling_study(P,args.seed),
            'twirl_mc':lambda:twirl_mc_study(P,args.seed),'twirl_budget':lambda:twirl_budget_study(P),
            'cycles':lambda:repeated_cycles_study(P,args.rmse),'global_depol':lambda:global_depol_study(P),
-           'local_resource':lambda:local_resource_study(P,args.seed)}
-    selected=TASKS if args.task=='all' else [args.task]
+           'local_resource':lambda:local_resource_study(P,args.seed),
+           'phase_uniform':lambda:phase_uniform_study(P,args.seed,args.rmse),
+           'phase_uniform_uncorrected':lambda:phase_uniform_study(P,args.seed,args.rmse,correct=False),
+           'phase_baseline':lambda:phase_baseline_study(P,args.rmse),
+           'placement_baseline':lambda:placement_baseline_study(P,args.rmse),
+           'channel_physical_baseline':lambda:channel_physical_baseline_study(P,args.rmse)}
+    selected={'all':TASKS,'readout_rule':READOUT_TASKS}.get(args.task,[args.task])
     print('='*75);print('PQES NEW NUMERICS — COMPILED-GATE NOISY INSTRUMENTS ON ONE CLOCK')
     print(f'profile={P} task={args.task} data={args.data_dir}');print('='*75)
     runtimes={}
@@ -785,6 +966,15 @@ def main():
             write_csv(out[0],args.data_dir/'global_depol.csv');write_csv(out[1],args.data_dir/'global_boundaries.csv')
         else:write_csv(out,args.data_dir/f'{title}.csv')
         runtimes[title]=round(time.time()-t0,1);print(f'  {title}: {runtimes[title]} s')
+    published=[t for t in selected if t in TASKS]
+    if published:write_manifest(args,published,{t:runtimes[t] for t in published})
+    new=[t for t in selected if t in READOUT_TASKS]
+    if new:write_readout_manifest(args,new,{t:runtimes[t] for t in new})
+    print('Done. Plot from CSV with: python pqes_new_numerics/plot_results.py')
+
+
+def write_manifest(args,selected,runtimes):
+    P=args.profile
     mpath=args.data_dir/'manifest.json'
     old=json.loads(mpath.read_text()) if mpath.exists() and args.task!='all' else {}
     manifest=dict(simulator='pqes_new_numerics_v2',profile=P,seed=args.seed,rmse_target=args.rmse,
@@ -807,7 +997,29 @@ def main():
                      'study_circuits':'algorithm_blocks M=2: entangling L=12 (first 12 layers of U_B^2 U_A), product L=8 (U_B^3 U_A); M=1 entangling L=6',
                      'p_conventions':'pauli_form (1-p)rho+p/3 sum P rho P: sources, local depolarizing; replacement_form (1-p)rho+p I/D: global depolarizing, gate noise eps; z_flip (1-p)rho+p Z rho Z: dephasing'})
     mpath.write_text(json.dumps(manifest,indent=2))
-    print('Done. Plot from CSV with: python pqes_new_numerics/plot_results.py')
+
+
+def write_readout_manifest(args,selected,runtimes):
+    """manifest_readout_rule.json: the readout-rule tasks only (manifest.json is untouched)."""
+    P=args.profile
+    mpath=args.data_dir/'manifest_readout_rule.json'
+    old=json.loads(mpath.read_text()) if mpath.exists() and args.task!='readout_rule' else {}
+    manifest=dict(simulator='pqes_new_numerics_v2',profile=P,seed=args.seed,rmse_target=args.rmse,
+                  task_profiles={**old.get('task_profiles',{}),**{t:P for t in selected}},
+                  task_runtimes_s={**old.get('task_runtimes_s',{}),**runtimes},
+                  reference_hardware={lp:reference(lp).record(readout=True) for lp in ('fast','slow')},
+                  uniform_rule_reference_hardware={f'{lp}_{t}':uniform_rule(reference(lp),t).record(readout=True)
+                                                   for lp in ('fast','slow') for t in ('mid','end')},
+                  specifications={
+                     'published_rule':'Hardware defaults: O measured ideally on every measured register, no basis change; readout_q only on recorded sign/control bits; spent derangement registers read right after their CSWAP',
+                     'uniform_rule':'obs_readout_q=readout_q on every measured data-qubit bit of every readout of O (every arm, every spent derangement register, the baseline); compiled noisy basis change before every readout of O; derangement_readout mid or end',
+                     'basis_change':'V maps the bell_tilted target cos(pi/6)|00>+sin(pi/6)|11> to |00>: [CNOT(0->1)] then [Ry(-pi/3) on qubit 0]; eps2 after the CNOT, eps1 after Ry, idle on qubit 1 during Ry; 2 units on the clock; per register read 1 CNOT, 1 one-qubit gate, 1 idle unit',
+                     'flips':'independent classical flip of each computational-basis bit after V, simulated exactly as an X error before an ideal Z measurement',
+                     'flip_correction':'uniform (primary): reported value (A^-1)^{(x)M} o of each outcome string, A=[[1-q,q],[q,1-q]] (inverse-confusion correction, unbiased, variance in v and the shot plan); uniform_uncorrected (sensitivity): reported value o',
+                     'derangement_timing':'mid: spent register read right after its CSWAP; end: every register read at the end with the control, spent register B_k idles (N-1-k)(M+2) units first',
+                     'unmitigated_baseline':'N=1: one noisy source copy (or one run of the algorithm circuit), O read with the readout rule of the run, no control, so t=1 and c=0; duration t_prep (or circuit depth) + t_meas; exact shots S=max(1,ceil(v/(eps^2-b^2))) at the target RMSE, infeasible if b^2>=eps^2, without the S t^2 guard; rmse_exact=sqrt(b^2+v/S) at those shots is its exact RMSE, so it is not Monte Carlo validated and the Monte Carlo columns are NaN',
+                     'csvs':'phase_uniform.csv (uniform), phase_uniform_uncorrected.csv (uniform_uncorrected), phase_baseline.csv (published, uniform, uniform_uncorrected), placement_baseline.csv and channel_physical_baseline.csv (published)'})
+    mpath.write_text(json.dumps(manifest,indent=2))
 
 
 if __name__=='__main__':main()

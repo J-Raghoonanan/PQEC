@@ -6,7 +6,7 @@
 - compiled CNOT–Toffoli–CNOT SWAP gadgets with the draft's two-qubit depolarizing channel;
 - one shared clock, with idle noise on every waiting qubit;
 - resets charged per actual reuse;
-- ideal observable readouts in every arm (readout error acts only on recorded sign and control bits);
+- ideal observable readouts in every arm (readout error acts only on recorded sign and control bits); Section 9 replaces this with one uniform readout rule;
 - spent derangement registers read out mid-circuit as soon as their CSWAP ends;
 - VCP2 purifying only layers that contain a two-qubit gate, each with a fresh control;
 - the reference hardware in `README.md` (ε₁ = ε₂/10).
@@ -16,7 +16,7 @@ These are **generic toy-hardware results**, not a device calibration. Each state
 ## Validation
 
 - **Tests and oracle:**
-  - 97 tests pass, including the independent oracle and a regression test for every audit and review defect.
+  - 122 tests pass, including the independent oracle and a regression test for every audit and review defect (25 of them check the readout rule of Section 9).
   - The oracle is a brute-force simulator with explicit Kraus sums, every register kept, every outcome string enumerated, and hand-derived clock waits.
   - Agreement is 10⁻¹³ under all noise mechanisms at once.
 - **Ideal identities:** all six arms give R = ρ and W = ρᴺ to ≤ 2.7×10⁻¹⁵ (70 cases; M = 1, 2; N = 2, 4, 8).
@@ -254,11 +254,60 @@ Local depolarizing (M = 2), p = 0.15: the virtual fidelity itself falls below 0.
 - For M = 5 at p ≥ 0.5 the delta-method optimum is **N = 1**, i.e. no distillation (unfavourable).
 - The entangled target cos(π/8)|00⟩ + sin(π/8)|11⟩ saturates at its eigenvector-mismatch floor (F_16 = 0.9851 at p = 0.3, equal to the floor). The small-p prediction 1 − p²/9 holds at small p.
 
+## 9. Uniform observable-readout rule and unmitigated baseline (`--task readout_rule`)
+
+The rule is described in `README.md` and `readout.py`. It puts one q on every recorded bit, a compiled noisy basis change before every readout of O, the O bits inverse-confusion corrected, and spent derangement registers read `mid` or `end`. The phase study is re-run on the same grid and profile.
+
+**Reference cell** (ε₂ = 0.005, fast, q = 0.01, idle 5×10⁻⁴), shots at RMSE 0.03:
+
+| Rule | Derangement | Wide cyclic |
+|---|---|---|
+| Published | 1355 | 3649 |
+| Uniform, `mid` | 1573 (bias −0.0143) | 4756 (bias −0.0183) |
+| Uniform, `end` | 1768 (bias −0.0171) | 4756 |
+
+The basis change adds about −0.004 bias to every arm, and the corrected flips add only variance.
+
+**Ranking (unconstrained and width ≤ 9).**
+- **`mid`:** derangement is cheapest in every feasible cell for every metric.
+- **Feasibility falls for every arm**, because of the basis-change CNOT:
+  - ε₂ = 0.01: 30 of 36 cells;
+  - ε₂ = 0.02: no feasible cell.
+- **`end`:** wide cyclic VD wins the highest-idle rows:
+  - ε₂ = 0.002: 6 of 36 cells;
+  - ε₂ = 0.005: 12 of 36 cells, except in the fast-profile unconstrained duration map. There wide cyclic VD wins 11 cells and the parallel tree 1 (q = 0, idle 2×10⁻³: 111503 vs 111690 gate units, a 0.2% near-tie).
+
+  At ε₂ = 0.01, derangement read at the end is feasible, and wins, in 18 cells.
+
+**Width budgets.** The uniform rule also changes the narrow-width maps (winners by shots, the metric of Fig B3; the same under both timings):
+- ε₂ = 0.005, fast: width ≤ 5 and width ≤ 7 keep 30 of 36 cells (published: 36), losing the idle 4×10⁻³ row. At width ≤ 7 the recycled tree wins 6 cells and coherent streaming 24 (published: coherent 29, recycled 2, sequential 5); at width ≤ 5 coherent streaming wins 27 and the sequential tree 3 (published: 30 and 6).
+- ε₂ = 0.005, slow: width ≤ 7 keeps its 30 cells, and the recycled tree takes 1 of them (published: 0).
+- ε₂ = 0.01: width ≤ 5 has no feasible cell; width ≤ 7 has 6 cells, all won by the recycled tree.
+
+**Uncorrected flips** (sensitivity, `phase_uniform_uncorrected.csv`): every arm takes a common bias of about −2q.
+- No arm is feasible at the reference cell.
+- Each slice keeps 0–10 feasible cells, which derangement wins with `mid` timing.
+
+**Unmitigated baseline:**
+- **Phase study:** infeasible in every cell, under every rule. The fixed source noise 0.14 gives bias −0.235 under the published rule, and −0.236 to −0.312 under the uniform rules.
+- **Placement:** feasible in 12 of 16 cells (entangling at ε₂ ≤ 0.005, product at every ε₂).
+- **Channel purification:** feasible in 20 of 24 cells.
+- **Where feasible (both studies):** it has no random denominator, so it is planned at its exact shot count, without the S·t² ≥ 50 guard. Its width is M.
+  - For the same reason b² + v/S is its exact MSE, so each feasible row reports the exact RMSE `rmse_exact` = √(b² + v/S) at the planned shots, at most 0.03, instead of a Monte Carlo; the Monte Carlo columns are NaN. A Monte Carlo would validate nothing, and at 1 shot it can report a degenerate CI (M = 1 entangling, ε₂ = 0.002, slow: 2000 single-shot reps drew no failure, so it reported RMSE ≈ 2×10⁻¹⁶, against an exact 0.0245).
+  - Entangling M = 2: 12 shots at ε₂ = 0.002 and 41 at ε₂ = 0.005, so 48 and 164 CNOTs.
+  - Product M = 2: 2, 5, 10 and 24 shots across ε₂, with no CNOT.
+  - M = 1 (channel study): 1, 2, 4 and 7 shots, with no CNOT.
+  - It is at or below every VD arm on every resource, except the VCP2 rows below.
+- **VCP2 rows that purify no layer:** these are the same circuit, but `vcp_physical` charges no final `t_meas` when no gadget runs, so they are shorter per shot. They keep the guard (50 or 51 shots), so their totals are at or above the baseline's, except at slow latency in two cases. There their total duration and space-time stay lower:
+  - placement, 6 rows: entangling at ε₂ = 0.005 and L_A/L = 0 (600 vs 902 units), and product at ε₂ = 0.02 at every cut (400 vs 432);
+  - channel purification, 3 rows: product at ε₂ = 0.02, under every apparatus (400 vs 432).
+- **Infeasible cells in both studies:** the entangling M = 2 circuit at ε₂ ≥ 0.01.
+
 ## Claim boundaries
 
 **What the data support:**
 - an unfavourable readout result for measured trees;
-- the cyclic-derangement estimator (9 qubits at M = 2, N = 4) winning every feasible cell when width is not constrained;
+- the cyclic-derangement estimator (9 qubits at M = 2, N = 4) winning every feasible cell when width is not constrained (published readout, and the uniform rule with `mid` timing; with `end` timing it does not, see Section 9);
 - one narrow favourable regime for PQES: the depth-first recycled tree under a width budget of 7 qubits, at ε₂ ≈ 0.01, fast measurement, and a target RMSE near the bias floor.
 
 **Unfavourable for compression, channel purification and weak noise:**
