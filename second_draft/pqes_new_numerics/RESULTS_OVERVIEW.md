@@ -289,7 +289,7 @@ The basis change adds about −0.004 bias to every arm, and the corrected flips 
 - Each slice keeps 0–10 feasible cells, which derangement wins with `mid` timing.
 
 **Unmitigated baseline:**
-- **Phase study:** infeasible in every cell, under every rule. The fixed source noise 0.14 gives bias −0.235.
+- **Phase study:** infeasible in every cell, under every rule. The fixed source noise 0.14 gives bias −0.235 under the published rule, and −0.236 to −0.312 under the uniform rules.
 - **Placement:** feasible in 12 of 16 cells (entangling at ε₂ ≤ 0.005, product at every ε₂).
 - **Channel purification:** feasible in 20 of 24 cells.
 - **Where feasible (both studies):** it has no random denominator, so it is planned at its exact shot count, without the S·t² ≥ 50 guard. Its width is M.
@@ -307,7 +307,7 @@ The basis change adds about −0.004 bias to every arm, and the corrected flips 
 
 **What the data support:**
 - an unfavourable readout result for measured trees;
-- the cyclic-derangement estimator (9 qubits at M = 2, N = 4) winning every feasible cell when width is not constrained;
+- the cyclic-derangement estimator (9 qubits at M = 2, N = 4) winning every feasible cell when width is not constrained (published readout, and the uniform rule with `mid` timing; with `end` timing it does not, see Section 9);
 - one narrow favourable regime for PQES: the depth-first recycled tree under a width budget of 7 qubits, at ε₂ ≈ 0.01, fast measurement, and a target RMSE near the bias floor.
 
 **Unfavourable for compression, channel purification and weak noise:**
