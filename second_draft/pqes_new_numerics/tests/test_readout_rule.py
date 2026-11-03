@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0,str(Path(__file__).resolve().parent))
+import functools
 import math
 from dataclasses import replace
 import numpy as np
@@ -15,7 +16,7 @@ from core import (Hardware,Ledger,ARCH,READOUT_FIELDS,noisy_input,simulate,simul
                   plan_shots,dag,pure_dm,prep_target)
 from readout import target_readout,read_out,BASIS_CHANGE
 from run_simulations import (arm_eval,reference,uniform_rule,hw_cols,baseline_plan,phase_baseline_study,
-                             placement_baseline_study,channel_physical_baseline_study)
+                             placement_baseline_study,channel_physical_baseline_study,MC_COLUMNS)
 import oracle
 from test_validation import _hw,_ohw
 
@@ -151,13 +152,17 @@ def _exact_baseline_shots(r,eps=.03):
     return max(1,math.ceil(v/(eps*eps-b*b))) if b*b<eps*eps else None
 
 
+@functools.cache
+def _baseline_rows(study):
+    return {'phase':lambda:phase_baseline_study('quick'),'placement':lambda:placement_baseline_study('full'),
+            'channel_physical':lambda:channel_physical_baseline_study('full')}[study]()
+
+
 @pytest.mark.parametrize('study',['phase','placement','channel_physical'])
 def test_baseline_studies_plan_the_exact_shot_count(study):
     """Regression: the baseline was planned with the S t^2>=50 guard (50 shots,
     or 51 where Tr(rho) rounded below 1) instead of its exact shot count."""
-    rows={'phase':lambda:phase_baseline_study('quick',31),'placement':lambda:placement_baseline_study('full'),
-          'channel_physical':lambda:channel_physical_baseline_study('full',31)}[study]()
-    for r in rows:
+    for r in _baseline_rows(study):
         assert r['normalization']==1 and r['ratio_bias_coeff']==0
         S=_exact_baseline_shots(r)
         assert r['feasible']==(S is not None) and not r['guard_binding']
@@ -167,7 +172,27 @@ def test_baseline_studies_plan_the_exact_shot_count(study):
 
 def test_baseline_shots_below_the_guard():
     """Cells that the guard used to set to 50 (or 51) shots."""
-    place={(r['family'],r['eps2'],r['latency_profile']):r for r in placement_baseline_study('full')}
-    chan={(r['M'],r['family'],r['eps2'],r['latency_profile']):r for r in channel_physical_baseline_study('full',31)}
+    place={(r['family'],r['eps2'],r['latency_profile']):r for r in _baseline_rows('placement')}
+    chan={(r['M'],r['family'],r['eps2'],r['latency_profile']):r for r in _baseline_rows('channel_physical')}
     assert place[('product',.002,'fast')]['shots']==2 and place[('entangling',.005,'fast')]['shots']==41
     assert chan[(1,'entangling',.01,'fast')]['shots']==4 and chan[(1,'entangling',.01,'slow')]['shots']==4
+
+
+@pytest.mark.parametrize('study',['phase','placement','channel_physical'])
+def test_baseline_studies_report_the_exact_rmse(study):
+    """b^2+v/S is the baseline's exact MSE: every feasible row reports
+    rmse_exact=sqrt(b^2+v/S) at its planned shots, and no row is Monte Carlo validated."""
+    for r in _baseline_rows(study):
+        assert all(np.isnan(r[k]) for k in MC_COLUMNS)
+        if r['feasible']:
+            b,v=r['bias'],r['variance_coeff']
+            assert abs(r['rmse_exact']-math.sqrt(b*b+v/r['shots']))<1e-15 and r['rmse_exact']<=.03
+        else:assert np.isnan(r['rmse_exact'])
+
+
+def test_one_shot_baseline_reports_its_exact_rmse():
+    """Regression: at 1 shot and P(0)=1-F~6e-4 the 2000-rep Monte Carlo drew no 0,
+    so it reported rmse=rmse_lo=rmse_hi~2e-16, a CI that excludes the exact RMSE."""
+    r={(r['M'],r['family'],r['eps2'],r['latency_profile']):r for r in _baseline_rows('channel_physical')}[(1,'entangling',.002,'slow')]
+    assert r['shots']==1 and abs(r['rmse_exact']-math.sqrt(r['bias']**2+r['variance_coeff']))<1e-15
+    assert .024<r['rmse_exact']<.025 and np.isnan(r['rmse'])

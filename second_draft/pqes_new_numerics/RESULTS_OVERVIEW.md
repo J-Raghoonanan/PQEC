@@ -16,7 +16,7 @@ These are **generic toy-hardware results**, not a device calibration. Each state
 ## Validation
 
 - **Tests and oracle:**
-  - 114 tests pass, including the independent oracle and a regression test for every audit and review defect (17 of them check the readout rule of Section 9).
+  - 122 tests pass, including the independent oracle and a regression test for every audit and review defect (25 of them check the readout rule of Section 9).
   - The oracle is a brute-force simulator with explicit Kraus sums, every register kept, every outcome string enumerated, and hand-derived clock waits.
   - Agreement is 10⁻¹³ under all noise mechanisms at once.
 - **Ideal identities:** all six arms give R = ρ and W = ρᴺ to ≤ 2.7×10⁻¹⁵ (70 cases; M = 1, 2; N = 2, 4, 8).
@@ -279,9 +279,10 @@ The basis change adds about −0.004 bias to every arm, and the corrected flips 
 
   At ε₂ = 0.01, derangement read at the end is feasible, and wins, in 18 cells.
 
-**Width budgets.** The basis change also shrinks the narrow-width maps at ε₂ = 0.01:
-- width ≤ 5: no feasible cell;
-- width ≤ 7: 6 cells, all won by the recycled tree.
+**Width budgets.** The uniform rule also changes the narrow-width maps (winners by shots, the metric of Fig B3; the same under both timings):
+- ε₂ = 0.005, fast: width ≤ 5 and width ≤ 7 keep 30 of 36 cells (published: 36), losing the idle 4×10⁻³ row. At width ≤ 7 the recycled tree wins 6 cells and coherent streaming 24 (published: coherent 29, recycled 2, sequential 5); at width ≤ 5 coherent streaming wins 27 and the sequential tree 3 (published: 30 and 6).
+- ε₂ = 0.005, slow: width ≤ 7 keeps its 30 cells, and the recycled tree takes 1 of them (published: 0).
+- ε₂ = 0.01: width ≤ 5 has no feasible cell; width ≤ 7 has 6 cells, all won by the recycled tree.
 
 **Uncorrected flips** (sensitivity, `phase_uniform_uncorrected.csv`): every arm takes a common bias of about −2q.
 - No arm is feasible at the reference cell.
@@ -292,6 +293,7 @@ The basis change adds about −0.004 bias to every arm, and the corrected flips 
 - **Placement:** feasible in 12 of 16 cells (entangling at ε₂ ≤ 0.005, product at every ε₂).
 - **Channel purification:** feasible in 20 of 24 cells.
 - **Where feasible (both studies):** it has no random denominator, so it is planned at its exact shot count, without the S·t² ≥ 50 guard. Its width is M.
+  - For the same reason b² + v/S is its exact MSE, so each feasible row reports the exact RMSE `rmse_exact` = √(b² + v/S) at the planned shots, at most 0.03, instead of a Monte Carlo; the Monte Carlo columns are NaN. A Monte Carlo would validate nothing, and at 1 shot it can report a degenerate CI (M = 1 entangling, ε₂ = 0.002, slow: 2000 single-shot reps drew no failure, so it reported RMSE ≈ 2×10⁻¹⁶, against an exact 0.0245).
   - Entangling M = 2: 12 shots at ε₂ = 0.002 and 41 at ε₂ = 0.005, so 48 and 164 CNOTs.
   - Product M = 2: 2, 5, 10 and 24 shots across ε₂, with no CNOT.
   - M = 1 (channel study): 1, 2, 4 and 7 shots, with no CNOT.

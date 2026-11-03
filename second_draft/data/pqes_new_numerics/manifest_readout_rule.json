@@ -130,7 +130,7 @@
     "flips": "independent classical flip of each computational-basis bit after V, simulated exactly as an X error before an ideal Z measurement",
     "flip_correction": "uniform (primary): reported value (A^-1)^{(x)M} o of each outcome string, A=[[1-q,q],[q,1-q]] (inverse-confusion correction, unbiased, variance in v and the shot plan); uniform_uncorrected (sensitivity): reported value o",
     "derangement_timing": "mid: spent register read right after its CSWAP; end: every register read at the end with the control, spent register B_k idles (N-1-k)(M+2) units first",
-    "unmitigated_baseline": "N=1: one noisy source copy (or one run of the algorithm circuit), O read with the readout rule of the run, no control, so t=1 and c=0; duration t_prep (or circuit depth) + t_meas; exact shots S=max(1,ceil(v/(eps^2-b^2))) at the target RMSE, infeasible if b^2>=eps^2, without the S t^2 guard",
+    "unmitigated_baseline": "N=1: one noisy source copy (or one run of the algorithm circuit), O read with the readout rule of the run, no control, so t=1 and c=0; duration t_prep (or circuit depth) + t_meas; exact shots S=max(1,ceil(v/(eps^2-b^2))) at the target RMSE, infeasible if b^2>=eps^2, without the S t^2 guard; rmse_exact=sqrt(b^2+v/S) at those shots is its exact RMSE, so it is not Monte Carlo validated and the Monte Carlo columns are NaN",
     "csvs": "phase_uniform.csv (uniform), phase_uniform_uncorrected.csv (uniform_uncorrected), phase_baseline.csv (published, uniform, uniform_uncorrected), placement_baseline.csv and channel_physical_baseline.csv (published)"
   }
 }
